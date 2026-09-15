@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 /**
- * Rebuilds the cloud development database from zero (spec FR-007).
+ * Rebuilds the cloud development database from zero (spec FR-007; spec 002
+ * FR-014 — the complete data layer incl. the private schema).
  *
  * Usage: npm run db:reset [-- --yes]
  *
- * Sequence: confirm → drop public + migration history → recreate public with
- * Supabase default grants → `supabase db push` (reapplies all migrations) →
- * `npm run db:seed`.
+ * Sequence: confirm → drop public + private + migration history → recreate
+ * public with Supabase default grants → `supabase db push` (reapplies all
+ * migrations) → `npm run db:seed`.
  *
  * DESTRUCTIVE and intended for the development project only. Reads only
  * SUPABASE_DB_URL, so it can only target the project you configured.
@@ -51,6 +52,7 @@ if (!process.argv.includes('--yes')) {
 
 const RESET_SQL = `
 drop schema if exists public cascade;
+drop schema if exists private cascade;
 drop schema if exists supabase_migrations cascade;
 create schema public;
 grant usage on schema public to postgres, anon, authenticated, service_role;

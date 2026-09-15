@@ -104,8 +104,8 @@ Single project at repository root: `src/`, `tests/`, `e2e/`, `supabase/`, `scrip
 
 ### Implementation for User Story 4
 
-- [ ] T013 [US4] Rebuild cycle 1: `npm run db:reset` (drops `public` + `supabase_migrations`, reapplies **all five** migrations via `db push`, reseeds) → `npm run types:gen` → `npm run test:db` (all four suites green on the rebuilt database) — rebuild purely from repository artifacts — FR-014, quickstart.md "Reset-and-rebuild determinism"
-- [ ] T014 [US4] Rebuild cycle 2 + determinism proof: run `npm run db:reset` a second time; the full suite is green again and `npm run types:gen` output is byte-identical to the committed `src/types/database.types.ts` — equivalent known-good state across consecutive rebuilds — FR-014/FR-016, SC-002
+- [x] T013 [US4] Rebuild cycle 1: `npm run db:reset` (drops `public` + `supabase_migrations`, reapplies **all five** migrations via `db push`, reseeds) → `npm run types:gen` → `npm run test:db` (all four suites green on the rebuilt database) — rebuild purely from repository artifacts — FR-014, quickstart.md "Reset-and-rebuild determinism"
+- [x] T014 [US4] Rebuild cycle 2 + determinism proof: run `npm run db:reset` a second time; the full suite is green again and `npm run types:gen` output is byte-identical to the committed `src/types/database.types.ts` — equivalent known-good state across consecutive rebuilds — FR-014/FR-016, SC-002
 
 **Checkpoint**: All four stories complete — the exit condition (§12: database resettable from zero, recreated entirely from migrations) is demonstrated
 
