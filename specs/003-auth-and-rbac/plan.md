@@ -113,7 +113,7 @@ Contracts: this project exposes three durable interfaces worth contracting — t
 │   ├── integration/
 │   │   └── auth.signin.test.ts            # NEW: real sign-ins for every seeded role; RPC context; API-path data matrix
 │   ├── unit/
-│   │   └── auth.guards.test.ts            # NEW: guard/route-permission decision matrix
+│   │   └── auth.guards.test.tsx           # NEW: guard/route-permission decision matrix
 │   └── setup-env.ts                       # unchanged
 ├── e2e/
 │   ├── routes.test.ts                     # unchanged (public routes)

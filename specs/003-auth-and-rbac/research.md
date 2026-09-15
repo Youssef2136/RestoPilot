@@ -267,9 +267,17 @@ distinguishable from an unlinked identity (no profile) for guard decisions.
   the staff list.
 - `profiles` **select policy created** (its first client access ever; grant
   `select` to `authenticated` alongside): own profile
-  (`auth_user_id in staff_profile_ids(auth.uid())`) or a profile in
+  (`id in (select private.staff_profile_ids(auth.uid()))`) or a profile in
   `managed_staff_profile_ids(auth.uid())` — the "linked profiles' basic
   information" half of the staff list (FR-007, Clarifications 2026-09-15).
+  *Erratum (2026-09-15, corrected post-implementation): the own arm above was
+  originally quoted in this section as
+  `auth_user_id in staff_profile_ids(auth.uid())` — a typo (the same one
+  already corrected in [data-model.md](./data-model.md) and
+  [contracts/database-functions.md](./contracts/database-functions.md)).
+  `staff_profile_ids` returns **profile ids**, so the predicate compares `id`,
+  exactly as the applied migration `20260915204636_rbac_policies.sql` does
+  (ground truth; proven by `tests/database/auth.rbac.test.ts`).*
 - `restaurants`, `branches`, `dining_tables` **unchanged**: the Phase 1
   policies already encode §30 exactly (owners see every branch of their
   restaurant; branch-scoped roles see only their assigned branch; every
