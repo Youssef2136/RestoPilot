@@ -1,5 +1,55 @@
--- Baseline seed data for the cloud development database (spec FR-008, data-model.md).
+-- Seed data for the cloud development database.
 -- Applied by `npm run db:seed` (scripts/db/seed.mjs). Idempotent: safe to re-run.
+--
+-- Baseline row (feature 001 FR-008).
 insert into public.app_meta (key, value)
 values ('foundation', 'seeded')
 on conflict (key) do nothing;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Tenancy fixture (spec 002 FR-015; data-model.md seed table).
+-- Deterministic UUIDs — MUST stay identical to
+-- tests/database/helpers/fixtures.ts (the suites assert through them).
+--
+-- Isolation matrix in data form: Blue Olive owns Downtown + Marina; Cedar
+-- Grill owns Airport. Eve holds memberships in BOTH restaurants (owner of
+-- Cedar Grill, cashier at Downtown). Platform Admin carries the super-admin
+-- flag with no memberships (modeled-only posture).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+insert into public.restaurants (id, name, slug) values
+  ('00000000-0000-4000-8000-000000000001', 'Blue Olive', 'blue-olive'),
+  ('00000000-0000-4000-8000-000000000002', 'Cedar Grill', 'cedar-grill')
+on conflict (id) do nothing;
+
+insert into public.branches (id, restaurant_id, name) values
+  ('00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-000000000001', 'Downtown'),
+  ('00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000000001', 'Marina'),
+  ('00000000-0000-4000-8000-000000000201', '00000000-0000-4000-8000-000000000002', 'Airport')
+on conflict (id) do nothing;
+
+insert into public.profiles (id, display_name, auth_user_id, is_super_admin) values
+  ('00000000-0000-4000-8000-000000001001', 'Alice', '00000000-0000-4000-8000-000000002001', false),
+  ('00000000-0000-4000-8000-000000001002', 'Bob', '00000000-0000-4000-8000-000000002002', false),
+  ('00000000-0000-4000-8000-000000001003', 'Carla', '00000000-0000-4000-8000-000000002003', false),
+  ('00000000-0000-4000-8000-000000001004', 'Dan', '00000000-0000-4000-8000-000000002004', false),
+  ('00000000-0000-4000-8000-000000001005', 'Eve', '00000000-0000-4000-8000-000000002005', false),
+  ('00000000-0000-4000-8000-000000001006', 'Platform Admin', '00000000-0000-4000-8000-000000002006', true)
+on conflict (id) do nothing;
+
+insert into public.staff_memberships (id, profile_id, restaurant_id, role, branch_id) values
+  ('00000000-0000-4000-8000-000000004001', '00000000-0000-4000-8000-000000001001', '00000000-0000-4000-8000-000000000001', 'owner', null),
+  ('00000000-0000-4000-8000-000000004002', '00000000-0000-4000-8000-000000001002', '00000000-0000-4000-8000-000000000001', 'branch_manager', '00000000-0000-4000-8000-000000000101'),
+  ('00000000-0000-4000-8000-000000004003', '00000000-0000-4000-8000-000000001003', '00000000-0000-4000-8000-000000000001', 'cashier', '00000000-0000-4000-8000-000000000101'),
+  ('00000000-0000-4000-8000-000000004004', '00000000-0000-4000-8000-000000001004', '00000000-0000-4000-8000-000000000001', 'kitchen', '00000000-0000-4000-8000-000000000102'),
+  ('00000000-0000-4000-8000-000000004005', '00000000-0000-4000-8000-000000001005', '00000000-0000-4000-8000-000000000002', 'owner', null),
+  ('00000000-0000-4000-8000-000000004006', '00000000-0000-4000-8000-000000001005', '00000000-0000-4000-8000-000000000001', 'cashier', '00000000-0000-4000-8000-000000000101')
+on conflict (id) do nothing;
+
+insert into public.dining_tables (id, restaurant_id, branch_id, label) values
+  ('00000000-0000-4000-8000-000000003001', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000101', 'T1'),
+  ('00000000-0000-4000-8000-000000003002', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000101', 'T2'),
+  ('00000000-0000-4000-8000-000000003003', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000101', 'T3'),
+  ('00000000-0000-4000-8000-000000003004', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000102', 'T1'),
+  ('00000000-0000-4000-8000-000000003005', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000201', 'T1')
+on conflict (id) do nothing;

@@ -32,6 +32,180 @@ export type Database = {
         }
         Relationships: []
       }
+      branches: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dining_tables: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          label: string
+          restaurant_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          label: string
+          restaurant_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          restaurant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dining_tables_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dining_tables_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          auth_user_id: string | null
+          created_at: string
+          display_name: string
+          id: string
+          is_super_admin: boolean
+          updated_at: string
+        }
+        Insert: {
+          auth_user_id?: string | null
+          created_at?: string
+          display_name: string
+          id?: string
+          is_super_admin?: boolean
+          updated_at?: string
+        }
+        Update: {
+          auth_user_id?: string | null
+          created_at?: string
+          display_name?: string
+          id?: string
+          is_super_admin?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      restaurants: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      staff_memberships: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          profile_id: string
+          restaurant_id: string
+          role: Database["public"]["Enums"]["staff_role"]
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id: string
+          restaurant_id: string
+          role: Database["public"]["Enums"]["staff_role"]
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string
+          restaurant_id?: string
+          role?: Database["public"]["Enums"]["staff_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_memberships_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_memberships_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_memberships_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -40,7 +214,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      staff_role: "owner" | "branch_manager" | "cashier" | "kitchen"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -167,6 +341,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      staff_role: ["owner", "branch_manager", "cashier", "kitchen"],
+    },
   },
 } as const
