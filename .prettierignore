@@ -1,0 +1,17 @@
+# Dependencies / build / test artifacts
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+
+# Generated files
+package-lock.json
+src/types/database.types.ts
+
+# Spec Kit artifacts and project documents (not formatter-owned)
+specs/
+.specify/
+.zcode/
+RestoPilot-Master-Plan.md
+supabase/
