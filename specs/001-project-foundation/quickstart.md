@@ -35,7 +35,7 @@ cp .env.example .env                       # then fill in the four values
 
 **Expected outcome**: dependencies install cleanly; the CLI reports the
 project as linked; `.env` contains `VITE_SUPABASE_URL`,
-`VITE_SUPABASE_ANON_KEY`, `SUPABASE_DB_URL`, `SUPABASE_PROJECT_REF`
+`VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_DB_URL`, `SUPABASE_PROJECT_REF`
 (secrets stay out of version control — SC-006).
 
 ## Database setup (migrate + seed)

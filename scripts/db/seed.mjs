@@ -28,7 +28,8 @@ if (!dbUrl) {
 }
 
 const sql = await readFile(seedPath, 'utf8')
-const client = new pg.Client({ connectionString: dbUrl })
+// TLS required — never fall back to plaintext (Supabase connection guidance).
+const client = new pg.Client({ connectionString: dbUrl, ssl: true })
 
 try {
   await client.connect()

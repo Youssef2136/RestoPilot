@@ -3,7 +3,7 @@ import { getClientEnv, getFullEnv, MissingEnvironmentError } from '../../src/lib
 
 const completeSource = {
   VITE_SUPABASE_URL: 'https://example.supabase.co',
-  VITE_SUPABASE_ANON_KEY: 'anon-key',
+  VITE_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_example',
   SUPABASE_DB_URL: 'postgresql://user:pass@host:5432/postgres',
   SUPABASE_PROJECT_REF: 'ref-123',
 }
@@ -12,7 +12,7 @@ describe('environment validation (spec FR-016)', () => {
   it('returns typed client values when the public variables are present', () => {
     const env = getClientEnv(completeSource)
     expect(env.supabaseUrl).toBe('https://example.supabase.co')
-    expect(env.supabaseAnonKey).toBe('anon-key')
+    expect(env.supabasePublishableKey).toBe('sb_publishable_example')
   })
 
   it('fails fast, naming every missing public variable', () => {
@@ -23,8 +23,8 @@ describe('environment validation (spec FR-016)', () => {
       thrown = error as MissingEnvironmentError
     }
     expect(thrown).toBeInstanceOf(MissingEnvironmentError)
-    expect(thrown?.missingVariables).toEqual(['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'])
-    expect(thrown?.message).toMatch(/VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY/)
+    expect(thrown?.missingVariables).toEqual(['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'])
+    expect(thrown?.message).toMatch(/VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY/)
     expect(thrown?.message).toMatch(/\.env\.example/)
   })
 
@@ -32,7 +32,7 @@ describe('environment validation (spec FR-016)', () => {
     const env = getFullEnv(completeSource)
     expect(env).toEqual({
       supabaseUrl: 'https://example.supabase.co',
-      supabaseAnonKey: 'anon-key',
+      supabasePublishableKey: 'sb_publishable_example',
       supabaseDbUrl: 'postgresql://user:pass@host:5432/postgres',
       supabaseProjectRef: 'ref-123',
     })

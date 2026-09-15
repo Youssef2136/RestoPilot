@@ -18,7 +18,8 @@ if (!dbUrl) {
   )
 }
 
-const client = new pg.Client({ connectionString: dbUrl })
+// TLS required — never fall back to plaintext (Supabase connection guidance).
+const client = new pg.Client({ connectionString: dbUrl, ssl: true })
 
 beforeAll(async () => {
   await client.connect()
@@ -69,5 +70,15 @@ describe('baseline table public.app_meta (data-model.md)', () => {
       'app_meta',
     ])
     expect(rows).toEqual([{ relrowsecurity: true }])
+  })
+
+  it('grants no table privileges to client roles (hardening, spec FR-017)', async () => {
+    const { rows } = await client.query(
+      `select grantee, privilege_type
+       from information_schema.role_table_grants
+       where table_schema = 'public' and table_name = 'app_meta'
+         and grantee in ('anon', 'authenticated')`,
+    )
+    expect(rows).toEqual([])
   })
 })

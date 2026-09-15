@@ -57,7 +57,8 @@ grant usage on schema public to postgres, anon, authenticated, service_role;
 grant all on schema public to postgres;
 `
 
-const client = new pg.Client({ connectionString: dbUrl })
+// TLS required — never fall back to plaintext (Supabase connection guidance).
+const client = new pg.Client({ connectionString: dbUrl, ssl: true })
 
 try {
   await client.connect()

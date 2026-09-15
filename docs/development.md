@@ -86,6 +86,11 @@ Symptoms: connection timeouts or DNS errors in `db:migrate`, `db:seed`,
 - Verify `VITE_SUPABASE_URL` / `SUPABASE_DB_URL` point at the right project.
 - Verify network access to `*.supabase.co` — corporate proxies and VPNs are a
   common cause.
+- Copy connection strings and pooler hosts from the Dashboard → Connect
+  dialog — the pooler host's cluster index cannot be derived from the region.
+- Authentication failures (rather than timeouts) when connecting usually mean
+  special characters in the database password need percent-encoding inside
+  `SUPABASE_DB_URL`.
 - Database tests have the reachable cloud project as a documented
   precondition; on connectivity failure they exit with clear guidance rather
   than ambiguous connection errors.

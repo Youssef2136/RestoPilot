@@ -260,6 +260,14 @@ mechanically visible; fail-fast validation prevents silent misconfiguration.
 - Storing the DB URL only in CLI config — rejected: database tests and seed
   scripts need it too; a single documented env contract is simpler.
 
+> **Audit update (2026-09-15, official docs)**: Supabase is deprecating the
+> legacy `anon`/`service_role` JWT keys (end of 2026). The client credential
+> is now the **publishable key** (`sb_publishable_...`) under
+> `VITE_SUPABASE_PUBLISHABLE_KEY`; direct pg connections set `ssl: true`
+> explicitly (never fall back to plaintext); and table privileges for client
+> roles are revoked on `app_meta` per the current RLS hardening guidance
+> (migration `20260915100723_app_meta_revoke_client_grants.sql`).
+
 ## 15. Repository hosting and initialization
 
 **Decision**: `git init` on `main`, `.gitignore` covering `node_modules`,

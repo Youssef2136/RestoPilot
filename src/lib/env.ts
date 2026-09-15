@@ -13,7 +13,7 @@
 
 export interface ClientEnv {
   supabaseUrl: string
-  supabaseAnonKey: string
+  supabasePublishableKey: string
 }
 
 export interface FullEnv extends ClientEnv {
@@ -21,7 +21,7 @@ export interface FullEnv extends ClientEnv {
   supabaseProjectRef: string
 }
 
-const CLIENT_VARIABLES = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_ANON_KEY'] as const
+const CLIENT_VARIABLES = ['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'] as const
 const SECRET_VARIABLES = ['SUPABASE_DB_URL', 'SUPABASE_PROJECT_REF'] as const
 
 export class MissingEnvironmentError extends Error {
@@ -53,7 +53,7 @@ export function getClientEnv(source: EnvSource = import.meta.env): ClientEnv {
   const env = requireVariables(source, CLIENT_VARIABLES)
   return {
     supabaseUrl: env.VITE_SUPABASE_URL,
-    supabaseAnonKey: env.VITE_SUPABASE_ANON_KEY,
+    supabasePublishableKey: env.VITE_SUPABASE_PUBLISHABLE_KEY,
   }
 }
 
@@ -63,7 +63,7 @@ export function getFullEnv(source: EnvSource = import.meta.env): FullEnv {
   const secrets = requireVariables(source, SECRET_VARIABLES)
   return {
     supabaseUrl: client.VITE_SUPABASE_URL,
-    supabaseAnonKey: client.VITE_SUPABASE_ANON_KEY,
+    supabasePublishableKey: client.VITE_SUPABASE_PUBLISHABLE_KEY,
     supabaseDbUrl: secrets.SUPABASE_DB_URL,
     supabaseProjectRef: secrets.SUPABASE_PROJECT_REF,
   }
