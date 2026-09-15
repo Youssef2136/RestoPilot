@@ -118,7 +118,7 @@ Single project at repository root: `src/`, `tests/`, `e2e/`, `supabase/`, `scrip
 - [x] T015 [P] Update `docs/development.md` with a short "Database security tests" section: what `npm run test:db` now covers (schema integrity, the tenant-isolation matrix, the audit foundation), the note that suites run in rolled-back transactions against the shared cloud development database (identity simulation per research.md §1), and the precondition (migrated + seeded database) with a pointer to `specs/002-database-and-tenancy/quickstart.md`
 - [x] T016 Full quality gate from a clean checkout: `npm run verify` (format:check → lint → typecheck → test:unit → test:db → build) **and** `npm run test:e2e` both exit 0 — SC-001/SC-003/SC-004 evidence
 - [x] T017 [P] Constraint & boundary audit: no `supabase start` / Docker / second migration workflow introduced anywhere (FR-017); no secrets in committed files; no `src/` frontend files were modified by this feature (data-layer-only boundary, plan.md); every spec FR-001–FR-017 maps to at least one completed task (traceability check)
-- [ ] T018 Final commit and push of all Phase 1 artifacts (migrations, seed, test helpers + suites, regenerated types, docs, spec/plan artifacts) to GitHub `main` — mirrors feature 001 T042
+- [x] T018 Final commit and push of all Phase 1 artifacts (migrations, seed, test helpers + suites, regenerated types, docs, spec/plan artifacts) to GitHub `main` — mirrors feature 001 T042
 
 ---
 
