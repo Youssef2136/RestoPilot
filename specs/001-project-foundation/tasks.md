@@ -83,7 +83,7 @@ Single project at repository root: `src/`, `tests/`, `e2e/`, `supabase/`, `scrip
 ### Implementation for User Story 2
 
 - [x] T019 [US2] Create `scripts/db/reset.mjs`: asks for explicit confirmation, then (1) drops the `public` and `supabase_migrations` schemas, (2) recreates `public` with Supabase's default grants (usage for `postgres`, `anon`, `authenticated`, `service_role`; all for `postgres`), (3) runs `supabase db push`, (4) runs the seed; reads only `SUPABASE_DB_URL` so it can only target the developer-configured project; wire as `npm run db:reset` and document it as development-project-only (destructive) — FR-007, research.md §4
-- [ ] T020 [US2] Add `npm run types:gen` running `supabase gen types typescript --linked --schema public` with output written to `src/types/database.types.ts`; commit the generated file — FR-009, research.md §5
+- [x] T020 [US2] Add `npm run types:gen` running `supabase gen types typescript --linked --schema public` with output written to `src/types/database.types.ts`; commit the generated file — FR-009, research.md §5
 - [x] T021 [US2] Document the single canonical data-layer workflow in `docs/development.md`: to change schema, run `supabase migration new <name>` → edit the migration → `npm run db:migrate` → `npm run types:gen` → commit migration + regenerated types; state explicitly that no ad-hoc alternative (dashboard edits, manual SQL) may be used — FR-010
 - [ ] T022 [US2] Determinism verification: run `npm run db:reset` twice and confirm each rebuild reaches the equivalent known-good state from repository artifacts only, and `npm run types:gen` produces an identical `src/types/database.types.ts` after each rebuild — SC-003
 
