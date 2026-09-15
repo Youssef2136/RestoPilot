@@ -36,7 +36,7 @@ Single project at repository root: `src/`, `tests/`, `e2e/`, `supabase/`, `scrip
 - [x] T005 [P] Install runtime dependencies in package.json: `react-router`, `@tanstack/react-query`, `@supabase/supabase-js` per research.md §7
 - [x] T006 [P] Install dev dependencies in package.json: `eslint`, `@eslint/js`, `typescript-eslint`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, `prettier`, `vitest`, `@playwright/test`, `pg` per research.md §11–12
 - [x] T007 Create the directory skeleton per plan.md Project Structure with `.gitkeep` in reserved dirs: `src/app/`, `src/components/`, `src/features/`, `src/hooks/`, `src/lib/`, `src/routes/`, `src/types/`, `supabase/migrations/`, `scripts/db/`, `tests/unit/`, `tests/database/`, `tests/integration/`, `e2e/`, `docs/`
-- [ ] T008 Create the **private** GitHub repository and push `main` (after committing T001–T007) — FR-001; GitHub hosting per spec Clarifications 2026-09-15
+- [x] T008 Create the **private** GitHub repository and push `main` (after committing T001–T007) — FR-001; GitHub hosting per spec Clarifications 2026-09-15
 
 ---
 
@@ -153,7 +153,7 @@ Single project at repository root: `src/`, `tests/`, `e2e/`, `supabase/`, `scrip
 - [x] T039 [P] Failure-mode checks per spec edge cases: missing `.env` values produce the named-variable error; an unreachable cloud project produces a clear connectivity message — verify behavior and close any documentation gaps in `docs/development.md` — FR-016
 - [x] T040 [P] Secrets audit: `.env*` untracked, `.env.example` contains no real values, no credential anywhere in the committed tree or history — SC-006/FR-006
 - [ ] T041 Full acceptance-gate validation per `specs/001-project-foundation/quickstart.md` on a genuinely clean environment (manual check per spec Clarifications): record pass/fail per step and total time; targets are 100% of steps succeeding as written (SC-002) within 30 minutes (SC-001)
-- [ ] T042 Final commit and push of all Phase 0 artifacts to GitHub `main` — FR-001
+- [x] T042 Final commit and push of all Phase 0 artifacts to GitHub `main` — FR-001
 
 ---
 
