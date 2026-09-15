@@ -19,6 +19,12 @@
   color: inherit;
 }
 
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
 .nav {
   display: flex;
   gap: 1.25rem;
@@ -31,6 +37,24 @@
 
 .nav a:hover {
   color: #1f2328;
+}
+
+.signOut {
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #59626e;
+  cursor: pointer;
+}
+
+.signOut:hover {
+  color: #1f2328;
+}
+
+.signOut:disabled {
+  cursor: default;
+  opacity: 0.6;
 }
 
 .main {

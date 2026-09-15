@@ -269,7 +269,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_auth_context: { Args: never; Returns: Json }
     }
     Enums: {
       staff_role: "owner" | "branch_manager" | "cashier" | "kitchen"
