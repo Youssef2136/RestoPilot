@@ -5,16 +5,25 @@ import {
   branchIds,
   diningTableIds,
   membershipIds,
+  profileIds,
   restaurantIds,
 } from './helpers/fixtures'
 
 /**
  * Tenant-isolation matrix (spec 002 US2, FR-008..FR-011; master plan §12
- * required security tests).
+ * required security tests; updated to the Phase 2 visibility matrix — spec 003
+ * FR-007, data-model.md "Consequences the test matrix asserts").
  *
  * These tests ARE direct database access: they run as the same Postgres roles
  * with the same JWT claims the data API uses for real requests, so anything
  * they prove holds for every access path (research.md §1).
+ *
+ * Phase 2 narrowing (by design — research.md §14): staff_memberships is no
+ * longer visible to arbitrary staff of the restaurant (own rows + managed
+ * restaurants only), and profiles gains its first client access (own profile
+ * + managed members' profiles). The four Phase 1 isolation categories
+ * (cross-restaurant, cross-branch, scope bypass, direct access) re-run
+ * unchanged against the real seeded identity ids.
  *
  * Preconditions: migrated + seeded cloud dev DB. All statements run inside
  * rolled-back transactions.
@@ -38,8 +47,8 @@ const TENANT_TABLES = [
   'dining_tables',
 ] as const
 
-/** Tables staff may read (grant + policy); profiles has no client grants. */
-const READABLE_TABLES = TENANT_TABLES.filter((t) => t !== 'profiles')
+/** Tables staff may read (grant + policy) — profiles joined them in Phase 2. */
+const READABLE_TABLES = TENANT_TABLES
 
 const UNKNOWN_AUTH_USER = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
 
@@ -59,12 +68,11 @@ describe('unauthenticated access is denied everywhere (FR-008, US2 scenario 4)',
 })
 
 describe('unknown authenticated identity sees nothing (deny-by-default)', () => {
-  it('all readable tables return zero rows; profiles stays grant-denied', async () => {
+  it('all readable tables return zero rows (empty own-profile arm)', async () => {
     await asUser(client, UNKNOWN_AUTH_USER, async () => {
       for (const table of READABLE_TABLES) {
         expect(await visibleIds(table)).toEqual([])
       }
-      await expectStatementToFail(client, '42501', 'select * from public.profiles')
     })
   }, 20000)
 })
@@ -74,12 +82,21 @@ describe('restaurant scope (FR-011a cross-restaurant + positive owner path)', ()
     await asUser(client, authUserIds.alice, async () => {
       expect(await visibleIds('restaurants')).toEqual([restaurantIds.blueOlive])
       expect(await visibleIds('branches')).toEqual([branchIds.downtown, branchIds.marina])
+      // Phase 2: owner — the full staff list of her restaurant (memberships
+      // of the managed restaurant + the linked profiles).
       expect(await visibleIds('staff_memberships')).toEqual([
         membershipIds.aliceOwnerBlueOlive,
         membershipIds.bobManagerDowntown,
         membershipIds.carlaCashierDowntown,
         membershipIds.danKitchenMarina,
         membershipIds.eveCashierDowntown,
+      ])
+      expect(await visibleIds('profiles')).toEqual([
+        profileIds.alice,
+        profileIds.bob,
+        profileIds.carla,
+        profileIds.dan,
+        profileIds.eve,
       ])
       expect(await visibleIds('dining_tables')).toEqual([
         diningTableIds.downtownT1,
@@ -100,8 +117,22 @@ describe('branch scope (FR-011b cross-branch + positive branch-staff path)', () 
     await asUser(client, authUserIds.bob, async () => {
       expect(await visibleIds('restaurants')).toEqual([restaurantIds.blueOlive])
       expect(await visibleIds('branches')).toEqual([branchIds.downtown])
-      // Memberships are restaurant-scoped: visible to all staff of the restaurant.
-      expect(await visibleIds('staff_memberships')).toHaveLength(5)
+      // Phase 2: branch manager — the staff list of his restaurant (own rows
+      // + the managed restaurant's rows), never another restaurant's.
+      expect(await visibleIds('staff_memberships')).toEqual([
+        membershipIds.aliceOwnerBlueOlive,
+        membershipIds.bobManagerDowntown,
+        membershipIds.carlaCashierDowntown,
+        membershipIds.danKitchenMarina,
+        membershipIds.eveCashierDowntown,
+      ])
+      expect(await visibleIds('profiles')).toEqual([
+        profileIds.alice,
+        profileIds.bob,
+        profileIds.carla,
+        profileIds.dan,
+        profileIds.eve,
+      ])
       expect(await visibleIds('dining_tables')).toEqual([
         diningTableIds.downtownT1,
         diningTableIds.downtownT2,
@@ -119,6 +150,11 @@ describe('branch scope (FR-011b cross-branch + positive branch-staff path)', () 
     await asUser(client, authUserIds.carla, async () => {
       expect(await visibleIds('branches')).toEqual([branchIds.downtown])
       expect(await visibleIds('dining_tables')).toHaveLength(3)
+      // Phase 2 narrowing: a cashier sees only her OWN membership row and
+      // her OWN profile — the staff list (other members' rows and profiles)
+      // is above her role (FR-007).
+      expect(await visibleIds('staff_memberships')).toEqual([membershipIds.carlaCashierDowntown])
+      expect(await visibleIds('profiles')).toEqual([profileIds.carla])
     })
   })
 
@@ -126,6 +162,9 @@ describe('branch scope (FR-011b cross-branch + positive branch-staff path)', () 
     await asUser(client, authUserIds.dan, async () => {
       expect(await visibleIds('branches')).toEqual([branchIds.marina])
       expect(await visibleIds('dining_tables')).toEqual([diningTableIds.marinaT1])
+      // Phase 2 narrowing: own membership row and own profile only (FR-007).
+      expect(await visibleIds('staff_memberships')).toEqual([membershipIds.danKitchenMarina])
+      expect(await visibleIds('profiles')).toEqual([profileIds.dan])
     })
   })
 })
@@ -140,7 +179,15 @@ describe('multi-restaurant member (Clarifications 2026-09-15, US2 scenario 8)', 
       // Downtown through her Blue Olive membership, Airport through ownership —
       // never Marina (her Blue Olive membership is branch-scoped to Downtown).
       expect(await visibleIds('branches')).toEqual([branchIds.downtown, branchIds.airport])
-      expect(await visibleIds('staff_memberships')).toHaveLength(6)
+      // Phase 2: own rows (both memberships) + Cedar Grill's staff list (the
+      // restaurant she manages) — never Blue Olive's other members (her
+      // Blue Olive role is cashier, not manager — the staff list is denied
+      // for that restaurant, data-model.md "Consequences").
+      expect(await visibleIds('staff_memberships')).toEqual([
+        membershipIds.eveOwnerCedarGrill,
+        membershipIds.eveCashierDowntown,
+      ])
+      expect(await visibleIds('profiles')).toEqual([profileIds.eve])
       expect(await visibleIds('dining_tables')).toEqual([
         diningTableIds.downtownT1,
         diningTableIds.downtownT2,
@@ -158,10 +205,13 @@ describe('multi-restaurant member (Clarifications 2026-09-15, US2 scenario 8)', 
 describe('modeled-only super-admin grants nothing (FR-004, US2 scenario 9)', () => {
   it('Platform Admin (is_super_admin, no memberships) sees zero rows everywhere', async () => {
     await asUser(client, authUserIds.platformAdmin, async () => {
-      for (const table of READABLE_TABLES) {
+      // No policy or grant reads is_super_admin: the capability grants no
+      // restaurant tenant data (spec 003 FR-012). Only the own-profile arm
+      // of the profiles policy reaches the holder's own row.
+      for (const table of TENANT_TABLES.filter((t) => t !== 'profiles')) {
         expect(await visibleIds(table)).toEqual([])
       }
-      await expectStatementToFail(client, '42501', 'select * from public.profiles')
+      expect(await visibleIds('profiles')).toEqual([profileIds.platformAdmin])
     })
   })
 })
