@@ -1,10 +1,10 @@
 /**
- * Deterministic seed fixture constants (spec 002 FR-015; data-model.md seed
- * table).
+ * Deterministic seed fixture constants (spec 002 FR-015, spec 003 FR-021;
+ * data-model.md seed table).
  *
  * These values MUST stay identical to `supabase/seed.sql`: the suites assert
- * the seeded database through these ids, so any drift between the two files
- * fails the tests.
+ * the seeded database through these ids (and, for Phase 2, the sign-in
+ * credentials), so any drift between the two files fails the tests.
  *
  * Fixture shape: Blue Olive (`blue-olive`) owns branches Downtown and Marina;
  * Cedar Grill (`cedar-grill`) owns branch Airport. Eve holds memberships in
@@ -35,7 +35,11 @@ export const profileIds = {
   platformAdmin: '00000000-0000-4000-8000-000000001006',
 } as const
 
-/** Synthetic auth identities (no real auth users exist until Phase 2). */
+/**
+ * Auth identity ids — the deterministic UUIDs `supabase/seed.sql` provisions
+ * in `auth.users` (spec 003 FR-021); each profile links to one via
+ * `profiles.auth_user_id`.
+ */
 export const authUserIds = {
   alice: '00000000-0000-4000-8000-000000002001',
   bob: '00000000-0000-4000-8000-000000002002',
@@ -43,6 +47,50 @@ export const authUserIds = {
   dan: '00000000-0000-4000-8000-000000002004',
   eve: '00000000-0000-4000-8000-000000002005',
   platformAdmin: '00000000-0000-4000-8000-000000002006',
+} as const
+
+/**
+ * Seeded sign-in credentials for the six staff identities (spec 003 FR-021,
+ * SC-007; data-model.md seed table) — the single credential source shared by
+ * the seed (`supabase/seed.sql` mirrors these values verbatim) and every
+ * Phase 2 test suite.
+ *
+ * Keyed like `authUserIds`: `auth_user_id` is the id of the real auth user
+ * the seed provisions (contracts/supabase-auth-surface.md), so a signed-in
+ * session's `sub` equals it. Development-only passwords; a manually changed
+ * password is restored by `npm run db:reset -- --purge-auth`.
+ */
+export const seedCredentials = {
+  alice: {
+    auth_user_id: authUserIds.alice,
+    email: 'alice@restopilot.dev',
+    password: 'dev-alice-2026',
+  },
+  bob: {
+    auth_user_id: authUserIds.bob,
+    email: 'bob@restopilot.dev',
+    password: 'dev-bob-2026',
+  },
+  carla: {
+    auth_user_id: authUserIds.carla,
+    email: 'carla@restopilot.dev',
+    password: 'dev-carla-2026',
+  },
+  dan: {
+    auth_user_id: authUserIds.dan,
+    email: 'dan@restopilot.dev',
+    password: 'dev-dan-2026',
+  },
+  eve: {
+    auth_user_id: authUserIds.eve,
+    email: 'eve@restopilot.dev',
+    password: 'dev-eve-2026',
+  },
+  platformAdmin: {
+    auth_user_id: authUserIds.platformAdmin,
+    email: 'platform-admin@restopilot.dev',
+    password: 'dev-platform-admin-2026',
+  },
 } as const
 
 export const diningTableIds = {

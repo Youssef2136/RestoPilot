@@ -39,11 +39,19 @@ try {
   const { rows } = await client.query('select key, value from public.app_meta order by key')
   const tenancy = await client.query(
     `select
-       (select count(*)::int from public.restaurants) as restaurants,
-       (select count(*)::int from public.branches) as branches,
-       (select count(*)::int from public.profiles) as profiles,
-       (select count(*)::int from public.staff_memberships) as staff_memberships,
-       (select count(*)::int from public.dining_tables) as dining_tables`,
+         (select count(*)::int from public.restaurants) as restaurants,
+         (select count(*)::int from public.branches) as branches,
+         (select count(*)::int from public.profiles) as profiles,
+         (select count(*)::int from public.staff_memberships) as staff_memberships,
+         (select count(*)::int from public.dining_tables) as dining_tables`,
+  )
+  // Seeded auth identities (spec 003 FR-021) — count + emails of the
+  // @restopilot.dev users provisioned in auth.users by the seed.
+  const identities = await client.query(
+    `select email
+         from auth.users
+        where email like '%@restopilot.dev'
+        order by email`,
   )
   console.log('[db:seed] supabase/seed.sql applied successfully.')
   for (const row of rows) {
@@ -55,6 +63,11 @@ try {
       `${counts.branches} branches, ${counts.profiles} profiles, ` +
       `${counts.staff_memberships} staff memberships, ` +
       `${counts.dining_tables} dining tables`,
+  )
+  const emails = identities.rows.map((row) => row.email)
+  console.log(
+    `[db:seed]   auth identities: ${emails.length} seeded sign-in users ` +
+      `(${emails.join(', ')})`,
   )
 } catch (error) {
   console.error(`[db:seed] seed failed: ${error.message}`)

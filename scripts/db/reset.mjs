@@ -3,11 +3,18 @@
  * Rebuilds the cloud development database from zero (spec FR-007; spec 002
  * FR-014 — the complete data layer incl. the private schema).
  *
- * Usage: npm run db:reset [-- --yes]
+ * Usage: npm run db:reset [-- --yes] [-- --purge-auth]
  *
  * Sequence: confirm → drop public + private + migration history → recreate
  * public with Supabase default grants → `supabase db push` (reapplies all
  * migrations) → `npm run db:seed`.
+ *
+ * `--purge-auth`: also delete the six seeded `@restopilot.dev` users from
+ * auth.users AFTER the schema drop and BEFORE migrate+seed — the scripted
+ * credential-restore runbook (spec 003 FR-021; research.md §4). Auth data
+ * survives ordinary resets (only public/private are dropped), so a manually
+ * changed fixture password is otherwise never restored; with the flag, the
+ * seed re-provisions the identities with the documented dev passwords.
  *
  * DESTRUCTIVE and intended for the development project only. Reads only
  * SUPABASE_DB_URL, so it can only target the project you configured.
@@ -35,6 +42,8 @@ if (!dbUrl) {
       'Copy .env.example to .env and fill it in — see docs/development.md (Setup).',
   )
 }
+
+const purgeAuth = process.argv.includes('--purge-auth')
 
 console.warn(
   '[db:reset] WARNING: this DROPS ALL DATA in the database behind SUPABASE_DB_URL ' +
@@ -67,6 +76,19 @@ try {
   await client.connect()
   await client.query(RESET_SQL)
   console.log('[db:reset] schemas dropped; public recreated with default grants.')
+
+  if (purgeAuth) {
+    // Credential-restore runbook: the schema drop above released the
+    // profiles→auth.users foreign keys, so the seeded identities can now be
+    // deleted; the seed re-provisions them with the documented dev passwords.
+    const { rowCount } = await client.query(
+      "delete from auth.users where email like '%@restopilot.dev'",
+    )
+    console.log(
+      `[db:reset] --purge-auth: deleted ${rowCount} seeded auth users ` +
+        '(fixture credentials will be restored by the seed).',
+    )
+  }
 } catch (error) {
   fail(`reset failed: ${error.message}`)
 } finally {
