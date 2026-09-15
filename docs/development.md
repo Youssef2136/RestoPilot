@@ -69,6 +69,29 @@ clean machine using only this documentation (spec SC-001/SC-002).
 | `npm run db:reset`                        | ⚠️ destructive: rebuild the cloud development database from zero (migrations + seed) — development project only |
 | `npm run types:gen`                       | regenerate `src/types/database.types.ts` from the cloud schema                                                  |
 
+## Database security tests
+
+`npm run test:db` runs four suites against the cloud development database:
+
+- `app_meta.test.ts` — Phase 0 baseline still intact.
+- `tenancy.schema.test.ts` — the tenancy tables match the declared shapes;
+  invalid data (cross-tenant references, duplicate identifiers, role/branch
+  mismatches) is rejected by constraints.
+- `tenancy.rls.test.ts` — the tenant-isolation matrix: cross-restaurant,
+  cross-branch, bypass, and direct-access denial for every seeded actor, plus
+  the positive within-scope paths (spec 002 FR-011).
+- `audit.test.ts` — the audit writer's contract and the append-only posture.
+
+The security suites simulate acting identities by setting the Postgres role
+and JWT claims exactly as the data API does for real requests, inside
+transactions that are **always rolled back** — the shared development database
+keeps no test residue. Precondition: a migrated and seeded database
+(`npm run db:migrate && npm run db:seed`). Details and expected outcomes:
+`specs/002-database-and-tenancy/quickstart.md`.
+
+A failing isolation test is a security boundary failure, not a flaky test —
+fix it before anything else.
+
 ## Troubleshooting
 
 ### Missing environment variables
