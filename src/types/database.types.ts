@@ -32,6 +32,64 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor_profile_id: string
+          branch_id: string | null
+          created_at: string
+          id: number
+          reason: string | null
+          resource_id: string
+          resource_type: string
+          restaurant_id: string
+        }
+        Insert: {
+          action: string
+          actor_profile_id: string
+          branch_id?: string | null
+          created_at?: string
+          id?: never
+          reason?: string | null
+          resource_id: string
+          resource_type: string
+          restaurant_id: string
+        }
+        Update: {
+          action?: string
+          actor_profile_id?: string
+          branch_id?: string | null
+          created_at?: string
+          id?: never
+          reason?: string | null
+          resource_id?: string
+          resource_type?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_actor_profile_id_fkey"
+            columns: ["actor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           created_at: string
