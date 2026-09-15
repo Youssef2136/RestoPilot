@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Applies supabase/seed.sql to the cloud development database (spec FR-008).
+ * Applies supabase/seed.sql to the cloud development database (feature 001
+ * FR-008; feature 002 FR-015) and prints a summary of the seeded fixture.
  *
  * Usage: npm run db:seed
  * Requires SUPABASE_DB_URL in the environment (see .env.example).
@@ -36,10 +37,25 @@ try {
   await client.connect()
   await client.query(sql)
   const { rows } = await client.query('select key, value from public.app_meta order by key')
+  const tenancy = await client.query(
+    `select
+       (select count(*)::int from public.restaurants) as restaurants,
+       (select count(*)::int from public.branches) as branches,
+       (select count(*)::int from public.profiles) as profiles,
+       (select count(*)::int from public.staff_memberships) as staff_memberships,
+       (select count(*)::int from public.dining_tables) as dining_tables`,
+  )
   console.log('[db:seed] supabase/seed.sql applied successfully.')
   for (const row of rows) {
     console.log(`[db:seed]   app_meta: ${row.key} = ${row.value}`)
   }
+  const counts = tenancy.rows[0]
+  console.log(
+    `[db:seed]   tenancy fixture: ${counts.restaurants} restaurants, ` +
+      `${counts.branches} branches, ${counts.profiles} profiles, ` +
+      `${counts.staff_memberships} staff memberships, ` +
+      `${counts.dining_tables} dining tables`,
+  )
 } catch (error) {
   console.error(`[db:seed] seed failed: ${error.message}`)
   process.exitCode = 1
