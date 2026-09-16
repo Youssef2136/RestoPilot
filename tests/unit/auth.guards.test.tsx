@@ -5,13 +5,14 @@ import { MemoryRouter } from 'react-router'
 import type { ReactElement } from 'react'
 
 import type { AuthSessionState } from '../../src/features/auth/AuthProvider'
-import { RequireStaff, RequireSuperAdmin } from '../../src/features/auth/guards'
+import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../../src/features/auth/guards'
 import {
   AUTH_CONTEXT_QUERY_KEY,
   useAuthContext,
   type AuthContext,
   type AuthContextMembership,
 } from '../../src/features/auth/useAuthContext'
+import { DashboardPage } from '../../src/routes/DashboardPage'
 import { StaffListPage } from '../../src/routes/StaffListPage'
 import {
   authUserIds,
@@ -28,6 +29,12 @@ import {
 /**
  * The guard/route-permission decision matrix (spec FR-013/FR-014/FR-015;
  * plan.md Testing; research.md §10) — every route × every seeded persona.
+ *
+ * Phase 3 (spec 004) extends the matrix with the revised `/dashboard` entry:
+ * `RequireProfile` (a linked profile — the FR-001 creation bootstrap for the
+ * membership-less profile), the `canManageRestaurant` presentation predicate,
+ * and the dashboard creation panel. The existing cases wrap guards explicitly
+ * and keep passing unchanged (research.md §13).
  *
  * Rendering strategy: static server-side rendering in the node environment
  * (no DOM test environment is installed — research.md adds no test
@@ -95,6 +102,16 @@ function StaffListPredicateProbe() {
     <ul>
       <li>blue-olive:{String(canReadStaffList(restaurantIds.blueOlive))}</li>
       <li>cedar-grill:{String(canReadStaffList(restaurantIds.cedarGrill))}</li>
+    </ul>
+  )
+}
+
+function CanManageProbe() {
+  const { canManageRestaurant } = useAuthContext()
+  return (
+    <ul>
+      <li>blue-olive:{String(canManageRestaurant(restaurantIds.blueOlive))}</li>
+      <li>cedar-grill:{String(canManageRestaurant(restaurantIds.cedarGrill))}</li>
     </ul>
   )
 }
@@ -530,4 +547,153 @@ describe('canReadStaffList predicate truth table (FR-007)', () => {
       expect(html).toContain(`cedar-grill:${testCase.cedarGrill}`)
     })
   }
+})
+
+describe('RequireProfile (spec 004 FR-001/FR-017): the linked profile is the entry requirement', () => {
+  it('admits a linked profile with no memberships (fiona) — the creation bootstrap path', () => {
+    signInAs('fiona')
+    const html = renderGuarded(
+      <RequireProfile>
+        <Guarded />
+      </RequireProfile>,
+      '/dashboard',
+    )
+    expect(html).toContain(PROTECTED_MARKER)
+    expect(html).not.toContain('Not authorized')
+    expect(harness.redirects).toEqual([])
+  })
+
+  it('renders nothing while the session restore is in flight (no flash, no premature redirect)', () => {
+    const html = renderGuarded(
+      <RequireProfile>
+        <Guarded />
+      </RequireProfile>,
+      '/dashboard',
+    )
+    expect(html).toBe('')
+    expect(harness.redirects).toEqual([])
+  })
+
+  it('redirects an unauthenticated visitor to /signin with return-to (wraps RequireAuth)', () => {
+    harness.session = { session: null, status: 'signed-out' }
+    renderGuarded(
+      <RequireProfile>
+        <Guarded />
+      </RequireProfile>,
+      '/dashboard',
+    )
+    expect(harness.redirects).toEqual([
+      { to: '/signin', replace: true, state: { from: '/dashboard' } },
+    ])
+  })
+
+  it('denies an unlinked identity — profile === null is the denial (FR-005 continuity)', () => {
+    signInAsUnlinked()
+    const html = renderGuarded(
+      <RequireProfile>
+        <Guarded />
+      </RequireProfile>,
+      '/dashboard',
+    )
+    expect(html).toContain('Not authorized')
+    expect(harness.redirects).toEqual([])
+  })
+})
+
+describe('canManageRestaurant predicate truth table (FR-006, FR-017)', () => {
+  const cases: Array<{
+    persona: string
+    signIn: () => void
+    blueOlive: boolean
+    cedarGrill: boolean
+  }> = [
+    {
+      persona: 'owner (alice)',
+      signIn: () => signInAs('alice'),
+      blueOlive: true,
+      cedarGrill: false,
+    },
+    {
+      persona: 'branch manager (bob)',
+      signIn: () => signInAs('bob'),
+      blueOlive: false,
+      cedarGrill: false,
+    },
+    {
+      persona: 'cashier (carla)',
+      signIn: () => signInAs('carla'),
+      blueOlive: false,
+      cedarGrill: false,
+    },
+    {
+      persona: 'kitchen (dan)',
+      signIn: () => signInAs('dan'),
+      blueOlive: false,
+      cedarGrill: false,
+    },
+    {
+      persona: 'multi-membership (eve): owner of Cedar Grill, cashier at Blue Olive',
+      signIn: () => signInAs('eve'),
+      blueOlive: false,
+      cedarGrill: true,
+    },
+    {
+      persona: 'membership-less linked profile (fiona)',
+      signIn: () => signInAs('fiona'),
+      blueOlive: false,
+      cedarGrill: false,
+    },
+    {
+      persona: 'super admin (platform admin)',
+      signIn: () => signInAs('platformAdmin'),
+      blueOlive: false,
+      cedarGrill: false,
+    },
+    {
+      persona: 'unlinked identity',
+      signIn: () => signInAsUnlinked(),
+      blueOlive: false,
+      cedarGrill: false,
+    },
+  ]
+
+  for (const testCase of cases) {
+    it(`${testCase.persona}: blue-olive=${testCase.blueOlive}, cedar-grill=${testCase.cedarGrill}`, () => {
+      testCase.signIn()
+      const html = renderGuarded(<CanManageProbe />, '/dashboard/restaurant')
+      expect(html).toContain(`blue-olive:${testCase.blueOlive}`)
+      expect(html).toContain(`cedar-grill:${testCase.cedarGrill}`)
+    })
+  }
+})
+
+describe('/dashboard bootstrap panel for a linked profile without memberships (FR-001, research.md §13)', () => {
+  it('renders the create-restaurant panel for fiona — no staff surfaces, no other tenant data', () => {
+    signInAs('fiona')
+    const html = renderGuarded(
+      <RequireProfile>
+        <DashboardPage />
+      </RequireProfile>,
+      '/dashboard',
+    )
+    expect(html).toContain('Create your restaurant')
+    expect(html).toContain('Your account is not yet part of a restaurant.')
+    expect(html).not.toContain('Signed in as')
+    expect(html).not.toContain('Blue Olive')
+    expect(html).not.toContain('Cedar Grill')
+    expect(html).not.toContain('Not authorized')
+  })
+
+  it('renders the creation panel for the membership-less platform admin too — creation is the person-level entitlement (FR-001/FR-021)', () => {
+    signInAs('platformAdmin')
+    const html = renderGuarded(
+      <RequireProfile>
+        <DashboardPage />
+      </RequireProfile>,
+      '/dashboard',
+    )
+    expect(html).toContain('Create your restaurant')
+    expect(html).toContain('Your account is not yet part of a restaurant.')
+    expect(html).not.toContain('Not authorized')
+  })
 })

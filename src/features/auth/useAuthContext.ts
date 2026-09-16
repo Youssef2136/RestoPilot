@@ -64,6 +64,12 @@ export type UseAuthContextResult = UseQueryResult<AuthContext, Error> & {
   isSuperAdmin: boolean
   /** Staff-list visibility (FR-007): owner or branch_manager for the restaurant. */
   canReadStaffList: (restaurantId: string) => boolean
+  /**
+   * Management-surface visibility (spec 004 FR-017; contracts/management-client.md
+   * §3): an `owner` membership of that restaurant. Presentation gate for the
+   * management controls and pages — it grants nothing (Constitution IV).
+   */
+  canManageRestaurant: (restaurantId: string) => boolean
 }
 
 export function useAuthContext(): UseAuthContextResult {
@@ -103,5 +109,19 @@ export function useAuthContext(): UseAuthContextResult {
     [memberships],
   )
 
-  return { ...query, profile, memberships, isStaff, isSuperAdmin, canReadStaffList }
+  const canManageRestaurant = useCallback(
+    (restaurantId: string) =>
+      memberships.some((m) => m.restaurant_id === restaurantId && m.role === 'owner'),
+    [memberships],
+  )
+
+  return {
+    ...query,
+    profile,
+    memberships,
+    isStaff,
+    isSuperAdmin,
+    canReadStaffList,
+    canManageRestaurant,
+  }
 }

@@ -37,6 +37,11 @@ describe('tenancy tables: declared columns, types, nullability (data-model.md)',
       ['slug', 'text', 'NO'],
       ['created_at', 'timestamp with time zone', 'NO'],
       ['updated_at', 'timestamp with time zone', 'NO'],
+      // Phase 3 columns (spec 004 FR-002/FR-003; data-model.md).
+      ['brand_description', 'text', 'YES'],
+      ['contact_email', 'text', 'YES'],
+      ['contact_phone', 'text', 'YES'],
+      ['timezone', 'text', 'NO'],
     ],
     branches: [
       ['id', 'uuid', 'NO'],
@@ -68,6 +73,8 @@ describe('tenancy tables: declared columns, types, nullability (data-model.md)',
       ['label', 'text', 'NO'],
       ['created_at', 'timestamp with time zone', 'NO'],
       ['updated_at', 'timestamp with time zone', 'NO'],
+      // Phase 3 activation state (spec 004 FR-011/FR-012; data-model.md).
+      ['is_active', 'boolean', 'NO'],
     ],
   }
 

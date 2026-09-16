@@ -43,7 +43,8 @@ try {
          (select count(*)::int from public.branches) as branches,
          (select count(*)::int from public.profiles) as profiles,
          (select count(*)::int from public.staff_memberships) as staff_memberships,
-         (select count(*)::int from public.dining_tables) as dining_tables`,
+         (select count(*)::int from public.dining_tables) as dining_tables,
+         (select count(*)::int from public.branch_working_hours) as branch_working_hours`,
   )
   // Seeded auth identities (spec 003 FR-021) — count + emails of the
   // @restopilot.dev users provisioned in auth.users by the seed.
@@ -62,7 +63,8 @@ try {
     `[db:seed]   tenancy fixture: ${counts.restaurants} restaurants, ` +
       `${counts.branches} branches, ${counts.profiles} profiles, ` +
       `${counts.staff_memberships} staff memberships, ` +
-      `${counts.dining_tables} dining tables`,
+      `${counts.dining_tables} dining tables, ` +
+      `${counts.branch_working_hours} working-hours intervals`,
   )
   const emails = identities.rows.map((row) => row.email)
   console.log(

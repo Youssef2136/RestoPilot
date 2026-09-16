@@ -8,18 +8,29 @@ import {
   type AuthContextMembership,
   type StaffRole,
 } from '../features/auth/useAuthContext'
+import {
+  StaffManagementPanel,
+  type StaffManagementMember,
+} from '../features/management/components/StaffManagementPanel'
 
 /**
- * The restaurant staff list (FR-007): the selected restaurant's
+ * The restaurant staff list (FR-007, FR-025): the selected restaurant's
  * staff_memberships plus the linked profiles' basic information, read
  * through the table policies with the typed client — an owner or branch
  * manager of the restaurant reads them; any other identity gets nothing.
  * The `canReadStaffList` gate below is presentation over that boundary
  * (Constitution IV): deep links by members without the role are rejected,
  * never merely hidden (FR-014).
+ *
+ * Owners additionally get the `StaffManagementPanel` — the add/change/remove
+ * controls and the one-time credential display (FR-013/FR-014/FR-015) —
+ * mounted behind `canManageRestaurant` (presentation; the staff RPCs remain
+ * the authorization boundary). Branch managers keep the read surface and see
+ * no management controls (FR-017).
  */
 
 interface StaffListRow {
+  membershipId: string
   profileId: string
   displayName: string | null
   role: StaffRole
@@ -37,12 +48,13 @@ async function fetchStaffList(restaurantId: string | null): Promise<StaffListRow
   }
   const { data, error } = await getSupabaseClient()
     .from('staff_memberships')
-    .select('profile_id, role, branch_id, profiles(display_name)')
+    .select('id, profile_id, role, branch_id, profiles(display_name)')
     .eq('restaurant_id', restaurantId)
   if (error) {
     throw error
   }
   const rows = (data ?? []).map((row) => ({
+    membershipId: row.id,
     profileId: row.profile_id,
     displayName: row.profiles?.display_name ?? null,
     role: row.role,
@@ -69,7 +81,8 @@ async function fetchBranchOptions(restaurantId: string | null) {
 }
 
 export function StaffListPage() {
-  const { memberships, isPending, isError, canReadStaffList } = useAuthContext()
+  const { memberships, isPending, isError, canReadStaffList, canManageRestaurant } =
+    useAuthContext()
 
   // The restaurants whose staff list this member may read: memberships with
   // role owner or branch_manager (canReadStaffList, FR-007), deduplicated
@@ -113,6 +126,26 @@ export function StaffListPage() {
   const selectedRestaurant =
     readableRestaurants.find((membership) => membership.restaurant_id === effectiveRestaurantId) ??
     null
+
+  // The owner-only management gate (presentation; contracts/management-client.md
+  // §2/§3): `canManageRestaurant` is true only for an owner membership — a
+  // branch manager keeps the read surface and sees no controls (FR-017).
+  const isOwner = useMemo(
+    () => (effectiveRestaurantId === null ? false : canManageRestaurant(effectiveRestaurantId)),
+    [effectiveRestaurantId, canManageRestaurant],
+  )
+
+  const managementMembers: StaffManagementMember[] = useMemo(
+    () =>
+      (staffQuery.data ?? []).map((row) => ({
+        membershipId: row.membershipId,
+        profileId: row.profileId,
+        displayName: row.displayName,
+        role: row.role,
+        branchId: row.branchId,
+      })),
+    [staffQuery.data],
+  )
 
   /** Branch label, honest about policy: names only for branches the caller may read. */
   function describeBranch(branchId: string | null): string {
@@ -195,7 +228,7 @@ export function StaffListPage() {
           </thead>
           <tbody>
             {staffQuery.data.map((row) => (
-              <tr key={`${row.profileId}:${row.role}:${row.branchId ?? 'all'}`}>
+              <tr key={row.membershipId}>
                 <td>{row.displayName ?? 'Unknown member'}</td>
                 <td>{row.role}</td>
                 <td>{describeBranch(row.branchId)}</td>
@@ -203,6 +236,14 @@ export function StaffListPage() {
             ))}
           </tbody>
         </table>
+      )}
+
+      {isOwner && (
+        <StaffManagementPanel
+          restaurantId={effectiveRestaurantId}
+          members={managementMembers}
+          branches={branchesQuery.data ?? []}
+        />
       )}
 
       <p>

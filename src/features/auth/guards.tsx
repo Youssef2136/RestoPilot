@@ -4,7 +4,8 @@ import { useAuthSession } from './AuthProvider'
 import { useAuthContext } from './useAuthContext'
 
 /**
- * Route guards (contracts/auth-client.md) — PRESENTATION ONLY. The enforced
+ * Route guards (contracts/auth-client.md, extended by
+ * contracts/management-client.md §2/§3) — PRESENTATION ONLY. The enforced
  * boundary is the data layer (Constitution IV; spec FR-008): guards shape
  * navigation and render the explicit denial view; they never authorize a
  * data operation. Guard decisions consume the effective context from
@@ -65,6 +66,21 @@ export function RequireStaff({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Requires a linked profile (spec 004 FR-001 bootstrap;
+ * contracts/management-client.md §2/§3): a signed-in identity with a profile
+ * — with memberships (the staff area) or without (restaurant creation). The
+ * unlinked-identity denial stays exactly as feature 003 defined it: no
+ * profile ⇒ the denial view (FR-005, FR-014).
+ */
+export function RequireProfile({ children }: { children: ReactNode }) {
+  return (
+    <RequireAuth>
+      <ProfileGate>{children}</ProfileGate>
+    </RequireAuth>
+  )
+}
+
+/**
  * Requires the platform super-admin capability (FR-012). A signed-in
  * identity without the capability gets the denial view (FR-014).
  */
@@ -87,6 +103,18 @@ function StaffGate({ children }: { children: ReactNode }) {
   // view: deny-by-default presentation. The data layer is the boundary
   // regardless of what the guard renders.
   return isStaff ? children : <NotAuthorized />
+}
+
+function ProfileGate({ children }: { children: ReactNode }) {
+  const { profile, isPending } = useAuthContext()
+
+  if (isPending) {
+    // Effective context still resolving — no denial flash.
+    return null
+  }
+  // Same deny-by-default posture as StaffGate: a failed context query and
+  // the genuinely unlinked identity both render the denial view.
+  return profile !== null ? children : <NotAuthorized />
 }
 
 function SuperAdminGate({ children }: { children: ReactNode }) {

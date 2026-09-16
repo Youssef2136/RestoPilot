@@ -11,12 +11,12 @@ live in [conventions.md](./conventions.md).
 
 ## Prerequisites
 
-| Tool                   | Version                            | Install / check                                                                                 |
-| ---------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| Node.js                | 22 LTS+ (pinned by `.nvmrc`)       | <https://nodejs.org> — `node --version`                                                         |
-| npm                    | bundled with Node                  | `npm --version`                                                                                 |
-| Git                    | current stable                     | <https://git-scm.com> — `git --version`                                                         |
-| Supabase CLI           | current stable                     | <https://supabase.com/docs/guides/local-development/cli/getting-started> — `supabase --version` |
+| Tool                   | Version                            | Install / check                                                                                   |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Node.js                | 22 LTS+ (pinned by `.nvmrc`)       | <https://nodejs.org> — `node --version`                                                           |
+| npm                    | bundled with Node                  | `npm --version`                                                                                   |
+| Git                    | current stable                     | <https://git-scm.com> — `git --version`                                                           |
+| Supabase CLI           | current stable                     | <https://supabase.com/docs/guides/local-development/cli/getting-started> — `supabase --version`   |
 | Supabase Cloud project | one configured development project | you need its URL, publishable key, project ref, and database connection string — see Setup step 5 |
 
 Verify versions before starting. Missing or wrong-version prerequisites are
@@ -121,10 +121,11 @@ limits — research.md §12):
   2/hour). The integration suite makes exactly one recovery request per run,
   for a non-existent address, which sends no email. The full email-link path
   (delivery, expiry, single-use) is a manual walkthrough.
-- **Sign-in rate limit**: 30 per 5 minutes per IP. The integration suite
-  performs ~15 sign-ins per run and the e2e suite ~10 — each suite stays
-  under the limit on its own; avoid running both (or repeated runs) in rapid
-  succession within one 5-minute window.
+- **Sign-in rate limit**: 30 per 5 minutes per IP. The integration suites
+  perform ~18 sign-ins per run (the Phase 2 matrix plus the Phase 3
+  provisioning round trip) and the e2e suite ~14 — each suite stays under the
+  limit on its own; avoid running both (or repeated runs) in rapid succession
+  within one 5-minute window.
 - **Recovery endpoint window**: the platform enforces a 60-second window
   between recovery requests — leave at least 60 seconds between consecutive
   `test:integration` runs or the single recovery probe may be rate-limited
@@ -134,6 +135,35 @@ Expected outcomes per walkthrough, including the manual validation scripts
 (per-identity sign-in experience, session persistence, rate-limit-aware
 password recovery, sign-up posture):
 [specs/003-auth-and-rbac/quickstart.md](../specs/003-auth-and-rbac/quickstart.md).
+
+## Management test suites (Phase 3)
+
+Phase 3 (restaurant and branch management) added the management surface to
+every tier. All of them share the same cloud precondition as `test:db`: a
+migrated and seeded development project (`npm run db:migrate && npm run
+db:seed`). What each covers:
+
+| Suite                                                           | Command                    | Proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --------------------------------------------------------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/database/management.rpc.test.ts`                         | `npm run test:db`          | The management RPCs at the data layer: the creation bootstrap, the owner-only authorization matrix (branch manager, cashier, kitchen, other restaurant, anon, unlinked identity, super admin — all `42501` with no state change), the validation rules and their `P0001` messages, the FR-004 identifier-change semantics (including that the released identifier is retained nowhere), branch/working-hours semantics (split days, post-18:00 intervals, the boundary-touching pair, all-or-nothing rejection), table label/activation rules, and the audit records. Runs in rolled-back transactions — no residue. |
+| `tests/database/staff.management.test.ts`                       | `npm run test:db`          | Staff provisioning and linking: a new email creates identity + profile + membership and returns a one-time credential stored only as a bcrypt hash; an existing linked person is linked with no credential and no display-name overwrite; an unclaimed stub gains a profile and a re-issued credential; the role/branch consistency rules; the FR-016 last-owner safeguard (removal and demotion); removal ends access while the person persists; the same owner-only authorization matrix; the staff audit records. Runs in rolled-back transactions — no residue.                                                  |
+| `tests/unit/management.client.test.ts`, `management.qr.test.ts` | `npm run test:unit`        | The client module's error mapping and result shaping for all twelve wrappers, and the QR payload builder (`origin/r/<slug>`, no branch or table segment possible) with SVG/PNG generation smoke tests.                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `tests/integration/management.provisioning.test.ts`             | `npm run test:integration` | The User Story 4 exit condition over the real APIs: the owner provisions a person through `add_staff_member`, the returned one-time credential signs in through the real Auth API, `current_auth_context` resolves exactly the assigned scope, and out-of-scope reads and management calls are denied under the caller's own grants. Tears itself down completely (membership, profile, identity, audit rows) in `afterAll`.                                                                                                                                                                                         |
+| `e2e/management.surfaces.test.ts`                               | `npm run test:e2e`         | The browser presentation matrix: the FR-001 creation panel, the owner's management navigation and page, the FR-004 warning-before-confirm flow (cancelled, never submitted), the tables and QR surfaces, and the non-owner / super-admin denials that must render NotAuthorized — rejected, not hidden. **Read-and-reject only: this suite creates no tenant, branch, table, or staff data** (creation journeys are proven by the database and integration suites plus the quickstart walkthroughs).                                                                                                                 |
+
+**Provisioning runbook step** (adding a team member): the owner adds a person
+from the staff page (email, display name, role, and a branch for the
+branch-scoped roles). The database provisions the sign-in identity and shows a
+**one-time temporary credential** on screen — share it with the person now; it
+is not shown again and is stored only as a hash. The person can rotate it
+through the platform's password-recovery flow. Adding someone who already has
+an account links their existing identity and issues **no** credential (their
+sign-in is untouched); adding a person whose identity exists but was never
+claimed issues a fresh credential. After a `db:reset`, re-adding a person
+restores their membership against the surviving identity — the identity rows
+live in the `auth` schema, which the reset leaves untouched (see the
+re-add/re-issue note in
+[specs/004-restaurant-and-branch-management/quickstart.md](../specs/004-restaurant-and-branch-management/quickstart.md)).
 
 ## Troubleshooting
 

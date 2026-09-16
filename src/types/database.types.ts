@@ -90,6 +90,57 @@ export type Database = {
           },
         ]
       }
+      branch_working_hours: {
+        Row: {
+          branch_id: string
+          close_time: string
+          created_at: string
+          end_minute: number | null
+          id: string
+          open_time: string
+          restaurant_id: string
+          start_minute: number | null
+          weekday: Database["public"]["Enums"]["weekday"]
+        }
+        Insert: {
+          branch_id: string
+          close_time: string
+          created_at?: string
+          end_minute?: number | null
+          id?: string
+          open_time: string
+          restaurant_id: string
+          start_minute?: number | null
+          weekday: Database["public"]["Enums"]["weekday"]
+        }
+        Update: {
+          branch_id?: string
+          close_time?: string
+          created_at?: string
+          end_minute?: number | null
+          id?: string
+          open_time?: string
+          restaurant_id?: string
+          start_minute?: number | null
+          weekday?: Database["public"]["Enums"]["weekday"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_working_hours_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_working_hours_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           created_at: string
@@ -127,6 +178,7 @@ export type Database = {
           branch_id: string
           created_at: string
           id: string
+          is_active: boolean
           label: string
           restaurant_id: string
           updated_at: string
@@ -135,6 +187,7 @@ export type Database = {
           branch_id: string
           created_at?: string
           id?: string
+          is_active?: boolean
           label: string
           restaurant_id: string
           updated_at?: string
@@ -143,6 +196,7 @@ export type Database = {
           branch_id?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           label?: string
           restaurant_id?: string
           updated_at?: string
@@ -193,24 +247,36 @@ export type Database = {
       }
       restaurants: {
         Row: {
+          brand_description: string | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           id: string
           name: string
           slug: string
+          timezone: string
           updated_at: string
         }
         Insert: {
+          brand_description?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
           name: string
           slug: string
+          timezone?: string
           updated_at?: string
         }
         Update: {
+          brand_description?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           id?: string
           name?: string
           slug?: string
+          timezone?: string
           updated_at?: string
         }
         Relationships: []
@@ -269,10 +335,233 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_staff_member: {
+        Args: {
+          p_branch_id?: string
+          p_display_name: string
+          p_email: string
+          p_restaurant_id: string
+          p_role: Database["public"]["Enums"]["staff_role"]
+        }
+        Returns: Json
+      }
+      create_branch: {
+        Args: { p_name: string; p_restaurant_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          restaurant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "branches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_dining_table: {
+        Args: { p_branch_id: string; p_label: string }
+        Returns: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          restaurant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "dining_tables"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_restaurant: {
+        Args: {
+          p_brand_description?: string
+          p_contact_email?: string
+          p_contact_phone?: string
+          p_name: string
+          p_slug: string
+          p_timezone?: string
+        }
+        Returns: {
+          brand_description: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "restaurants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_auth_context: { Args: never; Returns: Json }
+      remove_staff_membership: {
+        Args: { p_membership_id: string }
+        Returns: undefined
+      }
+      rename_branch: {
+        Args: { p_branch_id: string; p_name: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          restaurant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "branches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rename_dining_table: {
+        Args: { p_dining_table_id: string; p_label: string }
+        Returns: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          restaurant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "dining_tables"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      replace_branch_working_hours: {
+        Args: { p_branch_id: string; p_intervals: Json }
+        Returns: {
+          branch_id: string
+          close_time: string
+          created_at: string
+          end_minute: number | null
+          id: string
+          open_time: string
+          restaurant_id: string
+          start_minute: number | null
+          weekday: Database["public"]["Enums"]["weekday"]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "branch_working_hours"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      set_dining_table_active: {
+        Args: { p_active: boolean; p_dining_table_id: string }
+        Returns: {
+          branch_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          restaurant_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "dining_tables"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_restaurant_profile: {
+        Args: {
+          p_brand_description?: string
+          p_contact_email?: string
+          p_contact_phone?: string
+          p_name: string
+          p_restaurant_id: string
+          p_slug: string
+        }
+        Returns: {
+          brand_description: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "restaurants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_restaurant_settings: {
+        Args: { p_restaurant_id: string; p_timezone: string }
+        Returns: {
+          brand_description: string | null
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          timezone: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "restaurants"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_staff_membership: {
+        Args: {
+          p_branch_id?: string
+          p_membership_id: string
+          p_role: Database["public"]["Enums"]["staff_role"]
+        }
+        Returns: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          profile_id: string
+          restaurant_id: string
+          role: Database["public"]["Enums"]["staff_role"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "staff_memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       staff_role: "owner" | "branch_manager" | "cashier" | "kitchen"
+      weekday:
+        | "monday"
+        | "tuesday"
+        | "wednesday"
+        | "thursday"
+        | "friday"
+        | "saturday"
+        | "sunday"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -401,6 +690,15 @@ export const Constants = {
   public: {
     Enums: {
       staff_role: ["owner", "branch_manager", "cashier", "kitchen"],
+      weekday: [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ],
     },
   },
 } as const

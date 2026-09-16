@@ -1,6 +1,6 @@
 /**
- * Deterministic seed fixture constants (spec 002 FR-015, spec 003 FR-021;
- * data-model.md seed table).
+ * Deterministic seed fixture constants (spec 002 FR-015, spec 003 FR-021,
+ * spec 004 FR-023; data-model.md seed table).
  *
  * These values MUST stay identical to `supabase/seed.sql`: the suites assert
  * the seeded database through these ids (and, for Phase 2, the sign-in
@@ -11,6 +11,14 @@
  * BOTH restaurants (owner of Cedar Grill, cashier at Downtown) — the
  * multi-membership case. Platform Admin carries the super-admin flag with no
  * memberships — the modeled-only case.
+ *
+ * Phase 3 additions (spec 004, data-model.md seed table): the restaurant
+ * profile/settings values (`seedRestaurantSettings`), the weekly working-hours
+ * fixture (`seedBranchWorkingHours` — split days, a post-midnight interval,
+ * and the boundary-touching pair), the table-activation expectations
+ * (`seedDiningTableActivation` — Marina `T1` inactive), and a seventh seeded
+ * person, **Fiona** (`fiona@restopilot.dev`) — a linked profile with NO
+ * memberships, the creation-bootstrap fixture (spec 004 FR-001/FR-023).
  */
 
 export type StaffRole = 'owner' | 'branch_manager' | 'cashier' | 'kitchen'
@@ -33,6 +41,7 @@ export const profileIds = {
   dan: '00000000-0000-4000-8000-000000001004',
   eve: '00000000-0000-4000-8000-000000001005',
   platformAdmin: '00000000-0000-4000-8000-000000001006',
+  fiona: '00000000-0000-4000-8000-000000001007',
 } as const
 
 /**
@@ -47,13 +56,14 @@ export const authUserIds = {
   dan: '00000000-0000-4000-8000-000000002004',
   eve: '00000000-0000-4000-8000-000000002005',
   platformAdmin: '00000000-0000-4000-8000-000000002006',
+  fiona: '00000000-0000-4000-8000-000000002007',
 } as const
 
 /**
- * Seeded sign-in credentials for the six staff identities (spec 003 FR-021,
- * SC-007; data-model.md seed table) — the single credential source shared by
- * the seed (`supabase/seed.sql` mirrors these values verbatim) and every
- * Phase 2 test suite.
+ * Seeded sign-in credentials for the seven seeded identities (spec 003 FR-021,
+ * spec 004 FR-023, SC-007; data-model.md seed table) — the single credential
+ * source shared by the seed (`supabase/seed.sql` mirrors these values verbatim)
+ * and every Phase 2/3 test suite.
  *
  * Keyed like `authUserIds`: `auth_user_id` is the id of the real auth user
  * the seed provisions (contracts/supabase-auth-surface.md), so a signed-in
@@ -90,6 +100,11 @@ export const seedCredentials = {
     auth_user_id: authUserIds.platformAdmin,
     email: 'platform-admin@restopilot.dev',
     password: 'dev-platform-admin-2026',
+  },
+  fiona: {
+    auth_user_id: authUserIds.fiona,
+    email: 'fiona@restopilot.dev',
+    password: 'dev-fiona-2026',
   },
 } as const
 
@@ -142,6 +157,14 @@ export const seedProfiles = [
     display_name: 'Platform Admin',
     auth_user_id: authUserIds.platformAdmin,
     is_super_admin: true,
+  },
+  // Phase 3 creation-bootstrap fixture: a linked profile with NO membership
+  // row (spec 004 FR-001/FR-023) — distinct from the modeled-only super admin.
+  {
+    id: profileIds.fiona,
+    display_name: 'Fiona',
+    auth_user_id: authUserIds.fiona,
+    is_super_admin: false,
   },
 ] as const
 
@@ -229,4 +252,273 @@ export const seedDiningTables = [
     branch_id: branchIds.airport,
     label: 'T1',
   },
+] as const
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 3 fixtures (spec 004 FR-023, SC-007; data-model.md seed table). The
+// seed mirrors these values verbatim (T010/T021/T030); the Phase 3 suites
+// assert against them.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The Phase 3 restaurant profile/settings columns (spec 004 FR-002/FR-003;
+ * data-model.md): brand description, contact information, and the
+ * restaurant's authoritative timezone. `name`/`slug` keep the
+ * `seedRestaurants` shape above.
+ */
+export const seedRestaurantSettings = [
+  {
+    id: restaurantIds.blueOlive,
+    brand_description: 'Wood-fired Mediterranean plates in a former harbour warehouse.',
+    contact_email: 'hello@blue-olive.example',
+    contact_phone: '+351 21 555 0100',
+    timezone: 'Europe/Lisbon',
+  },
+  {
+    id: restaurantIds.cedarGrill,
+    brand_description: 'Charcoal grill house serving late into the night.',
+    contact_email: 'hello@cedar-grill.example',
+    contact_phone: '+34 91 555 0200',
+    timezone: 'Europe/Madrid',
+  },
+] as const
+
+/** The seven ISO weekdays in declaration (= display and `order by`) order — mirrors the `public.weekday` enum. */
+export type Weekday =
+  'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday'
+
+export interface SeedBranchWorkingHours {
+  id: string
+  restaurant_id: string
+  branch_id: string
+  weekday: Weekday
+  open_time: string
+  close_time: string
+}
+
+/**
+ * The branch weekly working-hours fixture (spec 004 FR-008/FR-009, FR-023;
+ * data-model.md seed table), ordered by id. Exercises every interesting
+ * shape: a split day (Downtown Mon–Fri lunch + dinner), a post-midnight
+ * interval (18:00–02:00, stored under its start day with
+ * `end_minute >= 1440`), a closed day (Downtown Sunday — no rows), and the
+ * boundary-touching pair (Marina Wednesday 12:00–18:00 + 18:00–23:00 —
+ * accepted, not an overlap). `time` values are the `HH:MM:SS` strings the
+ * database returns.
+ */
+export const seedBranchWorkingHours: readonly SeedBranchWorkingHours[] = [
+  // Downtown — Mon–Fri lunch 11:00–15:00 (split day, first half).
+  {
+    id: '00000000-0000-4000-8000-000000005001',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'monday',
+    open_time: '11:00:00',
+    close_time: '15:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005002',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'tuesday',
+    open_time: '11:00:00',
+    close_time: '15:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005003',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'wednesday',
+    open_time: '11:00:00',
+    close_time: '15:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005004',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'thursday',
+    open_time: '11:00:00',
+    close_time: '15:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005005',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'friday',
+    open_time: '11:00:00',
+    close_time: '15:00:00',
+  },
+  // Downtown — Mon–Fri dinner 18:00–02:00 (split day, second half; the
+  // post-midnight interval — close_time < open_time, end_minute +1440).
+  {
+    id: '00000000-0000-4000-8000-000000005006',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'monday',
+    open_time: '18:00:00',
+    close_time: '02:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005007',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'tuesday',
+    open_time: '18:00:00',
+    close_time: '02:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005008',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'wednesday',
+    open_time: '18:00:00',
+    close_time: '02:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005009',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'thursday',
+    open_time: '18:00:00',
+    close_time: '02:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005010',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'friday',
+    open_time: '18:00:00',
+    close_time: '02:00:00',
+  },
+  // Downtown — Saturday 12:00–02:00; Sunday closed (no rows).
+  {
+    id: '00000000-0000-4000-8000-000000005011',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    weekday: 'saturday',
+    open_time: '12:00:00',
+    close_time: '02:00:00',
+  },
+  // Marina — Wednesday 12:00–18:00 + 18:00–23:00 (the boundary-touching
+  // pair — accepted: [720, 1080) and [1080, 1380) share their boundary).
+  {
+    id: '00000000-0000-4000-8000-000000005012',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    weekday: 'wednesday',
+    open_time: '12:00:00',
+    close_time: '18:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005013',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    weekday: 'wednesday',
+    open_time: '18:00:00',
+    close_time: '23:00:00',
+  },
+  // Marina — Thursday through Sunday 12:00–23:00.
+  {
+    id: '00000000-0000-4000-8000-000000005014',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    weekday: 'thursday',
+    open_time: '12:00:00',
+    close_time: '23:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005015',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    weekday: 'friday',
+    open_time: '12:00:00',
+    close_time: '23:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005016',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    weekday: 'saturday',
+    open_time: '12:00:00',
+    close_time: '23:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005017',
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    weekday: 'sunday',
+    open_time: '12:00:00',
+    close_time: '23:00:00',
+  },
+  // Airport — daily 06:00–22:00.
+  {
+    id: '00000000-0000-4000-8000-000000005018',
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: branchIds.airport,
+    weekday: 'monday',
+    open_time: '06:00:00',
+    close_time: '22:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005019',
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: branchIds.airport,
+    weekday: 'tuesday',
+    open_time: '06:00:00',
+    close_time: '22:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005020',
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: branchIds.airport,
+    weekday: 'wednesday',
+    open_time: '06:00:00',
+    close_time: '22:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005021',
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: branchIds.airport,
+    weekday: 'thursday',
+    open_time: '06:00:00',
+    close_time: '22:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005022',
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: branchIds.airport,
+    weekday: 'friday',
+    open_time: '06:00:00',
+    close_time: '22:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005023',
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: branchIds.airport,
+    weekday: 'saturday',
+    open_time: '06:00:00',
+    close_time: '22:00:00',
+  },
+  {
+    id: '00000000-0000-4000-8000-000000005024',
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: branchIds.airport,
+    weekday: 'sunday',
+    open_time: '06:00:00',
+    close_time: '22:00:00',
+  },
+]
+
+/**
+ * The seeded activation state of every dining table (spec 004 FR-011/FR-012,
+ * SC-007; data-model.md seed table), ordered by id: Marina `T1` is the
+ * deliberate inactive fixture (inactive tables stay visible with their
+ * state); every other seeded table is active.
+ */
+export const seedDiningTableActivation = [
+  { id: diningTableIds.downtownT1, is_active: true },
+  { id: diningTableIds.downtownT2, is_active: true },
+  { id: diningTableIds.downtownT3, is_active: true },
+  { id: diningTableIds.marinaT1, is_active: false },
+  { id: diningTableIds.airportT1, is_active: true },
 ] as const
