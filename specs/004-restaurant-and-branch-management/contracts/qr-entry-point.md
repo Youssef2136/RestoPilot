@@ -54,9 +54,14 @@ per-table or per-branch variant, and no server-side artifact storage
 
 - Viewing/downloading the QR is an owner action (FR-018, US5 scenario 3):
   the panel renders only for `canManageRestaurant(restaurantId)`
-  ([management-client.md](./management-client.md)); the underlying data
-  (the restaurant row with its slug) is already owner-readable under the
-  existing policies, and non-owners of the restaurant cannot read it at all.
+  ([management-client.md](./management-client.md)) and non-owners get the
+  denial view, so the affordance is owner-only by presentation. The underlying
+  data is not: the restaurant row with its slug stays readable to the
+  restaurant's staff under the unchanged feature-002 policy (data-model.md's
+  policy matrix), while anyone outside the restaurant — including the platform
+  super admin — cannot read it at all (FR-021/FR-025). The QR therefore
+  discloses nothing a staff member could not already read, and nothing that is
+  not public by design (FR-019).
 - Obtaining the QR exposes nothing beyond the public entry URL, which is
   public by design (FR-019): the encoding does not disclose configuration
   data, and no configuration table becomes publicly readable.

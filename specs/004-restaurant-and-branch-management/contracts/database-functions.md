@@ -395,7 +395,8 @@ provision_staff_identity(p_email text, p_display_name text) returns table (
   person_created     boolean
 )
 -- language plpgsql, volatile, security definer, set search_path = ''
--- execute: owner role only (revoked from public, anon, authenticated)
+-- execute: revoked from every client role (public, anon, authenticated); no
+-- grant — callable only from its SECURITY DEFINER caller, add_staff_member
 ```
 
 **Semantics**: the Phase 3 runtime provisioning path, using the insert

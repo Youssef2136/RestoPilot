@@ -327,7 +327,7 @@ test('the owner obtains the QR entry point: the panel renders with its payload v
   await expect(page.getByRole('button', { name: 'Download PNG' })).toBeEnabled()
 })
 
-test('the QR panel is absent for non-owners and the super admin — the restaurant row is not readable to them (FR-018/FR-019)', async ({
+test('the QR panel is absent for non-owners and the super admin (FR-018/FR-019)', async ({
   page,
 }) => {
   // A branch manager of the same restaurant: management is owner-only.

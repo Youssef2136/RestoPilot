@@ -193,7 +193,9 @@ Write operations remain denied **by grants** for every client role on every
 table; the management RPCs are the only write paths, and they authorize owner
 scope internally via `private.owned_restaurant_ids` (branch targets resolve
 their restaurant first). Execute grants: each new RPC to `authenticated` only;
-`private.provision_staff_identity` to the owner role only.
+`private.provision_staff_identity` to no client role at all (revoked from
+`public`, `anon`, and `authenticated`), so it is callable only from its
+`SECURITY DEFINER` caller, `public.add_staff_member`.
 
 ## Relationships
 
