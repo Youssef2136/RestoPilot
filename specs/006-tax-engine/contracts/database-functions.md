@@ -6,7 +6,9 @@ Conventions inherited from features 004/005: every write function is `security d
 
 ## §1 Write RPCs — restaurant-level rules (owner-only)
 
-### `create_tax_rule(p_name text, p_rate text, p_scope text, p_sort_order int, p_item_ids uuid[], p_category_ids uuid[], p_compound_source_ids uuid[]) → tax_rules`
+### `create_tax_rule(p_restaurant_id uuid, p_name text, p_rate text, p_scope text, p_branch_id uuid default null, p_sort_order int default null, p_item_ids uuid[] default null, p_category_ids uuid[] default null, p_compound_source_ids uuid[] default null) → tax_rules`
+
+> **Deployed signature note (convergence)**: the restaurant id and the branch-only `p_branch_id` variant are explicit parameters; the context — restaurant-level vs branch-only — follows from them (§4's authorization matrix). `p_sort_order` defaults to after the last rule of the context.
 
 - Owner-only (`42501` otherwise). Name: non-blank after trim, ≤ 80 chars, unique case-insensitively within the restaurant **across restaurant-level and branch-only rules** (`P0001` "A tax rule with this name already exists." / "A tax rule name is required.").
 - Rate: validated by the same rules as the client (`P0001` "A tax rate must be between 0 and 100 with at most four decimal places.") — malformed, negative, >100, >4 decimals rejected; zero valid.
@@ -19,26 +21,30 @@ Conventions inherited from features 004/005: every write function is `security d
 
 - Owner-only; the rule must belong to the caller's restaurant (`42501`/`P0001` "Tax rule not found."). Same validation as create. A rule referenced by a snapshot **MAY be edited** (rate/name/targets) — snapshots are self-contained and unaffected (research §7); a retired rule MAY be reactivated.
 - No-op rule: identical values (including identical target sets) write nothing and return the stored row.
-- Audit on change: `tax.rule_updated` with change `field=<changed fields>; before=<…>; after=<…>`.
+- Audit on change: `tax.rule_updated` with a change string of `field: before -> after` fragments joined by `; ` (e.g. `name: "VAT" -> "VAT food"; rate: 8.2500 -> 8.5000`) and `shape updated` for scope/target/order changes.
+- **Deployed note (convergence)**: `update_tax_rule` is a full-form update — `p_name`, `p_rate`, and `p_scope` are required on every call ("A tax rule name is required." when the name is blank); targets are replaced wholesale.
 
-### `reorder_tax_rules(p_rule_ids uuid[], p_branch_id uuid default null) → void`
+### `reorder_tax_rules(p_restaurant_id uuid, p_rule_ids uuid[], p_branch_id uuid default null) → void`
 
-- Owner-only when `p_branch_id` is null (the restaurant-level set); owner or that branch's manager when a branch is named (that branch's branch-only rules + override-bearing rules' local ordering context — see §3). The id array MUST be the complete set of rules in the addressed context, each exactly once (`P0001` "The reorder list must contain every rule exactly once."). Writes `sort_order` per position.
-- Audit: `tax.rules_reordered` (branch scope when a branch context).
+- Owner-only when `p_branch_id` is null (the restaurant-level set); owner or that branch's manager when a branch is named (that branch's branch-only rules). The id array MUST be the complete set of rules in the addressed context, each exactly once — **retired rules included** — (`P0001` "The reorder list must contain every rule of the context exactly once."). Writes `sort_order` per position.
+- Audit: `tax.rules_reordered` with change `context=<restaurant|branch id>; positions=<n>` (branch scope when a branch context).
 
-### `retire_tax_rule(p_rule_id uuid) → tax_rules`
+### `retire_tax_rule(p_rule_id uuid, p_active boolean default false) → tax_rules`
 
-- Owner-only for restaurant-level rules; owner or the owning branch's manager for branch-only rules. Sets `is_active = false`. Idempotent no-op when already retired.
-- Audit on change: `tax.rule_retired` with change `name=<name>`.
+- Owner-only for restaurant-level rules; owner or the owning branch's manager for branch-only rules. Sets `is_active` to `p_active` — retirement is the default; passing `p_active = true` reactivates. Idempotent no-op (returns the stored row, writes nothing) when the flag already matches.
+- Audit on change: `tax.rule_retired` / `tax.rule_reactivated` with change `name=<name>`.
+- **Deployed note (convergence)**: reactivation goes through this toggle, not `update_tax_rule` (the earlier draft's wording).
 
 ### `delete_unused_tax_rule(p_rule_id uuid) → void`
 
-- Owner-only. Refused with `P0001` "This tax rule has been applied in recorded results and cannot be deleted." when the rule is referenced by any recorded snapshot's fingerprint, any override row, or any target/compound junction row; otherwise deletes the rule and cascades its junction rows.
+- Owner-only. Refused with `P0001` "This tax rule has been applied in recorded results and cannot be deleted." when the rule is referenced by any recorded snapshot's fingerprint, any override row, or any **incoming** target/compound reference (another rule targeting it or compounding on it); a rule's **own** citations (its targets, its compound sources) cascade away with it. Otherwise deletes the rule and its junction rows.
 - Audit on success: `tax.rule_deleted`.
 
 ## §2 Write RPCs — branch overrides (owner anywhere; branch manager own branch only)
 
-### `set_branch_tax_override(p_branch_id uuid, p_rule_id uuid, p_rate text | null) → branch_tax_overrides`
+### `set_branch_tax_override(p_branch_id uuid, p_rule_id uuid, p_rate text | null) → jsonb`
+
+> Returns `{ changed: boolean, rate: text | null }` (convergence: jsonb, not the row).
 
 - Authorized: the restaurant's owner, or a `branch_manager` member **of that branch** (`42501` otherwise) — clarification 2. The rule must be a restaurant-level active rule of the branch's restaurant (`P0001` "Only a restaurant-level rule can be overridden at a branch.").
 - `p_rate` non-null: validates like create; upserts the override row (insert or replace the rate). `p_rate` null: deletes the override row (clear → back to the restaurant default). No-op: setting the same rate again (or clearing a missing override) writes nothing and reports "changed: false".
@@ -49,15 +55,14 @@ Conventions inherited from features 004/005: every write function is `security d
 
 ### `get_branch_tax_config(p_branch_id uuid) → jsonb`
 
-- Authorized: owner of the branch's restaurant, or any membership on that branch (`42501`). Returns the branch's **effective configuration**: the ordered rule list as applied — each entry `{ rule_id, name, rate (effective four-decimal string), scope, targets, compound_sources, order, origin: "restaurant" | "branch-only" | "override" }` — plus the diff summary the visibility promise (FR-020) needs: which rules are overridden, at what effective rate, which branch-only rules exist.
-- Ordering: `(sort_order, name)`; the payload is validated client-side by `parseTaxConfig` (contracts/tax-client.md).
+- Authorized: owner of the branch's restaurant, or any membership on that branch (`42501`). Returns `{ branch: {id, name}, restaurant_id, rules: [...] }` — the branch's **effective configuration**: the ordered rule list as applied — each entry `{ rule_id, name, rate (effective four-decimal string), scope, sort_order, origin: "restaurant" | "branch-only" | "override", is_active, item_ids, category_ids, compound_sources }` (the per-rule `origin` field IS the FR-020 diff: which rules are overridden, at what effective rate, which branch-only rules exist).
+- Ordering: `(sort_order, name, id)`; only active rules of the branch's restaurant (restaurant-level + that branch's branch-only) appear; the payload is validated client-side by `parseTaxConfig` (contracts/tax-client.md).
 
 ### `calculate_branch_taxes(p_branch_id uuid, p_selections jsonb) → jsonb`
 
-- Authorized: same scope as `get_branch_tax_config` (`42501`). `p_selections` = `[{ item_id, extras: [{ extra_id }], quantity }]` (quantity positive integer, default 1; malformed → `P0001` "A calculation selection is malformed.").
-- The engine: resolve the branch's effective configuration (active rules: restaurant-level + that branch's branch-only; overrides applied; ordered by `(sort_order, name)`); compute per line: item-scope rules over the named items' (base + selected extras adjustments) × quantity; category-scope rules over the items of the named categories on the same base; total-scope rules over the subtotal; a rule's base includes the amounts of its named compound sources that applied earlier in the order (research §2); round each line once, half-up, at the end of its own calculation (`round(numeric, 2)`); the total = exact subtotal + lines.
-- Returns `{ lines: [{ rule_id, name, rate, scope, order, amount }], subtotal, total, effective_config: <the §3 config> }`. Deterministic: identical input + configuration → byte-identical result (the §16 matrix).
-- Empty basket → empty lines, subtotal 0.00, total 0.00 (FR-012's edge case).
+- Authorized: same scope as `get_branch_tax_config` (`42501`). `p_selections` = `[{ item_id, extras: [extra_id | {extra_id}], quantity }]` — extras may be bare id strings or `{extra_id}` objects (both accepted); quantity positive integer, default 1; malformed → `P0001` "A calculation selection is malformed."
+- The engine: resolve the branch's applicable rules (active rules: restaurant-level + that branch's branch-only; overrides applied; ordered by `(sort_order, name, id)`); compute per line: item-scope rules over the named items' (base + selected extras adjustments) × quantity; category-scope rules over the items of the named categories on the same base; total-scope rules over the subtotal; a rule's base includes the amounts of its named compound sources that applied earlier in the order (research §2); round each line once, half-up, at the end of its own calculation (`round(numeric, 2)`); the total = exact subtotal + lines.
+- Returns `{ branch_id, restaurant_id, lines: [{ rule_id, name, rate, scope, sort_order, amount }], subtotal, total }` (convergence: no separate `effective_config` in the payload — the configuration is read through `get_branch_tax_config`). A line charging 0.00 is dropped from `lines` (a zero amount contributes nothing to any compound base), so an empty basket yields empty lines, subtotal `0.00`, total `0.00` (FR-012). Deterministic: identical input + configuration → byte-identical result (the §16 matrix).
 
 ## §4 Authorization summary
 
