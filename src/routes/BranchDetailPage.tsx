@@ -315,6 +315,10 @@ export function BranchDetailPage() {
         <Link to={`/dashboard/branches/${branch.id}/menu`}>{`${branch.name} menu`}</Link>
       </p>
 
+      <p>
+        <Link to={`/dashboard/branches/${branch.id}/tax`}>{`${branch.name} tax`}</Link>
+      </p>
+
       <section aria-labelledby="branch-working-hours-heading">
         <h2 id="branch-working-hours-heading">Working hours</h2>
         {hoursQuery.isPending ? (

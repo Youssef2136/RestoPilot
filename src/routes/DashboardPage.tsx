@@ -322,6 +322,11 @@ export function DashboardPage() {
                   <Link to="/dashboard/menu">Menu</Link>
                 </li>
               )}
+              {canManageRestaurant(selectedRestaurant.restaurantId) && (
+                <li>
+                  <Link to="/dashboard/tax">Tax</Link>
+                </li>
+              )}
             </ul>
           </nav>
 

@@ -12,6 +12,7 @@ src/types/database.types.ts
 # Spec Kit artifacts and project documents (not formatter-owned)
 specs/
 .specify/
+.agents/
 .zcode/
 RestoPilot-Master-Plan.md
 supabase/

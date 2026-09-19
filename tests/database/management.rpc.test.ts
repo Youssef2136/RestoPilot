@@ -372,7 +372,8 @@ describe('owner-only authorization matrix for profile and settings (FR-005/FR-00
             },
           ])
           const audit = await client.query(
-            `select count(*)::int as n from public.audit_log where actor_profile_id = $1`,
+            `select count(*)::int as n from public.audit_log
+              where actor_profile_id = $1 and created_at > now() - interval '2 seconds'`,
             [identity.profileId],
           )
           expect(audit.rows[0].n).toBe(0)

@@ -90,6 +90,45 @@ export type Database = {
           },
         ]
       }
+      branch_tax_overrides: {
+        Row: {
+          branch_id: string
+          created_at: string
+          rate: number
+          restaurant_id: string
+          rule_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          rate: number
+          restaurant_id: string
+          rule_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          rate?: number
+          restaurant_id?: string
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_tax_overrides_branch_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "branch_tax_overrides_rule_scope_fkey"
+            columns: ["restaurant_id", "rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
       branch_unavailable_items: {
         Row: {
           branch_id: string
@@ -519,6 +558,197 @@ export type Database = {
           },
         ]
       }
+      tax_rule_categories: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          restaurant_id: string
+          rule_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          restaurant_id: string
+          rule_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          restaurant_id?: string
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rule_categories_category_scope_fkey"
+            columns: ["restaurant_id", "category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "tax_rule_categories_scope_fkey"
+            columns: ["restaurant_id", "rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
+      tax_rule_compounds: {
+        Row: {
+          created_at: string
+          id: string
+          restaurant_id: string
+          rule_id: string
+          source_rule_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          restaurant_id: string
+          rule_id: string
+          source_rule_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          restaurant_id?: string
+          rule_id?: string
+          source_rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rule_compounds_scope_fkey"
+            columns: ["restaurant_id", "rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "tax_rule_compounds_source_scope_fkey"
+            columns: ["restaurant_id", "source_rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
+      tax_rule_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          restaurant_id: string
+          rule_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          restaurant_id: string
+          rule_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          restaurant_id?: string
+          rule_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rule_items_item_scope_fkey"
+            columns: ["restaurant_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "tax_rule_items_scope_fkey"
+            columns: ["restaurant_id", "rule_id"]
+            isOneToOne: false
+            referencedRelation: "tax_rules"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
+      tax_rules: {
+        Row: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          rate: number
+          restaurant_id: string
+          scope: string
+          sort_order: number
+        }
+        Insert: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          rate?: number
+          restaurant_id: string
+          scope: string
+          sort_order?: number
+        }
+        Update: {
+          branch_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          rate?: number
+          restaurant_id?: string
+          scope?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rules_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tax_snapshots: {
+        Row: {
+          branch_id: string
+          created_at: string
+          fingerprint: string
+          id: string
+          payload: Json
+          recorded_at: string | null
+          restaurant_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          fingerprint: string
+          id?: string
+          payload: Json
+          recorded_at?: string | null
+          restaurant_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          fingerprint?: string
+          id?: string
+          payload?: Json
+          recorded_at?: string | null
+          restaurant_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -551,6 +781,10 @@ export type Database = {
           p_restaurant_id: string
           p_role: Database["public"]["Enums"]["staff_role"]
         }
+        Returns: Json
+      }
+      calculate_branch_taxes: {
+        Args: { p_branch_id: string; p_selections: Json }
         Returns: Json
       }
       create_branch: {
@@ -663,12 +897,47 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_tax_rule: {
+        Args: {
+          p_branch_id?: string
+          p_category_ids?: string[]
+          p_compound_source_ids?: string[]
+          p_item_ids?: string[]
+          p_name: string
+          p_rate: string
+          p_restaurant_id: string
+          p_scope: string
+          p_sort_order?: number
+        }
+        Returns: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          rate: number
+          restaurant_id: string
+          scope: string
+          sort_order: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tax_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       current_auth_context: { Args: never; Returns: Json }
       delete_menu_category: {
         Args: { p_category_id: string }
         Returns: undefined
       }
+      delete_unused_tax_rule: {
+        Args: { p_rule_id: string }
+        Returns: undefined
+      }
       get_branch_menu: { Args: { p_branch_id: string }; Returns: Json }
+      get_branch_tax_config: { Args: { p_branch_id: string }; Returns: Json }
       move_menu_item: {
         Args: { p_category_id: string; p_item_id: string }
         Returns: {
@@ -690,6 +959,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_tax_snapshot: {
+        Args: {
+          p_branch_id: string
+          p_fingerprint: string
+          p_payload: Json
+          p_restaurant_id: string
+        }
+        Returns: Json
       }
       remove_menu_item_extra: {
         Args: { p_extra_id: string }
@@ -741,6 +1019,14 @@ export type Database = {
         Args: { p_category_id: string; p_item_ids: string[] }
         Returns: undefined
       }
+      reorder_tax_rules: {
+        Args: {
+          p_branch_id?: string
+          p_restaurant_id: string
+          p_rule_ids: string[]
+        }
+        Returns: undefined
+      }
       replace_branch_working_hours: {
         Args: { p_branch_id: string; p_intervals: Json }
         Returns: {
@@ -761,6 +1047,26 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      retire_tax_rule: {
+        Args: { p_active?: boolean; p_rule_id: string }
+        Returns: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          rate: number
+          restaurant_id: string
+          scope: string
+          sort_order: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tax_rules"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_branch_item_availability: {
         Args: {
           p_branch_id: string
@@ -768,6 +1074,10 @@ export type Database = {
           p_item_id: string
         }
         Returns: boolean
+      }
+      set_branch_tax_override: {
+        Args: { p_branch_id: string; p_rate: string; p_rule_id: string }
+        Returns: Json
       }
       set_dining_table_active: {
         Args: { p_active: boolean; p_dining_table_id: string }
@@ -945,6 +1255,35 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "staff_memberships"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_tax_rule: {
+        Args: {
+          p_category_ids?: string[]
+          p_compound_source_ids?: string[]
+          p_item_ids?: string[]
+          p_name: string
+          p_rate: string
+          p_rule_id: string
+          p_scope: string
+          p_sort_order: number
+        }
+        Returns: {
+          branch_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          rate: number
+          restaurant_id: string
+          scope: string
+          sort_order: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "tax_rules"
           isOneToOne: true
           isSetofReturn: false
         }

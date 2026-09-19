@@ -274,3 +274,56 @@ insert into public.branch_unavailable_items (id, restaurant_id, branch_id, item_
   ('00000000-0000-4000-8000-000000006041', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000006015'),
   ('00000000-0000-4000-8000-000000006042', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000006016')
 on conflict on constraint branch_unavailable_items_branch_item_key do nothing;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Phase 5 tax fixture (spec 006 FR-023, SC-007; data-model.md seed fixture
+-- section). Deterministic UUIDs — MUST stay identical to
+-- tests/database/helpers/fixtures.ts.
+--
+-- Blue Olive carries the demo tax configuration the phase's journeys need:
+--   * VAT (total scope, 8.25%, order 1) — the restaurant default that Marina
+--     overrides at 8.75%;
+--   * City tax (total scope, 1.5%, order 2) compounding on VAT — the compound
+--     pair the matrix and walkthrough B hand-calculate against;
+--   * Alcohol duty (categories scope → Drinks, 10%, order 3);
+--   * Imported sweets tax (items scope → Baklava, 5%, order 4);
+--   * Downtown surcharge (total scope, 2%, order 5) — a BRANCH-ONLY rule at
+--     Downtown, proving the branch-only arm of the effective configuration.
+-- Cedar Grill carries one unoverridden total rule (IGIC, 7%), proving
+-- cross-tenant isolation of tax configuration.
+-- No snapshot rows are seeded: nothing records snapshots in this phase
+-- (clarification 3), and an empty snapshot table is the honest baseline.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+insert into public.tax_rules
+  (id, restaurant_id, branch_id, name, rate, scope, sort_order, is_active)
+values
+  ('00000000-0000-4000-8000-000000007001', '00000000-0000-4000-8000-000000000001', null, 'VAT', 8.2500, 'total', 1, true),
+  ('00000000-0000-4000-8000-000000007002', '00000000-0000-4000-8000-000000000001', null, 'City tax', 1.5000, 'total', 2, true),
+  ('00000000-0000-4000-8000-000000007003', '00000000-0000-4000-8000-000000000001', null, 'Alcohol duty', 10.0000, 'categories', 3, true),
+  ('00000000-0000-4000-8000-000000007004', '00000000-0000-4000-8000-000000000001', null, 'Imported sweets tax', 5.0000, 'items', 4, true),
+  ('00000000-0000-4000-8000-000000007005', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000101', 'Downtown surcharge', 2.0000, 'total', 5, true),
+  ('00000000-0000-4000-8000-000000007101', '00000000-0000-4000-8000-000000000002', null, 'IGIC', 7.0000, 'total', 1, true)
+on conflict (id) do update set
+  branch_id = excluded.branch_id,
+  name = excluded.name,
+  rate = excluded.rate,
+  scope = excluded.scope,
+  sort_order = excluded.sort_order,
+  is_active = excluded.is_active;
+
+insert into public.tax_rule_items (id, restaurant_id, rule_id, item_id) values
+  ('00000000-0000-4000-8000-000000007012', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000007004', '00000000-0000-4000-8000-000000006018')
+on conflict (id) do nothing;
+
+insert into public.tax_rule_categories (id, restaurant_id, rule_id, category_id) values
+  ('00000000-0000-4000-8000-000000007011', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000007003', '00000000-0000-4000-8000-000000006004')
+on conflict (id) do nothing;
+
+insert into public.tax_rule_compounds (id, restaurant_id, rule_id, source_rule_id) values
+  ('00000000-0000-4000-8000-000000007021', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000007002', '00000000-0000-4000-8000-000000007001')
+on conflict (id) do nothing;
+
+insert into public.branch_tax_overrides (branch_id, rule_id, restaurant_id, rate) values
+  ('00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000007001', '00000000-0000-4000-8000-000000000001', 8.7500)
+on conflict (branch_id, rule_id) do update set rate = excluded.rate;

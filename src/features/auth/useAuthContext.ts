@@ -82,6 +82,18 @@ export type UseAuthContextResult = UseQueryResult<AuthContext, Error> & {
    * an owner of the branch's restaurant, or that branch's `branch_manager`.
    */
   canManageBranchAvailability: (branchId: string) => boolean
+  /**
+   * Branch tax view (spec 006 FR-020; contracts/tax-client.md §2): an owner of
+   * the branch's restaurant, or ANY branch-scoped membership on that branch —
+   * the same read arm as `canViewBranchMenu` (the configuration RPC's own
+   * scope check is the boundary).
+   */
+  canViewBranchTax: (branchId: string) => boolean
+  /**
+   * Branch tax control (spec 006 FR-003, clarification 2; contracts/tax-client.md
+   * §2): an owner of the branch's restaurant, or that branch's `branch_manager`.
+   */
+  canManageBranchTax: (branchId: string) => boolean
 }
 
 export function useAuthContext(): UseAuthContextResult {
@@ -146,6 +158,20 @@ export function useAuthContext(): UseAuthContextResult {
     [memberships],
   )
 
+  const canViewBranchTax = useCallback(
+    (branchId: string) =>
+      memberships.some((m) => m.role === 'owner') ||
+      memberships.some((m) => m.branch_id === branchId),
+    [memberships],
+  )
+
+  const canManageBranchTax = useCallback(
+    (branchId: string) =>
+      memberships.some((m) => m.role === 'owner') ||
+      memberships.some((m) => m.branch_id === branchId && m.role === 'branch_manager'),
+    [memberships],
+  )
+
   return {
     ...query,
     profile,
@@ -156,5 +182,7 @@ export function useAuthContext(): UseAuthContextResult {
     canManageRestaurant,
     canViewBranchMenu,
     canManageBranchAvailability,
+    canViewBranchTax,
+    canManageBranchTax,
   }
 }

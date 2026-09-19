@@ -824,3 +824,187 @@ export const seedBranchUnavailableItems = [
     item_id: menuItemIds.chickenTagine,
   },
 ] as const
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 5 tax fixture (spec 006 FR-023, SC-007; data-model.md seed fixture
+// section). Mirrors `supabase/seed.sql` exactly — the seed and these
+// constants are two views of one fixture.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const taxRuleIds = {
+  vat: '00000000-0000-4000-8000-000000007001',
+  cityTax: '00000000-0000-4000-8000-000000007002',
+  alcoholDuty: '00000000-0000-4000-8000-000000007003',
+  importedSweetsTax: '00000000-0000-4000-8000-000000007004',
+  downtownSurcharge: '00000000-0000-4000-8000-000000007005',
+  cedarTax: '00000000-0000-4000-8000-000000007101',
+} as const
+
+export const taxRuleTargetIds = {
+  alcoholDutyDrinks: '00000000-0000-4000-8000-000000007011',
+  importedSweetsBaklava: '00000000-0000-4000-8000-000000007012',
+} as const
+
+export const taxRuleCompoundIds = {
+  cityTaxOnVat: '00000000-0000-4000-8000-000000007021',
+} as const
+
+export const branchTaxOverrideIds = {
+  marinaVat: '00000000-0000-4000-8000-000000007031',
+} as const
+
+/**
+ * The seeded override identity pair — the PK of `branch_tax_overrides` is
+ * `(branch_id, rule_id)`, so the override fixture is a pair, not an id row.
+ * (The `branchTaxOverrideIds` value is kept only as a stable reference handle
+ * for test readability.)
+ */
+export const seededBranchTaxOverride = {
+  branch_id: branchIds.marina,
+  rule_id: taxRuleIds.vat,
+  restaurant_id: restaurantIds.blueOlive,
+  rate: '8.7500',
+} as const
+
+/** Blue Olive's restaurant-level tax rules, in `(sort_order, name)` order. */
+export const seedTaxRules = [
+  {
+    id: taxRuleIds.vat,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: null,
+    name: 'VAT',
+    rate: '8.2500',
+    scope: 'total',
+    sort_order: 1,
+    is_active: true,
+  },
+  {
+    id: taxRuleIds.cityTax,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: null,
+    name: 'City tax',
+    rate: '1.5000',
+    scope: 'total',
+    sort_order: 2,
+    is_active: true,
+  },
+  {
+    id: taxRuleIds.alcoholDuty,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: null,
+    name: 'Alcohol duty',
+    rate: '10.0000',
+    scope: 'categories',
+    sort_order: 3,
+    is_active: true,
+  },
+  {
+    id: taxRuleIds.importedSweetsTax,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: null,
+    name: 'Imported sweets tax',
+    rate: '5.0000',
+    scope: 'items',
+    sort_order: 4,
+    is_active: true,
+  },
+  {
+    id: taxRuleIds.downtownSurcharge,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    name: 'Downtown surcharge',
+    rate: '2.0000',
+    scope: 'total',
+    sort_order: 5,
+    is_active: true,
+  },
+  {
+    id: taxRuleIds.cedarTax,
+    restaurant_id: restaurantIds.cedarGrill,
+    branch_id: null,
+    name: 'IGIC',
+    rate: '7.0000',
+    scope: 'total',
+    sort_order: 1,
+    is_active: true,
+  },
+] as const
+
+export const seedTaxRuleItems = [
+  {
+    id: taxRuleTargetIds.importedSweetsBaklava,
+    restaurant_id: restaurantIds.blueOlive,
+    rule_id: taxRuleIds.importedSweetsTax,
+    item_id: menuItemIds.baklava,
+  },
+] as const
+
+export const seedTaxRuleCategories = [
+  {
+    id: taxRuleTargetIds.alcoholDutyDrinks,
+    restaurant_id: restaurantIds.blueOlive,
+    rule_id: taxRuleIds.alcoholDuty,
+    category_id: menuCategoryIds.blueOliveDrinks,
+  },
+] as const
+
+export const seedTaxRuleCompounds = [
+  {
+    id: taxRuleCompoundIds.cityTaxOnVat,
+    restaurant_id: restaurantIds.blueOlive,
+    rule_id: taxRuleIds.cityTax,
+    source_rule_id: taxRuleIds.vat,
+  },
+] as const
+
+export const seedBranchTaxOverrides = [
+  {
+    branch_id: branchIds.marina,
+    rule_id: taxRuleIds.vat,
+    restaurant_id: restaurantIds.blueOlive,
+    rate: '8.7500',
+  },
+] as const
+
+/**
+ * The effective tax configuration per Blue Olive branch (spec 006 FR-020;
+ * quickstart walkthroughs): Downtown carries the branch-only surcharge and
+ * no overrides; Marina carries the VAT replacement rate and no surcharge.
+ */
+export const seedTaxEffective = {
+  downtown: {
+    rules: [
+      { id: taxRuleIds.vat, name: 'VAT', rate: '8.2500', origin: 'restaurant' },
+      { id: taxRuleIds.cityTax, name: 'City tax', rate: '1.5000', origin: 'restaurant' },
+      { id: taxRuleIds.alcoholDuty, name: 'Alcohol duty', rate: '10.0000', origin: 'restaurant' },
+      {
+        id: taxRuleIds.importedSweetsTax,
+        name: 'Imported sweets tax',
+        rate: '5.0000',
+        origin: 'restaurant',
+      },
+      {
+        id: taxRuleIds.downtownSurcharge,
+        name: 'Downtown surcharge',
+        rate: '2.0000',
+        origin: 'branch-only',
+      },
+    ],
+  },
+  marina: {
+    rules: [
+      { id: taxRuleIds.vat, name: 'VAT', rate: '8.7500', origin: 'override' },
+      { id: taxRuleIds.cityTax, name: 'City tax', rate: '1.5000', origin: 'restaurant' },
+      { id: taxRuleIds.alcoholDuty, name: 'Alcohol duty', rate: '10.0000', origin: 'restaurant' },
+      {
+        id: taxRuleIds.importedSweetsTax,
+        name: 'Imported sweets tax',
+        rate: '5.0000',
+        origin: 'restaurant',
+      },
+    ],
+  },
+  airport: {
+    rules: [{ id: taxRuleIds.cedarTax, name: 'IGIC', rate: '7.0000', origin: 'restaurant' }],
+  },
+} as const

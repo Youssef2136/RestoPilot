@@ -4,6 +4,7 @@ import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../features/aut
 import { AdminPage } from '../routes/AdminPage'
 import { BranchDetailPage } from '../routes/BranchDetailPage'
 import { BranchMenuPage } from '../routes/BranchMenuPage'
+import { BranchTaxPage } from '../routes/BranchTaxPage'
 import { BranchesPage } from '../routes/BranchesPage'
 import { DashboardPage } from '../routes/DashboardPage'
 import { ManageRestaurantPage } from '../routes/ManageRestaurantPage'
@@ -15,6 +16,7 @@ import { RestaurantPage } from '../routes/RestaurantPage'
 import { RootPage } from '../routes/RootPage'
 import { SignInPage } from '../routes/SignInPage'
 import { StaffListPage } from '../routes/StaffListPage'
+import { TaxPage } from '../routes/TaxPage'
 
 /**
  * Route surface (contracts/auth-client.md, revised by
@@ -99,6 +101,17 @@ export function AppRouter() {
             </RequireStaff>
           }
         />
+        {/* Tax configuration (spec 006 US1, FR-003): `RequireStaff` plus the
+            page's in-page owner gate — a non-owner deep link renders the
+            denial view, and every write is authorized by its RPC regardless. */}
+        <Route
+          path="/dashboard/tax"
+          element={
+            <RequireStaff>
+              <TaxPage />
+            </RequireStaff>
+          }
+        />
         {/* Branch surfaces (spec 004 FR-007/FR-008/FR-017): `RequireStaff`
             plus the pages' policy-scoped reads — an owner sees every branch
             of the restaurant, a branch-scoped member exactly their own; an
@@ -128,6 +141,17 @@ export function AppRouter() {
           element={
             <RequireStaff>
               <BranchMenuPage />
+            </RequireStaff>
+          }
+        />
+        {/* The branch tax view (spec 006 US2, FR-020): the branch's effective
+            tax configuration, the override controls gated in-page. The
+            projection's own scope check decides server-side. */}
+        <Route
+          path="/dashboard/branches/:branchId/tax"
+          element={
+            <RequireStaff>
+              <BranchTaxPage />
             </RequireStaff>
           }
         />
