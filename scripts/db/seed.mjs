@@ -44,7 +44,11 @@ try {
          (select count(*)::int from public.profiles) as profiles,
          (select count(*)::int from public.staff_memberships) as staff_memberships,
          (select count(*)::int from public.dining_tables) as dining_tables,
-         (select count(*)::int from public.branch_working_hours) as branch_working_hours`,
+         (select count(*)::int from public.branch_working_hours) as branch_working_hours,
+         (select count(*)::int from public.menu_categories) as menu_categories,
+         (select count(*)::int from public.menu_items) as menu_items,
+         (select count(*)::int from public.menu_item_extras) as menu_item_extras,
+         (select count(*)::int from public.branch_unavailable_items) as branch_unavailable_items`,
   )
   // Seeded auth identities (spec 003 FR-021) — count + emails of the
   // @restopilot.dev users provisioned in auth.users by the seed.
@@ -64,7 +68,10 @@ try {
       `${counts.branches} branches, ${counts.profiles} profiles, ` +
       `${counts.staff_memberships} staff memberships, ` +
       `${counts.dining_tables} dining tables, ` +
-      `${counts.branch_working_hours} working-hours intervals`,
+      `${counts.branch_working_hours} working-hours intervals, ` +
+      `${counts.menu_categories} menu categories, ${counts.menu_items} menu items, ` +
+      `${counts.menu_item_extras} item extras, ` +
+      `${counts.branch_unavailable_items} branch availability overrides`,
   )
   const emails = identities.rows.map((row) => row.email)
   console.log(

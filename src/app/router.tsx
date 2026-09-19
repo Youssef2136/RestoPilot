@@ -3,9 +3,11 @@ import { AppShell } from '../components/AppShell'
 import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../features/auth/guards'
 import { AdminPage } from '../routes/AdminPage'
 import { BranchDetailPage } from '../routes/BranchDetailPage'
+import { BranchMenuPage } from '../routes/BranchMenuPage'
 import { BranchesPage } from '../routes/BranchesPage'
 import { DashboardPage } from '../routes/DashboardPage'
 import { ManageRestaurantPage } from '../routes/ManageRestaurantPage'
+import { MenuPage } from '../routes/MenuPage'
 import { OrderPage } from '../routes/OrderPage'
 import { ProfilePage } from '../routes/ProfilePage'
 import { ResetPasswordPage } from '../routes/ResetPasswordPage'
@@ -86,6 +88,17 @@ export function AppRouter() {
             </RequireStaff>
           }
         />
+        {/* Menu management (spec 005 US1/US2, FR-003): `RequireStaff` plus the
+            page's in-page owner gate — a non-owner deep link renders the
+            denial view, and every write is authorized by its RPC regardless. */}
+        <Route
+          path="/dashboard/menu"
+          element={
+            <RequireStaff>
+              <MenuPage />
+            </RequireStaff>
+          }
+        />
         {/* Branch surfaces (spec 004 FR-007/FR-008/FR-017): `RequireStaff`
             plus the pages' policy-scoped reads — an owner sees every branch
             of the restaurant, a branch-scoped member exactly their own; an
@@ -103,6 +116,18 @@ export function AppRouter() {
           element={
             <RequireStaff>
               <BranchDetailPage />
+            </RequireStaff>
+          }
+        />
+        {/* The branch menu view (spec 005 US2, FR-014/FR-015): the branch's
+            customer-visible menu, the exit condition's artifact. The page
+            renders the denial state for out-of-scope branches while the
+            projection's own scope check decides server-side. */}
+        <Route
+          path="/dashboard/branches/:branchId/menu"
+          element={
+            <RequireStaff>
+              <BranchMenuPage />
             </RequireStaff>
           }
         />

@@ -522,3 +522,305 @@ export const seedDiningTableActivation = [
   { id: diningTableIds.marinaT1, is_active: false },
   { id: diningTableIds.airportT1, is_active: true },
 ] as const
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Phase 4 menu fixture (spec 005 FR-028, SC-007; data-model.md seed table;
+// research.md §13). Mirrors `supabase/seed.sql` exactly — the seed and these
+// constants are two views of one fixture.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const menuCategoryIds = {
+  blueOliveStarters: '00000000-0000-4000-8000-000000006001',
+  blueOliveMains: '00000000-0000-4000-8000-000000006002',
+  blueOliveDesserts: '00000000-0000-4000-8000-000000006003',
+  blueOliveDrinks: '00000000-0000-4000-8000-000000006004',
+  cedarGrillGrill: '00000000-0000-4000-8000-000000006101',
+} as const
+
+export const menuItemIds = {
+  hummus: '00000000-0000-4000-8000-000000006011',
+  grilledHalloumi: '00000000-0000-4000-8000-000000006012',
+  soupOfTheDay: '00000000-0000-4000-8000-000000006013',
+  lambKebab: '00000000-0000-4000-8000-000000006014',
+  /** Stopped restaurant-wide — its Marina override row has no effect. */
+  grilledSeaBass: '00000000-0000-4000-8000-000000006015',
+  /** Available restaurant-wide, unavailable at Marina only. */
+  chickenTagine: '00000000-0000-4000-8000-000000006016',
+  chocolateFondant: '00000000-0000-4000-8000-000000006017',
+  baklava: '00000000-0000-4000-8000-000000006018',
+  seasonalFruitPlate: '00000000-0000-4000-8000-000000006019',
+  mintLemonade: '00000000-0000-4000-8000-000000006020',
+  stillWater: '00000000-0000-4000-8000-000000006021',
+  turkishCoffee: '00000000-0000-4000-8000-000000006022',
+  cedarMixedGrill: '00000000-0000-4000-8000-000000006111',
+  flatbread: '00000000-0000-4000-8000-000000006112',
+} as const
+
+export const menuExtraIds = {
+  lambExtraGarlicSauce: '00000000-0000-4000-8000-000000006031',
+  lambExtraRice: '00000000-0000-4000-8000-000000006032',
+  lambExtraChili: '00000000-0000-4000-8000-000000006033',
+  fondantVanillaIceCream: '00000000-0000-4000-8000-000000006034',
+  fondantExtraChocolateSauce: '00000000-0000-4000-8000-000000006035',
+  cedarExtraFlatbread: '00000000-0000-4000-8000-000000006121',
+} as const
+
+export const branchUnavailableItemIds = {
+  /** Marina × the restaurant-wide stop (proves the hard stop beats an override). */
+  marinaGrilledSeaBass: '00000000-0000-4000-8000-000000006041',
+  /** Marina × the everyday override (available everywhere else). */
+  marinaChickenTagine: '00000000-0000-4000-8000-000000006042',
+} as const
+
+/** The item stopped restaurant-wide (`is_available = false`). */
+export const stoppedMenuItemId = menuItemIds.grilledSeaBass
+
+/** The item available restaurant-wide but overridden unavailable at Marina. */
+export const marinaOnlyUnavailableItemId = menuItemIds.chickenTagine
+
+export const seedMenuCategories = [
+  {
+    id: menuCategoryIds.blueOliveStarters,
+    restaurant_id: restaurantIds.blueOlive,
+    name: 'Starters',
+    description: 'Small plates to begin with.',
+    sort_order: 1,
+  },
+  {
+    id: menuCategoryIds.blueOliveMains,
+    restaurant_id: restaurantIds.blueOlive,
+    name: 'Mains',
+    description: 'Grilled and slow-cooked plates.',
+    sort_order: 2,
+  },
+  {
+    id: menuCategoryIds.blueOliveDesserts,
+    restaurant_id: restaurantIds.blueOlive,
+    name: 'Desserts',
+    description: 'Sweet finishes.',
+    sort_order: 3,
+  },
+  {
+    id: menuCategoryIds.blueOliveDrinks,
+    restaurant_id: restaurantIds.blueOlive,
+    name: 'Drinks',
+    description: 'Cold and hot drinks.',
+    sort_order: 4,
+  },
+  {
+    id: menuCategoryIds.cedarGrillGrill,
+    restaurant_id: restaurantIds.cedarGrill,
+    name: 'Grill',
+    description: 'From the charcoal grill.',
+    sort_order: 1,
+  },
+] as const
+
+export const seedMenuItems = [
+  {
+    id: menuItemIds.hummus,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveStarters,
+    name: 'Hummus',
+    description: 'Chickpea purée with tahini, olive oil, and warm pita.',
+    price: '6.50',
+    is_available: true,
+    sort_order: 1,
+  },
+  {
+    id: menuItemIds.grilledHalloumi,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveStarters,
+    name: 'Grilled Halloumi',
+    description: 'Charred halloumi with lemon and mint.',
+    price: '8.00',
+    is_available: true,
+    sort_order: 2,
+  },
+  {
+    id: menuItemIds.soupOfTheDay,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveStarters,
+    name: 'Soup of the Day',
+    description: "Ask the team about today's pot.",
+    price: '5.50',
+    is_available: true,
+    sort_order: 3,
+  },
+  {
+    id: menuItemIds.lambKebab,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveMains,
+    name: 'Lamb Kebab',
+    description: 'Charcoal-grilled lamb skewers with rice and grilled vegetables.',
+    price: '18.50',
+    is_available: true,
+    sort_order: 1,
+  },
+  {
+    id: menuItemIds.grilledSeaBass,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveMains,
+    name: 'Grilled Sea Bass',
+    description: 'Whole sea bass with olive oil, lemon, and seasonal greens.',
+    price: '24.00',
+    is_available: false,
+    sort_order: 2,
+  },
+  {
+    id: menuItemIds.chickenTagine,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveMains,
+    name: 'Chicken Tagine',
+    description: 'Slow-cooked chicken with preserved lemon and olives.',
+    price: '16.00',
+    is_available: true,
+    sort_order: 3,
+  },
+  {
+    id: menuItemIds.chocolateFondant,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveDesserts,
+    name: 'Chocolate Fondant',
+    description: 'Warm chocolate cake with a molten centre.',
+    price: '7.50',
+    is_available: true,
+    sort_order: 1,
+  },
+  {
+    id: menuItemIds.baklava,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveDesserts,
+    name: 'Baklava',
+    description: 'Pistachio baklava with honey syrup.',
+    price: '6.00',
+    is_available: true,
+    sort_order: 2,
+  },
+  {
+    id: menuItemIds.seasonalFruitPlate,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveDesserts,
+    name: 'Seasonal Fruit Plate',
+    description: 'Fresh fruit, sliced to order.',
+    price: '5.00',
+    is_available: true,
+    sort_order: 3,
+  },
+  {
+    id: menuItemIds.mintLemonade,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveDrinks,
+    name: 'Mint Lemonade',
+    description: 'Fresh lemonade with crushed mint.',
+    price: '4.50',
+    is_available: true,
+    sort_order: 1,
+  },
+  {
+    id: menuItemIds.stillWater,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveDrinks,
+    name: 'Still Water',
+    description: '750 ml bottle.',
+    price: '2.50',
+    is_available: true,
+    sort_order: 2,
+  },
+  {
+    id: menuItemIds.turkishCoffee,
+    restaurant_id: restaurantIds.blueOlive,
+    category_id: menuCategoryIds.blueOliveDrinks,
+    name: 'Turkish Coffee',
+    description: 'Traditional preparation, served with a sweet.',
+    price: '3.50',
+    is_available: true,
+    sort_order: 3,
+  },
+  {
+    id: menuItemIds.cedarMixedGrill,
+    restaurant_id: restaurantIds.cedarGrill,
+    category_id: menuCategoryIds.cedarGrillGrill,
+    name: 'Cedar Mixed Grill',
+    description: 'Lamb, chicken, and kofta over charcoal.',
+    price: '22.00',
+    is_available: true,
+    sort_order: 1,
+  },
+  {
+    id: menuItemIds.flatbread,
+    restaurant_id: restaurantIds.cedarGrill,
+    category_id: menuCategoryIds.cedarGrillGrill,
+    name: 'Flatbread',
+    description: 'Baked to order, brushed with butter.',
+    price: '4.00',
+    is_available: true,
+    sort_order: 2,
+  },
+] as const
+
+export const seedMenuItemExtras = [
+  {
+    id: menuExtraIds.lambExtraGarlicSauce,
+    restaurant_id: restaurantIds.blueOlive,
+    item_id: menuItemIds.lambKebab,
+    name: 'Extra garlic sauce',
+    price_adjustment: '0.00',
+    sort_order: 1,
+  },
+  {
+    id: menuExtraIds.lambExtraRice,
+    restaurant_id: restaurantIds.blueOlive,
+    item_id: menuItemIds.lambKebab,
+    name: 'Extra rice',
+    price_adjustment: '3.00',
+    sort_order: 2,
+  },
+  {
+    id: menuExtraIds.lambExtraChili,
+    restaurant_id: restaurantIds.blueOlive,
+    item_id: menuItemIds.lambKebab,
+    name: 'Extra chili',
+    price_adjustment: '0.50',
+    sort_order: 3,
+  },
+  {
+    id: menuExtraIds.fondantVanillaIceCream,
+    restaurant_id: restaurantIds.blueOlive,
+    item_id: menuItemIds.chocolateFondant,
+    name: 'Vanilla ice cream',
+    price_adjustment: '3.50',
+    sort_order: 1,
+  },
+  {
+    id: menuExtraIds.fondantExtraChocolateSauce,
+    restaurant_id: restaurantIds.blueOlive,
+    item_id: menuItemIds.chocolateFondant,
+    name: 'Extra chocolate sauce',
+    price_adjustment: '2.00',
+    sort_order: 2,
+  },
+  {
+    id: menuExtraIds.cedarExtraFlatbread,
+    restaurant_id: restaurantIds.cedarGrill,
+    item_id: menuItemIds.cedarMixedGrill,
+    name: 'Extra flatbread',
+    price_adjustment: '2.00',
+    sort_order: 1,
+  },
+] as const
+
+export const seedBranchUnavailableItems = [
+  {
+    id: branchUnavailableItemIds.marinaGrilledSeaBass,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    item_id: menuItemIds.grilledSeaBass,
+  },
+  {
+    id: branchUnavailableItemIds.marinaChickenTagine,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.marina,
+    item_id: menuItemIds.chickenTagine,
+  },
+] as const

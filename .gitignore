@@ -32,3 +32,6 @@ pnpm-debug.log*
 Thumbs.db
 *.suo
 *.sw?
+
+# Local one-off artifacts (dev-db snapshots, scratch scripts)
+tmp/

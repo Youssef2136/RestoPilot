@@ -165,6 +165,51 @@ live in the `auth` schema, which the reset leaves untouched (see the
 re-add/re-issue note in
 [specs/004-restaurant-and-branch-management/quickstart.md](../specs/004-restaurant-and-branch-management/quickstart.md)).
 
+## Menu test suites (Phase 4)
+
+Phase 4 (menu management) extends every tier again and adds the project's
+first Storage surface. The database-tier suites share the `test:db`
+precondition (migrated + seeded development project); the storage integration
+suite additionally needs the `menu-images` bucket, which the media migration
+creates — see the storage posture below.
+
+| Suite                                   | Command                    | Proves                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------------------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/database/menu.schema.test.ts`    | `npm run test:db`          | The menu schema layer: table and column definitions, the `image_path` shape check (the path grammar as a table constraint), the ordering/unique constraints on categories and items, and the client-grant posture — no INSERT/UPDATE/DELETE grant on any menu table for `authenticated` (the RPCs are the only write paths). Runs in rolled-back transactions.                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `tests/database/menu.rpc.test.ts`       | `npm run test:db`          | The menu RPC matrix: category and item CRUD authorization across the identity matrix (owner, manager, cashier, other restaurant, anon — denials are `42501` with no state change), validation messages verbatim, price handling, the visibility rules for the branch-facing read, the extras lifecycle (`add_menu_item_extra` / `update_menu_item_extra` / `remove_menu_item_extra`, including the 20-extras ceiling proven under a real row lock so two concurrent adds cannot exceed it), the image-reference RPC (`set_menu_item_image` — previous-path return, path-grammar and ownership validation, the audit records), and the SQL-level proof of the storage select policy (an object is readable exactly while a visible item references it). Runs in rolled-back transactions. |
+| `tests/unit/menu.client.test.ts`        | `npm run test:unit`        | The client module's error mapping, result shaping, and money formatting for all menu wrappers, plus the image orchestration against a stubbed Storage client (path building, the upload → record → delete-old ordering, and failure handling per contracts/menu-images.md §4).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `tests/integration/menu.images.test.ts` | `npm run test:integration` | The real-Storage round trip against the live `menu-images` bucket: the bucket's limits reject oversized and disallowed-type uploads; the policies decide insert/read/delete under a real token; and the load-bearing rule — an object is readable exactly while a visible item references it — end to end. Self-cleaning: teardown clears the item's reference and removes every scratch object through the Storage API.                                                                                                                                                                                                                                                                                                                                                                 |
+| `e2e/menu.surfaces.test.ts`             | `npm run test:e2e`         | The browser presentation matrix: the owner's menu structure editor, the per-item editor with price, availability, extras, and image fields, the branch-facing read-only view, and the non-owner denials that render NotAuthorized. **Read-and-reject only: no menu data is created** (creation journeys are proven by the database suite and the quickstart walkthroughs).                                                                                                                                                                                                                                                                                                                                                                                                               |
+
+### The `menu-images` bucket and its storage posture
+
+The bucket is **configured by migration**
+(`supabase/migrations/*_menu_media.sql`) — never through the dashboard — so
+its limits and access rules live in the same canonical workflow as every
+other schema change:
+
+- **Private** (`public: false`), `file_size_limit` 5 MiB,
+  `allowed_mime_types` JPEG/PNG/WebP. The bucket is the **authoritative
+  validation point**: a direct Storage call with a user token is subject to
+  exactly the same bounds as the UI's upload (the client's pre-checks are
+  feedback only).
+- **Policy-only, no grants added**: the Storage service's own migrations
+  grant table privileges to `authenticated`; the four policies
+  (`menu_images_staff_select`, `menu_images_owner_insert`,
+  `menu_images_owner_delete`, and deliberately **no update** — replacement is
+  insert + delete) are the entire access decision.
+- **Object paths are tenant bindings**: `restaurant/<restaurant_id>/item/
+<item_id>/<uuid>.<ext>`, built by `menuImages.ts`, re-validated by the RPC,
+  and constrained on the table.
+- **Deletion is never done in SQL** — deleting through SQL orphans the file;
+  cleanup is always a Storage-API delete by the owner.
+- One observed hosted-Storage behavior worth knowing when debugging:
+  authorization decisions are **token-bound** — after an image reference
+  moves, a session that was previously granted a download may keep receiving
+  the old object for a while, while any fresh session is refused
+  immediately. `tests/integration/menu.images.test.ts` observes refusals
+  with fresh sign-ins for exactly this reason.
+
 ## Troubleshooting
 
 ### Missing environment variables

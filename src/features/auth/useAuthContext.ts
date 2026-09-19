@@ -70,6 +70,18 @@ export type UseAuthContextResult = UseQueryResult<AuthContext, Error> & {
    * management controls and pages — it grants nothing (Constitution IV).
    */
   canManageRestaurant: (restaurantId: string) => boolean
+  /**
+   * Branch-menu visibility (spec 005 FR-014; contracts/menu-client.md §3): an
+   * owner of the branch's restaurant, or ANY branch-scoped membership on that
+   * branch. Presentation gate for the branch menu view — the projection's own
+   * scope check is the boundary.
+   */
+  canViewBranchMenu: (branchId: string) => boolean
+  /**
+   * Branch availability control (spec 005 FR-003; contracts/menu-client.md §3):
+   * an owner of the branch's restaurant, or that branch's `branch_manager`.
+   */
+  canManageBranchAvailability: (branchId: string) => boolean
 }
 
 export function useAuthContext(): UseAuthContextResult {
@@ -115,6 +127,25 @@ export function useAuthContext(): UseAuthContextResult {
     [memberships],
   )
 
+  // Branch predicates. Ownership is restaurant-wide, so a bare branch id
+  // cannot resolve it: any owner passes these presentation gates and the
+  // server decides (the projection's scope check and the availability RPC are
+  // the boundary — Constitution IV). Branch-scoped members are resolved
+  // exactly, from their own membership rows.
+  const canViewBranchMenu = useCallback(
+    (branchId: string) =>
+      memberships.some((m) => m.role === 'owner') ||
+      memberships.some((m) => m.branch_id === branchId),
+    [memberships],
+  )
+
+  const canManageBranchAvailability = useCallback(
+    (branchId: string) =>
+      memberships.some((m) => m.role === 'owner') ||
+      memberships.some((m) => m.branch_id === branchId && m.role === 'branch_manager'),
+    [memberships],
+  )
+
   return {
     ...query,
     profile,
@@ -123,5 +154,7 @@ export function useAuthContext(): UseAuthContextResult {
     isSuperAdmin,
     canReadStaffList,
     canManageRestaurant,
+    canViewBranchMenu,
+    canManageBranchAvailability,
   }
 }

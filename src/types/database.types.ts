@@ -90,6 +90,52 @@ export type Database = {
           },
         ]
       }
+      branch_unavailable_items: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          item_id: string
+          restaurant_id: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          restaurant_id: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          restaurant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_unavailable_items_item_scope_fkey"
+            columns: ["restaurant_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "branch_unavailable_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_unavailable_items_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
       branch_working_hours: {
         Row: {
           branch_id: string
@@ -218,6 +264,149 @@ export type Database = {
           },
         ]
       }
+      menu_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_item_extras: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          name: string
+          price_adjustment: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          name: string
+          price_adjustment?: number
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          name?: string
+          price_adjustment?: number
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_item_extras_item_scope_fkey"
+            columns: ["restaurant_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "menu_item_extras_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_items: {
+        Row: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          is_available: boolean
+          name: string
+          price: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          is_available?: boolean
+          name: string
+          price: number
+          restaurant_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_path?: string | null
+          is_available?: boolean
+          name?: string
+          price?: number
+          restaurant_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_items_category_scope_fkey"
+            columns: ["restaurant_id", "category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "menu_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           auth_user_id: string | null
@@ -335,6 +524,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_menu_item_extra: {
+        Args: { p_item_id: string; p_name: string; p_price_adjustment?: number }
+        Returns: {
+          created_at: string
+          id: string
+          item_id: string
+          name: string
+          price_adjustment: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_item_extras"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       add_staff_member: {
         Args: {
           p_branch_id?: string
@@ -379,6 +587,55 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      create_menu_category: {
+        Args: {
+          p_description?: string
+          p_name: string
+          p_restaurant_id: string
+        }
+        Returns: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_categories"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_menu_item: {
+        Args: {
+          p_category_id: string
+          p_description?: string
+          p_name: string
+          p_price?: number
+        }
+        Returns: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          is_available: boolean
+          name: string
+          price: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_restaurant: {
         Args: {
           p_brand_description?: string
@@ -407,6 +664,37 @@ export type Database = {
         }
       }
       current_auth_context: { Args: never; Returns: Json }
+      delete_menu_category: {
+        Args: { p_category_id: string }
+        Returns: undefined
+      }
+      get_branch_menu: { Args: { p_branch_id: string }; Returns: Json }
+      move_menu_item: {
+        Args: { p_category_id: string; p_item_id: string }
+        Returns: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          is_available: boolean
+          name: string
+          price: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      remove_menu_item_extra: {
+        Args: { p_extra_id: string }
+        Returns: undefined
+      }
       remove_staff_membership: {
         Args: { p_membership_id: string }
         Returns: undefined
@@ -445,6 +733,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      reorder_menu_categories: {
+        Args: { p_category_ids: string[]; p_restaurant_id: string }
+        Returns: undefined
+      }
+      reorder_menu_items: {
+        Args: { p_category_id: string; p_item_ids: string[] }
+        Returns: undefined
+      }
       replace_branch_working_hours: {
         Args: { p_branch_id: string; p_intervals: Json }
         Returns: {
@@ -465,6 +761,14 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      set_branch_item_availability: {
+        Args: {
+          p_branch_id: string
+          p_is_available_at_branch: boolean
+          p_item_id: string
+        }
+        Returns: boolean
+      }
       set_dining_table_active: {
         Args: { p_active: boolean; p_dining_table_id: string }
         Returns: {
@@ -479,6 +783,100 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "dining_tables"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_menu_item_availability: {
+        Args: { p_is_available: boolean; p_item_id: string }
+        Returns: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          is_available: boolean
+          name: string
+          price: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_menu_item_image: {
+        Args: { p_image_path: string; p_item_id: string }
+        Returns: string
+      }
+      update_menu_category: {
+        Args: { p_category_id: string; p_description?: string; p_name: string }
+        Returns: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_categories"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_menu_item: {
+        Args: {
+          p_description?: string
+          p_item_id: string
+          p_name: string
+          p_price?: number
+        }
+        Returns: {
+          category_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_path: string | null
+          is_available: boolean
+          name: string
+          price: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_items"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      update_menu_item_extra: {
+        Args: {
+          p_extra_id: string
+          p_name: string
+          p_price_adjustment?: number
+        }
+        Returns: {
+          created_at: string
+          id: string
+          item_id: string
+          name: string
+          price_adjustment: number
+          restaurant_id: string
+          sort_order: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "menu_item_extras"
           isOneToOne: true
           isSetofReturn: false
         }

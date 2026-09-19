@@ -190,3 +190,87 @@ on conflict (id) do update set
   weekday = excluded.weekday,
   open_time = excluded.open_time,
   close_time = excluded.close_time;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Phase 4 menu fixture (spec 005 FR-028, SC-007; data-model.md seed table;
+-- research.md §13). Deterministic UUIDs — MUST stay identical to
+-- tests/database/helpers/fixtures.ts.
+--
+-- Blue Olive carries the shared demo menu (categories, items with descriptions
+-- and two-decimal prices, extras on two items) and the two availability
+-- states the phase turns on:
+--   * Grilled Sea Bass is stopped RESTAURANT-WIDE (`is_available = false`) and
+--     ALSO carries a Marina override row — the clarified hard stop wins over
+--     an existing override (spec Edge Cases, FR-012/FR-013);
+--   * Chicken Tagine is available restaurant-wide but unavailable at Marina
+--     only — the everyday branch override (FR-013).
+-- Cedar Grill carries its own small menu, proving cross-tenant isolation of
+-- categories, items, and extras.
+--
+-- No item image is seeded: the seed writes to the database only, and a
+-- reference without an uploaded object would violate FR-021 (research.md §16).
+-- The image journey is proven by the integration round trip and the quickstart
+-- upload.
+--
+-- `on conflict (id) do update` converges the menu content on re-run (spec 004
+-- SC-007 posture), so a fixture edited through the app returns to the seeded
+-- state without a reset.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+insert into public.menu_categories (id, restaurant_id, name, description, sort_order) values
+  ('00000000-0000-4000-8000-000000006001', '00000000-0000-4000-8000-000000000001', 'Starters', 'Small plates to begin with.', 1),
+  ('00000000-0000-4000-8000-000000006002', '00000000-0000-4000-8000-000000000001', 'Mains', 'Grilled and slow-cooked plates.', 2),
+  ('00000000-0000-4000-8000-000000006003', '00000000-0000-4000-8000-000000000001', 'Desserts', 'Sweet finishes.', 3),
+  ('00000000-0000-4000-8000-000000006004', '00000000-0000-4000-8000-000000000001', 'Drinks', 'Cold and hot drinks.', 4),
+  ('00000000-0000-4000-8000-000000006101', '00000000-0000-4000-8000-000000000002', 'Grill', 'From the charcoal grill.', 1)
+on conflict (id) do update set
+  name = excluded.name,
+  description = excluded.description,
+  sort_order = excluded.sort_order;
+
+insert into public.menu_items
+  (id, restaurant_id, category_id, name, description, price, is_available, sort_order)
+values
+  ('00000000-0000-4000-8000-000000006011', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006001', 'Hummus', 'Chickpea purée with tahini, olive oil, and warm pita.', 6.50, true, 1),
+  ('00000000-0000-4000-8000-000000006012', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006001', 'Grilled Halloumi', 'Charred halloumi with lemon and mint.', 8.00, true, 2),
+  ('00000000-0000-4000-8000-000000006013', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006001', 'Soup of the Day', 'Ask the team about today''s pot.', 5.50, true, 3),
+  ('00000000-0000-4000-8000-000000006014', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006002', 'Lamb Kebab', 'Charcoal-grilled lamb skewers with rice and grilled vegetables.', 18.50, true, 1),
+  ('00000000-0000-4000-8000-000000006015', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006002', 'Grilled Sea Bass', 'Whole sea bass with olive oil, lemon, and seasonal greens.', 24.00, false, 2),
+  ('00000000-0000-4000-8000-000000006016', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006002', 'Chicken Tagine', 'Slow-cooked chicken with preserved lemon and olives.', 16.00, true, 3),
+  ('00000000-0000-4000-8000-000000006017', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006003', 'Chocolate Fondant', 'Warm chocolate cake with a molten centre.', 7.50, true, 1),
+  ('00000000-0000-4000-8000-000000006018', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006003', 'Baklava', 'Pistachio baklava with honey syrup.', 6.00, true, 2),
+  ('00000000-0000-4000-8000-000000006019', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006003', 'Seasonal Fruit Plate', 'Fresh fruit, sliced to order.', 5.00, true, 3),
+  ('00000000-0000-4000-8000-000000006020', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006004', 'Mint Lemonade', 'Fresh lemonade with crushed mint.', 4.50, true, 1),
+  ('00000000-0000-4000-8000-000000006021', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006004', 'Still Water', '750 ml bottle.', 2.50, true, 2),
+  ('00000000-0000-4000-8000-000000006022', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006004', 'Turkish Coffee', 'Traditional preparation, served with a sweet.', 3.50, true, 3),
+  ('00000000-0000-4000-8000-000000006111', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000006101', 'Cedar Mixed Grill', 'Lamb, chicken, and kofta over charcoal.', 22.00, true, 1),
+  ('00000000-0000-4000-8000-000000006112', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000006101', 'Flatbread', 'Baked to order, brushed with butter.', 4.00, true, 2)
+on conflict (id) do update set
+  category_id = excluded.category_id,
+  name = excluded.name,
+  description = excluded.description,
+  price = excluded.price,
+  is_available = excluded.is_available,
+  sort_order = excluded.sort_order;
+
+insert into public.menu_item_extras
+  (id, restaurant_id, item_id, name, price_adjustment, sort_order)
+values
+  ('00000000-0000-4000-8000-000000006031', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006014', 'Extra garlic sauce', 0.00, 1),
+  ('00000000-0000-4000-8000-000000006032', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006014', 'Extra rice', 3.00, 2),
+  ('00000000-0000-4000-8000-000000006033', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006014', 'Extra chili', 0.50, 3),
+  ('00000000-0000-4000-8000-000000006034', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006017', 'Vanilla ice cream', 3.50, 1),
+  ('00000000-0000-4000-8000-000000006035', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000006017', 'Extra chocolate sauce', 2.00, 2),
+  ('00000000-0000-4000-8000-000000006121', '00000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000006111', 'Extra flatbread', 2.00, 1)
+on conflict (id) do update set
+  name = excluded.name,
+  price_adjustment = excluded.price_adjustment,
+  sort_order = excluded.sort_order;
+
+-- Marina's two override rows: the everyday one (Chicken Tagine — available
+-- everywhere except Marina) and the one that proves the hard stop (Grilled Sea
+-- Bass is stopped restaurant-wide, so its override row has no effect).
+insert into public.branch_unavailable_items (id, restaurant_id, branch_id, item_id) values
+  ('00000000-0000-4000-8000-000000006041', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000006015'),
+  ('00000000-0000-4000-8000-000000006042', '00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000006016')
+on conflict on constraint branch_unavailable_items_branch_item_key do nothing;
