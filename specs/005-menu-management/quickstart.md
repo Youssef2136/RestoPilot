@@ -21,11 +21,11 @@ details belong to `tasks.md`.
 | App | `npm run dev` → <http://localhost:5173> | for the manual walkthroughs |
 
 The seed provides everything the walkthroughs need: Blue Olive (Downtown,
-Marina, Airport) with its **shared demo menu** — four categories, 10–12 items
+Marina) with its **shared demo menu** — four categories, 10–12 items
 with descriptions and two-decimal prices, extras on two items, one item stopped
 restaurant-wide (with a Marina override row proving the hard stop wins), one
-item overridden unavailable at Marina only — plus Cedar Grill's own menu for
-isolation checks, and the seeded identities: **alice** (owner, Blue Olive),
+item overridden unavailable at Marina only — plus Cedar Grill's own menu (its
+branch is Airport) for isolation checks, and the seeded identities: **alice** (owner, Blue Olive),
 **bob** (branch manager, Downtown), **carla** (cashier, Downtown), **dan**
 (kitchen, Marina), **eve** (owner, Cedar Grill), **platform-admin** (super
 admin), **fiona** (linked profile, no memberships). Passwords follow the

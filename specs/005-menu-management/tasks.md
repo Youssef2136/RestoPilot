@@ -35,7 +35,7 @@ Single project at repository root: `src/`, `tests/`, `e2e/`, `supabase/`, `scrip
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: The four migrations that constitute the menu data layer, the seeded fixture source, and the schema/authorization proofs every user story consumes
+**Purpose**: The five migrations that constitute the menu data layer (the four planned at task generation plus `20260917120000_menu_rpc_price_format.sql`, added during implementation as a new migration per FR-029 — see Notes), the seeded fixture source, and the schema/authorization proofs every user story consumes
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
@@ -161,7 +161,7 @@ Single project at repository root: `src/`, `tests/`, `e2e/`, `supabase/`, `scrip
 - [X] T045 Full quality gate from a clean state: `npm run verify` (format:check → lint → typecheck → test:unit → test:db → test:integration → build) **and** `npm run test:e2e` both exit 0 with the extended suites; `package.json` unchanged (no new dependency, no new script) — SC-001…SC-008 evidence (depends on T044)
 - [X] T046 [P] Constraint & boundary audit across the Phase 4 diff (`supabase/migrations/`, `supabase/seed.sql`, `scripts/db/seed.mjs`, `src/features/menu/`, `src/features/auth/`, `src/routes/`, `src/app/router.tsx`, the test suites, `docs/development.md`): no service-role or secret keys anywhere (the seed and tests use only `SUPABASE_DB_URL`); no new environment variables; no new dependency; no client write grants on any table and no grants added to `storage.objects`; the bucket stays private and no public-read policy exists; guards and predicates presentation-only (Constitution IV); no item deletion path and no non-empty category deletion; no scope creep (no tax, session, ordering, cart, round, kitchen, cashier, delivery, bill, reporting, realtime, or super-admin work); every spec FR-001–FR-029 and SC-001–SC-008 maps to at least one task — audit record in the Notes section below
 - [X] T047 Run the quickstart.md walkthroughs and record the results: Walkthrough A — the owner builds the menu in one session (SC-001), including one real image upload; Walkthrough B — availability, the hard stop, and the override lifecycle with the exit-condition check; Walkthrough C — isolation, read scope, the recorded price change, and image privacy; then restore the development project with `npm run db:reset && npm run db:seed` and append the validation record to `specs/005-menu-management/quickstart.md`
-- [X] T048 Final commit and push of all Phase 4 artifacts (the four migrations under `supabase/migrations/`, `supabase/seed.sql` + `scripts/db/seed.mjs`, the `src/features/menu/` module, the route and auth-module edits, regenerated `src/types/database.types.ts`, the test suites, `docs/development.md`, and the spec artifacts) to GitHub `main` — mirrors feature 004 T051 (depends on T045–T047)
+- [X] T048 Final commit and push of all Phase 4 artifacts (the five migrations under `supabase/migrations/`, `supabase/seed.sql` + `scripts/db/seed.mjs`, the `src/features/menu/` module, the route and auth-module edits, regenerated `src/types/database.types.ts`, the test suites, `docs/development.md`, and the spec artifacts) to GitHub `main` — mirrors feature 004 T051 (depends on T045–T047)
 
 ---
 
@@ -259,6 +259,7 @@ T001 → T002 ∥ (T003 → T004 → T005 → T006) → T007 → T008 → T009 �
 - No new dependency, no new environment variable, no service-role or secret keys anywhere; the seed writes to the database only, so no image is seeded (research.md §16)
 - The preliminary `checklists/security-and-data-integrity.md` review items are reviewer-owned; the implementation must not mark them. Items CHK033, CHK034, CHK040, CHK041, and CHK044 flag requirements-level questions (out-of-band object deletion, orphan accumulation, the reorder/creation race, empty states, and SC-008's verification method) — resolve them in the spec as part of T029/T039/T042 work if the reviewer rules they need a spec line
 - Commit after each task or logical group; stop at any checkpoint to validate the story independently
+- **Five migrations shipped, not the four planned at task generation**: the US3 database test caught the update RPCs recording their audit change string from the unconstrained `numeric` parameter (a `24.5` price recorded as `"price: 24.00 -> 24.5"` instead of the contract's `24.50`; the stored columns were always exact). The fix landed as the new migration `20260917120000_menu_rpc_price_format.sql` — `create or replace` preserving signature, body shape, and grants — added per FR-029's rule that an applied migration is never edited
 
 ### T046 audit record (2026-09-19) — all checks PASS
 
