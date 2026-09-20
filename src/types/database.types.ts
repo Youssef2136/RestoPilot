@@ -303,6 +303,55 @@ export type Database = {
           },
         ]
       }
+      kitchen_tickets: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          restaurant_id: string
+          round_id: string
+          state: string
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          restaurant_id: string
+          round_id: string
+          state?: string
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          restaurant_id?: string
+          round_id?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kitchen_tickets_branch_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "kitchen_tickets_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kitchen_tickets_round_scope_fkey"
+            columns: ["restaurant_id", "round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           created_at: string
@@ -508,6 +557,165 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      round_item_extras: {
+        Row: {
+          created_at: string
+          extra_id: string
+          id: string
+          price_adjustment: number
+          restaurant_id: string
+          round_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          extra_id: string
+          id?: string
+          price_adjustment: number
+          restaurant_id: string
+          round_item_id: string
+        }
+        Update: {
+          created_at?: string
+          extra_id?: string
+          id?: string
+          price_adjustment?: number
+          restaurant_id?: string
+          round_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_item_extras_extra_id_fkey"
+            columns: ["extra_id"]
+            isOneToOne: false
+            referencedRelation: "menu_item_extras"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_item_extras_line_scope_fkey"
+            columns: ["restaurant_id", "round_item_id"]
+            isOneToOne: false
+            referencedRelation: "round_items"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "round_item_extras_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      round_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          quantity: number
+          restaurant_id: string
+          round_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          quantity: number
+          restaurant_id: string
+          round_id: string
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          quantity?: number
+          restaurant_id?: string
+          round_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_items_item_scope_fkey"
+            columns: ["restaurant_id", "item_id"]
+            isOneToOne: false
+            referencedRelation: "menu_items"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "round_items_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_items_round_scope_fkey"
+            columns: ["restaurant_id", "round_id"]
+            isOneToOne: false
+            referencedRelation: "rounds"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+        ]
+      }
+      rounds: {
+        Row: {
+          branch_id: string
+          created_at: string
+          id: string
+          restaurant_id: string
+          session_id: string
+          state: string
+          subtotal: number
+          tax_lines: Json
+          tax_total: number
+        }
+        Insert: {
+          branch_id: string
+          created_at?: string
+          id?: string
+          restaurant_id: string
+          session_id: string
+          state?: string
+          subtotal: number
+          tax_lines?: Json
+          tax_total: number
+        }
+        Update: {
+          branch_id?: string
+          created_at?: string
+          id?: string
+          restaurant_id?: string
+          session_id?: string
+          state?: string
+          subtotal?: number
+          tax_lines?: Json
+          tax_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rounds_branch_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "rounds_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rounds_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       session_participants: {
         Row: {
@@ -1102,6 +1310,7 @@ export type Database = {
       get_public_restaurant: { Args: { p_slug: string }; Returns: Json }
       get_session_context: { Args: { p_token: string }; Returns: Json }
       get_session_menu: { Args: { p_token: string }; Returns: Json }
+      get_session_rounds: { Args: { p_token: string }; Returns: Json }
       move_menu_item: {
         Args: { p_category_id: string; p_item_id: string }
         Returns: {
@@ -1297,6 +1506,7 @@ export type Database = {
         Args: { p_image_path: string; p_item_id: string }
         Returns: string
       }
+      submit_round: { Args: { p_items: Json; p_token: string }; Returns: Json }
       update_menu_category: {
         Args: { p_category_id: string; p_description?: string; p_name: string }
         Returns: {

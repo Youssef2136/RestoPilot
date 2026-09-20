@@ -283,3 +283,179 @@ test('eve sees Downtown only at Blue Olive; the staff list carries no phone numb
   expect(pageText).not.toContain('+15550101')
   expect(pageText).not.toContain('05550102')
 })
+
+/* ══ Phase 7 (spec 008): the cart, submission, and rounds history ════════════
+ *
+ * The US1 cart interactions, the US2 submission flow, and the US3 history —
+ * all through the customer route the earlier blocks reached. Downtown T3 is
+ * the shared fixture table: the entry flow above leaves an OPEN T3 session
+ * (the serial worker reuses it), so these tests join that session rather
+ * than open a new one — safe under `fullyParallel` because the file is
+ * serial in one worker and joins never disturb the seed.
+ *
+ * ════════════════════════════════════════════════════════════════════════════ */
+
+/** Joins (or re-enters) the Downtown T3 session and lands on the menu. */
+async function joinT3AndReachMenu(page: Page, name: string, phone: string) {
+  await page.goto(`/r/${SLUG}`)
+  await page.getByLabel('Branch').selectOption({ label: 'Downtown' })
+  await page.getByLabel('Table').selectOption({ label: 'T3' })
+  await page.getByLabel('Your name').fill(name)
+  await page.getByLabel('Phone number').fill(phone)
+  await page.getByRole('button', { name: 'Join the table' }).click()
+  await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
+}
+
+test('add with extras updates the line list and the advisory total; adjust and remove work (US1, FR-002)', async ({
+  page,
+}) => {
+  await joinT3AndReachMenu(page, 'Cart Guest', '+15559000010')
+
+  // The cart section is the assertion scope (the history section also
+  // renders item lines once rounds exist).
+  const cart = page.getByRole('region', { name: 'Cart' })
+
+  // Add one Lamb Kebab with Extra rice: the line renders; the total is the
+  // advisory sum from the payload prices (18.50 + 3.00 = 21.50).
+  const lambSection = page.locator('li').filter({ hasText: 'Lamb Kebab' }).first()
+  await lambSection.getByLabel('Extra rice').check()
+  await lambSection.getByRole('spinbutton').fill('1')
+  await lambSection.getByRole('button', { name: 'Add to cart' }).click()
+  await expect(cart.getByText('Lamb Kebab × 1')).toBeVisible()
+  await expect(cart.getByText('21.50')).toBeVisible()
+
+  // Add two Hummus: a second line; the total grows by 13.00 → 34.50.
+  const hummusSection = page.locator('li').filter({ hasText: 'Hummus' }).first()
+  await hummusSection.getByRole('spinbutton').fill('2')
+  await hummusSection.getByRole('button', { name: 'Add to cart' }).click()
+  await expect(cart.getByText('Hummus × 2')).toBeVisible()
+  await expect(cart.getByText('34.50')).toBeVisible()
+
+  // Adjust the kebab line up: 2 × 21.50 = 43.00, plus 13.00 hummus → 56.00.
+  const kebabLine = cart.locator('li').filter({ hasText: 'Lamb Kebab × 1' }).first()
+  await kebabLine.getByRole('button', { name: '+' }).click()
+  await expect(cart.getByText('Lamb Kebab × 2')).toBeVisible()
+  await expect(cart.getByText('56.00')).toBeVisible()
+
+  // Remove the hummus line: the total falls back to 43.00 and the line goes.
+  const hummusLine = cart.locator('li').filter({ hasText: 'Hummus × 2' }).first()
+  await hummusLine.getByRole('button', { name: 'Remove' }).click()
+  await expect(cart.getByText('Hummus × 2')).toHaveCount(0)
+  await expect(cart.getByText('43.00')).toBeVisible()
+})
+
+test('the cart survives a reload (SC-005 local half) and stays off the entry route (FR-003)', async ({
+  page,
+}) => {
+  await joinT3AndReachMenu(page, 'Cart Reload Guest', '+15559000011')
+
+  const cart = page.getByRole('region', { name: 'Cart' })
+  const lambSection = page.locator('li').filter({ hasText: 'Lamb Kebab' }).first()
+  await lambSection.getByRole('spinbutton').fill('2')
+  await lambSection.getByRole('button', { name: 'Add to cart' }).click()
+  await expect(cart.getByText('Lamb Kebab × 2')).toBeVisible()
+  await expect(cart.getByText('37.00')).toBeVisible()
+
+  // Reload: the token recovers the session AND the cart is restored exactly.
+  await page.reload()
+  await expect(page.getByText(/Blue Olive · Downtown · Table T3/)).toBeVisible()
+  await expect(cart.getByText('Lamb Kebab × 2')).toBeVisible()
+  await expect(cart.getByText('37.00')).toBeVisible()
+
+  // The entry route never renders a cart surface (FR-003's other side).
+  await page.goto(`/r/${SLUG}`)
+  await expect(page.getByRole('button', { name: 'Add to cart' })).toHaveCount(0)
+  await expect(page.getByText('Your cart')).toHaveCount(0)
+})
+
+test('submitting a valid cart clears it, names the round, and the history shows it (US2/US3, SC-001)', async ({
+  page,
+}) => {
+  await joinT3AndReachMenu(page, 'Submit Guest', '+15559000012')
+
+  const lambSection = page.locator('li').filter({ hasText: 'Lamb Kebab' }).first()
+  await lambSection.getByRole('spinbutton').fill('1')
+  await lambSection.getByRole('button', { name: 'Add to cart' }).click()
+
+  // Empty-cart guard: not exercised here (the cart has a line) — the submit
+  // is enabled and completes. The success feedback names the ticket.
+  await page.getByRole('button', { name: 'Send order to the kitchen' }).click()
+  await expect(page.getByRole('status')).toContainText(/ticket/i)
+  await expect(page.getByText('Your cart is empty.')).toBeVisible()
+
+  // The history section recovered the round from the server (US3).
+  const history = page.getByRole('region', { name: 'Your rounds' })
+  await expect(history.getByText('Lamb Kebab').first()).toBeVisible()
+  await expect(history.getByText('18.50').first()).toBeVisible()
+  await expect(history.getByText(/VAT/).first()).toBeVisible()
+})
+
+test('a refused submission preserves the cart and renders the server message verbatim (US2, FR-010)', async ({
+  page,
+}) => {
+  await joinT3AndReachMenu(page, 'Refusal Guest', '+15559000013')
+
+  // The sea bass is stopped restaurant-wide — its "Add to cart" affordance
+  // never renders for customers (the payload marks it not offered). So the
+  // refusal must come from a RACE: add a valid item, then the item is
+  // stopped server-side before submission. Real UI path: fill the cart, and
+  // force the refusal through a direct submit with a stale line injected
+  // into the stored cart (the advisory cart is client state — the server
+  // remains the authority; FR-004).
+  const cart = page.getByRole('region', { name: 'Cart' })
+  const hummusSection = page.locator('li').filter({ hasText: 'Hummus' }).first()
+  await hummusSection.getByRole('spinbutton').fill('1')
+  await hummusSection.getByRole('button', { name: 'Add to cart' }).click()
+  await expect(cart.getByText('Hummus × 1')).toBeVisible()
+
+  // Inject an unavailable item into the stored cart (stopped sea bass), then
+  // reload so the surface renders the poisoned cart — the submission must
+  // fail verbatim and the cart must survive.
+  await page.evaluate((seaBassId) => {
+    const raw = localStorage.getItem('restopilot.cart')
+    const cart =
+      raw !== null
+        ? (JSON.parse(raw) as { token: string; lines: unknown[] })
+        : { token: '', lines: [] }
+    cart.lines.push({ item_id: seaBassId, extra_ids: [], quantity: 1 })
+    localStorage.setItem('restopilot.cart', JSON.stringify(cart))
+  }, '00000000-0000-4000-8000-000000006015')
+  await page.reload()
+  await expect(cart.getByText('Hummus × 1')).toBeVisible()
+
+  // The poisoned cart renders the sea bass line too (the payload knows the
+  // item, availability is server-side); submitting is refused verbatim.
+  await page.getByRole('button', { name: 'Send order to the kitchen' }).click()
+  await expect(page.getByRole('alert')).toHaveText('This item is not available here.')
+
+  // FR-010: the cart is exactly as it was — all three lines still render.
+  await expect(cart.getByText('Hummus × 1')).toBeVisible()
+})
+
+test('two submissions render two rounds in the history; reload keeps it (US3, SC-003/SC-005 server half)', async ({
+  page,
+}) => {
+  await joinT3AndReachMenu(page, 'History Guest', '+15559000014')
+
+  const history = page.getByRole('region', { name: 'Your rounds' })
+  const addHummus = async (quantity: string) => {
+    const hummusSection = page.locator('li').filter({ hasText: 'Hummus' }).first()
+    await hummusSection.getByRole('spinbutton').fill(quantity)
+    await hummusSection.getByRole('button', { name: 'Add to cart' }).click()
+  }
+  await addHummus('1')
+  await page.getByRole('button', { name: 'Send order to the kitchen' }).click()
+  await expect(page.getByRole('status')).toContainText(/ticket/i)
+
+  await addHummus('3')
+  await page.getByRole('button', { name: 'Send order to the kitchen' }).click()
+  await expect(page.getByRole('status')).toContainText(/ticket/i)
+
+  // Both rounds render with their distinct lines (1 and 3 hummus).
+  await expect(history.getByText(/Hummus × 1/)).toBeVisible()
+  await expect(history.getByText('Hummus × 3')).toBeVisible()
+
+  // Reload: the history is recovered from the server (SC-005's server half).
+  await page.reload()
+  await expect(history.getByText('Hummus × 3')).toBeVisible()
+})

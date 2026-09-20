@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { BranchMenuPreview } from '../features/menu/components/BranchMenuPreview'
+import { CartPanel } from '../features/order/components/CartPanel'
+import { RoundsHistory } from '../features/order/components/RoundsHistory'
 import { SessionIndicator } from '../features/session/components/SessionIndicator'
 import { SESSION_UNAVAILABLE_MESSAGE } from '../features/session/sessionClient'
 import { forgetSession, sessionTokenScope, useSessionMenu } from '../features/session/useSession'
@@ -73,7 +74,8 @@ export function CustomerMenuPage() {
     <section>
       <SessionIndicator />
       <h1>{menu.branch.name}</h1>
-      <BranchMenuPreview menu={menu} />
+      <CartPanel menu={menu} />
+      <RoundsHistory />
     </section>
   )
 }

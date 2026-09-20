@@ -1100,3 +1100,31 @@ export const downtownTableLabels = {
   [diningTableIds.downtownT2]: 'T2',
   [diningTableIds.downtownT3]: 'T3',
 } as const
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 7 (cart and rounds) fixture constants (spec 008; T002): the item
+// selection matrix the submission suites drive. No rounds are seeded —
+// histories start empty so Round 1/Round 2 journeys are provable from a
+// clean state (research.md §10).
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * The submission suites' item matrix, expressed from the seeded menu:
+ * a priced item WITH extras (lamb kebab: garlic sauce, rice, chili), a plain
+ * priced item (mint lemonade), the foreign-restaurant item (Cedar Grill's
+ * mixed grill — wrong restaurant for a Blue Olive session), the
+ * restaurant-wide stopped item, and the Marina-override item (proves the
+ * branch check uses the SESSION's branch).
+ */
+export const orderTestItems = {
+  /** With extras `lambExtraGarlicSauce`/`lambExtraRice`/`lambExtraChili`. */
+  lambKebab: menuItemIds.lambKebab,
+  /** A plain priced item with no extras rows. */
+  mintLemonade: menuItemIds.mintLemonade,
+  /** Cedar Grill's item — the foreign-restaurant refusal class. */
+  foreign: menuItemIds.cedarMixedGrill,
+  /** Restaurant-wide stopped (`is_available = false`). */
+  stopped: stoppedMenuItemId,
+  /** Available everywhere except Marina (the session-branch check). */
+  marinaOnly: marinaOnlyUnavailableItemId,
+} as const
