@@ -5,9 +5,11 @@ import { AdminPage } from '../routes/AdminPage'
 import { BranchDetailPage } from '../routes/BranchDetailPage'
 import { BranchMenuPage } from '../routes/BranchMenuPage'
 import { BranchTaxPage } from '../routes/BranchTaxPage'
+import { CashierRoundsPage } from '../routes/CashierRoundsPage'
 import { BranchesPage } from '../routes/BranchesPage'
 import { CustomerMenuPage } from '../routes/CustomerMenuPage'
 import { DashboardPage } from '../routes/DashboardPage'
+import { KitchenDashboardPage } from '../routes/KitchenDashboardPage'
 import { ManageRestaurantPage } from '../routes/ManageRestaurantPage'
 import { MenuPage } from '../routes/MenuPage'
 import { OrderPage } from '../routes/OrderPage'
@@ -100,6 +102,28 @@ export function AppRouter() {
           element={
             <RequireStaff>
               <StaffSessionsPage />
+            </RequireStaff>
+          }
+        />
+        {/* Round operations (spec 009 US2, `/dashboard/rounds`): the cashier
+            dashboard. The page's own role gate renders the denial for kitchen
+            or outsiders; every action is re-authorized by its RPC. */}
+        <Route
+          path="/dashboard/rounds"
+          element={
+            <RequireStaff>
+              <CashierRoundsPage />
+            </RequireStaff>
+          }
+        />
+        {/* Kitchen display (spec 009 US3, `/dashboard/kitchen`): the queue
+            with start/ready controls. The page's own role gate renders the
+            denial for identities without branch reach. */}
+        <Route
+          path="/dashboard/kitchen"
+          element={
+            <RequireStaff>
+              <KitchenDashboardPage />
             </RequireStaff>
           }
         />

@@ -269,6 +269,30 @@ the state that matters.
 | `tests/integration/order.journey.test.ts`       | `npm run test:integration` | The real-API ordering journey through the hosted PostgREST endpoint: enter → build the cart through the real merge rules → submit → the history shows the round with captured prices → the reload-equivalent (fresh client, stored token) → a second submission → two rounds, two tickets. Rerun-safe by id-based assertions; self-cleaning (closes its session through a real staff sign-in).                                                                                                                                                                                                                                                                              |
 | `e2e/session.surfaces.test.ts` (Phase 7 blocks) | `npm run test:e2e`         | The browser cart journey on the customer menu: add-with-extras and the advisory total, adjust/remove, reload persistence of the cart, no cart surface on the entry route, the submit flow (success clears and names the round; the verbatim refusal preserves the cart via a poisoned stale line), and the two-round history surviving a reload.                                                                                                                                                                                                                                                                                                                            |
 
+## Staff operations test suites (Phase 8)
+
+Phase 8 (kitchen and cashier operations) adds the staff surface over the
+Phase 7 substrate. Its data-layer posture: the round state machine
+(`new → accepted → preparing → ready → lock`, terminal; kitchen tickets move
+`new → accepted → preparing → ready`, never lock) lives in the DATABASE —
+five guarded-update transition RPCs plus `modify_round_line`'s captured-price
+re-derivation (through the same owner-only tax core, pinned to each line's
+captured unit price and adjustments via a parallel overrides array). Every
+transition is `update … where id = $1 and state = '<from>'` with
+`row_count = 0 ⇒ P0001` — two racing transitions serialize at row level and
+exactly one guard matches (the concurrency arbiter; the pooled session-mode
+cloud database cannot interleave connections, so the suites prove the
+sequential winner/loser posture instead, as documented in the suites).
+Every mutation is audited through `private.record_audit` with the JWT-derived
+actor. The DB owns the transitions; the transport (realtime) is Phase 12's.
+
+| Suite                                           | Command             | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ----------------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/database/round.lifecycle.test.ts`        | `npm run test:db`   | The transition matrix: identity/tenant gates (outsider, anon, cross-branch kitchen; the dual-role eve reaching Downtown as cashier), the full happy path per allowed role with round↔ticket↔audit sync, every illegal class (repeat/skip/backward/terminal/unknown id) refusing with ZERO state change, the unknown id indistinguishable from out-of-tenant, and the reads (silent `[]` filtering on branch reads, the bill's 42501, the money-free queue shape). |
+| `tests/database/order.schema.test.ts` (widened) | `npm run test:db`   | The order tables' constraints re-asserted against the WIDENED state checks (the 008-era closed checks are superseded by the lifecycle check).                                                                                                                                                                                                                                                                                                                     |
+| `tests/unit/staffops.client.test.ts`            | `npm run test:unit` | The client wrappers' payload discipline (rpc error → typed error; null payload → fail closed; clean payload → typed), the money-free queue parser rejecting ANY money key (FR-010 client half), and the verbatim bill shape. No network.                                                                                                                                                                                                                          |
+| `e2e/kitchen.cashier.test.ts`                   | `npm run test:e2e`  | The browser journeys (serial): dan's kitchen queue at Marina with no cashier-route access and no money text; carla's full cashier journey on a REAL customer-submitted round — accept → modify → start/ready → lock → the bill panel rendering the captured figures.                                                                                                                                                                                              |
+
 ## Troubleshooting
 
 ### Missing environment variables

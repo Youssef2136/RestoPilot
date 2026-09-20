@@ -145,10 +145,14 @@ describe('order tables: declared columns, types, nullability (data-model.md)', (
 })
 
 describe('order tables: named constraints', () => {
-  it('rounds carries the closed state check and money bounds', async () => {
+  it('rounds carries the lifecycle state check and money bounds', async () => {
     const rows = await constraints('rounds')
     const defs = rows.map((r) => r.def).join('\n')
-    expect(defs).toContain("state = 'new'::text")
+    // Phase 8 (spec 009) widened the closed Phase 7 check ('new') to the full
+    // state machine — the 008-era single-state assertion is superseded.
+    expect(defs).toMatch(
+      /state = ANY \(ARRAY\['new'::text, 'accepted'::text, 'preparing'::text, 'ready'::text, 'lock'::text\]\)/,
+    )
     expect(defs).toMatch(/subtotal >= \(0\)::numeric/)
     expect(defs).toMatch(/tax_total >= \(0\)::numeric/)
   })
@@ -173,10 +177,12 @@ describe('order tables: named constraints', () => {
     expect(uniq.some((r) => /round_item_id/.test(r.def) && /extra_id/.test(r.def))).toBe(true)
   })
 
-  it('kitchen_tickets carries the closed state check', async () => {
+  it('kitchen_tickets carries the ticket-lifecycle state check (no lock — Phase 8)', async () => {
     const rows = await constraints('kitchen_tickets')
     const defs = rows.map((r) => r.def).join('\n')
-    expect(defs).toContain("state = 'new'::text")
+    expect(defs).toMatch(
+      /state = ANY \(ARRAY\['new'::text, 'accepted'::text, 'preparing'::text, 'ready'::text\]\)/,
+    )
   })
 
   it('a second kitchen ticket for one round is impossible (SC-003 foundation)', async () => {

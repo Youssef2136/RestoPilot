@@ -24,7 +24,17 @@
 -- payload shape exist in exactly one body.
 -- ────────────────────────────────────────────────────────────────────────────
 
-create or replace function private.calculate_tax_totals(p_branch_id uuid, p_selections jsonb)
+-- The 009 captured-price extension widened the core's signature; drop any
+-- pre-widening overload so exactly one core remains (an idempotent re-apply
+-- against a database that still holds the 2-arg body would otherwise leave
+-- both, and the 2-arg one would shadow the new default).
+drop function if exists private.calculate_tax_totals(uuid, jsonb);
+
+create or replace function private.calculate_tax_totals(
+  p_branch_id uuid,
+  p_selections jsonb,
+  p_price_overrides jsonb default null
+)
 returns jsonb
 language plpgsql
 stable
@@ -51,6 +61,15 @@ begin
   if p_selections is null or jsonb_typeof(p_selections) <> 'array' then
     raise exception 'A calculation selection is malformed.';
   end if;
+
+  -- CAPTURED-PRICE support (spec 009 research §4): when p_price_overrides is
+  -- a jsonb ARRAY parallel to p_selections, each element supplies the
+  -- line's CAPTURED money — {"unit_price": "…", "extras": {extra_id: "…"}}.
+  -- Same length is enforced (fail closed); null/absent elements and keys fall
+  -- back to the menu-current values, so 006/008 callers that pass nothing
+  -- keep exactly the old behavior. A parallel array (not a per-item map) is
+  -- required because two lines of the SAME item may carry different captured
+  -- prices.
 
   -- Every entry must name its item as a UUID string, and every extras entry
   -- must be an extra id (string) or an {extra_id} object — anything else is
@@ -80,12 +99,34 @@ begin
   -- One pass, no session state (a stable function cannot create tables):
   -- every selection joins its item of THIS restaurant and produces exactly
   -- one base row, kept positionally in a jsonb array.
+  if p_price_overrides is not null
+    and (
+      jsonb_typeof(p_price_overrides) <> 'array'
+      or jsonb_array_length(p_price_overrides) <> jsonb_array_length(p_selections)
+    )
+  then
+    raise exception 'A calculation selection is malformed.';
+  end if;
+
   select coalesce(jsonb_agg(
            jsonb_build_object(
              'item_id', i.id,
              'base',
-             (i.price + coalesce((
-               select sum(e.price_adjustment)
+             (coalesce(
+                case
+                  when p_price_overrides is null then null
+                  else p_price_overrides -> ((j.ord - 1)::int) ->> 'unit_price'
+                end,
+                i.price::text
+              )::numeric + coalesce((
+               select sum(
+                 case
+                   when p_price_overrides is not null
+                        and (p_price_overrides -> ((j.ord - 1)::int) -> 'extras') ? e.id::text
+                     then (p_price_overrides -> ((j.ord - 1)::int) -> 'extras' ->> e.id::text)::numeric
+                   else e.price_adjustment
+                 end
+               )
                from public.menu_item_extras e
                where e.item_id = i.id
                  and e.id::text in (
@@ -206,7 +247,7 @@ $$;
 -- The privileged core: owner role only, no execute grant of any kind. It is
 -- callable solely from definer bodies owned by this role (the staff surface
 -- and the submission RPC below).
-revoke all on function private.calculate_tax_totals(uuid, jsonb) from public, anon, authenticated;
+revoke all on function private.calculate_tax_totals(uuid, jsonb, jsonb) from public, anon, authenticated;
 
 -- ── The 006 staff surface becomes a thin authorizing delegator ───────────────
 -- Byte-identical behavior: same authorization, same refusals, same payload.

@@ -248,6 +248,24 @@ export function DashboardPage() {
         (m.role === 'owner' || m.role === 'branch_manager' || m.role === 'cashier'),
     )
 
+  // Round operations entry (spec 009 FR-005): cashier/manager/owner reach the
+  // cashier dashboard; kitchen reaches the kitchen display instead.
+  const canViewRoundsSomewhere = (restaurantId: string) =>
+    memberships.some(
+      (m) =>
+        m.restaurant_id === restaurantId &&
+        (m.role === 'owner' || m.role === 'branch_manager' || m.role === 'cashier'),
+    )
+  const canViewKitchenSomewhere = (restaurantId: string) =>
+    memberships.some(
+      (m) =>
+        m.restaurant_id === restaurantId &&
+        (m.role === 'owner' ||
+          m.role === 'branch_manager' ||
+          m.role === 'cashier' ||
+          m.role === 'kitchen'),
+    )
+
   const effectiveBranchId =
     selectedBranchId !== null && branchOptions.some((option) => option.id === selectedBranchId)
       ? selectedBranchId
@@ -340,6 +358,16 @@ export function DashboardPage() {
               {canViewSessionsSomewhere(selectedRestaurant.restaurantId) && (
                 <li>
                   <Link to="/dashboard/sessions">Sessions</Link>
+                </li>
+              )}
+              {canViewRoundsSomewhere(selectedRestaurant.restaurantId) && (
+                <li>
+                  <Link to="/dashboard/rounds">Rounds</Link>
+                </li>
+              )}
+              {canViewKitchenSomewhere(selectedRestaurant.restaurantId) && (
+                <li>
+                  <Link to="/dashboard/kitchen">Kitchen</Link>
                 </li>
               )}
             </ul>

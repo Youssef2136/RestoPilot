@@ -1121,6 +1121,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_round: { Args: { p_round_id: string }; Returns: Json }
       add_menu_item_extra: {
         Args: { p_item_id: string; p_name: string; p_price_adjustment?: number }
         Returns: {
@@ -1306,11 +1307,25 @@ export type Database = {
       }
       get_branch_menu: { Args: { p_branch_id: string }; Returns: Json }
       get_branch_open_sessions: { Args: { p_branch_id: string }; Returns: Json }
+      get_branch_rounds: { Args: { p_branch_id: string }; Returns: Json }
       get_branch_tax_config: { Args: { p_branch_id: string }; Returns: Json }
+      get_kitchen_queue: { Args: { p_branch_id: string }; Returns: Json }
       get_public_restaurant: { Args: { p_slug: string }; Returns: Json }
+      get_session_bill: { Args: { p_session_id: string }; Returns: Json }
       get_session_context: { Args: { p_token: string }; Returns: Json }
       get_session_menu: { Args: { p_token: string }; Returns: Json }
       get_session_rounds: { Args: { p_token: string }; Returns: Json }
+      lock_round: { Args: { p_round_id: string }; Returns: Json }
+      mark_round_ready: { Args: { p_round_id: string }; Returns: Json }
+      modify_round_line: {
+        Args: {
+          p_action: string
+          p_item_id: string
+          p_quantity?: number
+          p_round_id: string
+        }
+        Returns: Json
+      }
       move_menu_item: {
         Args: { p_category_id: string; p_item_id: string }
         Returns: {
@@ -1506,6 +1521,7 @@ export type Database = {
         Args: { p_image_path: string; p_item_id: string }
         Returns: string
       }
+      start_preparation: { Args: { p_round_id: string }; Returns: Json }
       submit_round: { Args: { p_items: Json; p_token: string }; Returns: Json }
       update_menu_category: {
         Args: { p_category_id: string; p_description?: string; p_name: string }

@@ -1,0 +1,199 @@
+import { getSupabaseClient } from '../../lib/supabase'
+import type { Database } from '../../types/database.types'
+
+/**
+ * Phase 8 — the staff operations client (spec 009 T009; contracts/
+ * staff-ops-client.md §1, §3).
+ *
+ * Thin typed wrappers over the eight RPCs. Authorization is SERVER-side
+ * (each RPC derives identity from the JWT and refuses 42501 with the
+ * action's own message); the client adds no rules, only shapes. Money keys
+ * absent from the kitchen queue are absent here too — the type says so
+ * (FR-010).
+ *
+ * Error handling mirrors the 007/008 clients: a boolean-error-shaped reply
+ * raises (payload discipline), everything else returns typed — surfaces
+ * render data or an error, never a malformed half.
+ */
+
+type Rpc = Database['public']['Functions']
+
+/** A round as the lifecycle/modify payload surfaces it (§1 shape). */
+export interface StaffRoundItem {
+  id: string
+  item_id: string
+  name: string
+  quantity: number
+  unit_price: string
+  extras: Array<{ extra_id: string; name: string; price_adjustment: string }>
+}
+
+export interface StaffRound {
+  id: string
+  restaurant_id: string
+  branch_id: string
+  session_id: string
+  state: string
+  subtotal: string
+  tax_total: string
+  tax_lines: unknown
+  created_at: string
+  items: StaffRoundItem[]
+}
+
+/** Result of a lifecycle transition or a modification. */
+export interface RoundActionResult {
+  round: StaffRound
+  ticket_state: string
+}
+
+/** A branch round as `get_branch_rounds` surfaces it (§6). */
+export interface BranchRound {
+  round_id: string
+  session_id: string
+  table_label: string
+  state: string
+  subtotal: string
+  tax_total: string
+  tax_lines: unknown
+  created_at: string
+  items: Array<{
+    item_id: string
+    name: string
+    quantity: number
+    unit_price: string
+    extras: string[]
+  }>
+}
+
+/**
+ * A kitchen ticket — deliberately carries NO money keys anywhere (FR-010);
+ * the type-level guarantee the database test asserts at runtime.
+ */
+export interface KitchenTicket {
+  ticket_id: string
+  round_id: string
+  state: string
+  table_label: string
+  created_at: string
+  items: Array<{ name: string; quantity: number; extras: string[] }>
+}
+
+/** The session bill (§8): grouped rounds plus the captured grand total. */
+export interface SessionBill {
+  session_id: string
+  table_label: string
+  rounds: Array<{
+    round_id: string
+    state: string
+    subtotal: string
+    tax_total: string
+    tax_lines: unknown
+    created_at: string
+  }>
+  grand_total: string
+}
+
+/**
+ * Raise when an RPC answers with the boolean-error shape instead of a
+ * payload (the 007/008 client convention).
+ */
+export class StaffOpsPayloadError extends Error {
+  readonly code: string
+
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'StaffOpsPayloadError'
+    this.code = code
+  }
+}
+
+/**
+ * FR-010, client half: the kitchen queue is money-free by contract. A
+ * payload carrying any money key (on the ticket or inside an item) is a
+ * contract violation — rejected, never rendered.
+ */
+function assertMoneyFree(tickets: KitchenTicket[]): void {
+  const moneyPattern = /price|subtotal|tax|total/i
+  for (const ticket of tickets) {
+    for (const key of Object.keys(ticket)) {
+      if (moneyPattern.test(key)) {
+        throw new StaffOpsPayloadError('contract', 'The kitchen queue must not carry money data.')
+      }
+    }
+    for (const item of ticket.items) {
+      for (const key of Object.keys(item)) {
+        if (moneyPattern.test(key)) {
+          throw new StaffOpsPayloadError('contract', 'The kitchen queue must not carry money data.')
+        }
+      }
+    }
+  }
+}
+
+async function callRpc<T>(fn: keyof Rpc, args: Record<string, unknown>): Promise<T> {
+  const { data, error } = await getSupabaseClient().rpc(fn as never, args as never)
+  if (error) {
+    throw new StaffOpsPayloadError(error.code ?? 'unexpected', error.message)
+  }
+  if (data === null || data === undefined) {
+    // A row-returning RPC answering nothing is a malformed response —
+    // fail closed (§3: never a crash, never a partial render).
+    throw new StaffOpsPayloadError('malformed', 'The staff operation returned no data.')
+  }
+  return data as T
+}
+
+// ── Lifecycle transitions (§1–§5) ───────────────────────────────────────────
+
+export async function acceptRound(roundId: string): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('accept_round', { p_round_id: roundId })
+}
+
+export async function startPreparation(roundId: string): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('start_preparation', { p_round_id: roundId })
+}
+
+export async function markRoundReady(roundId: string): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('mark_round_ready', { p_round_id: roundId })
+}
+
+export async function lockRound(roundId: string): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('lock_round', { p_round_id: roundId })
+}
+
+export type ModifyAction = 'remove' | 'reduce'
+
+export async function modifyRoundLine(
+  roundId: string,
+  itemId: string,
+  action: ModifyAction,
+  quantity?: number,
+): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('modify_round_line', {
+    p_round_id: roundId,
+    p_item_id: itemId,
+    p_action: action,
+    p_quantity: quantity ?? null,
+  })
+}
+
+// ── Reads (§6–§8) ───────────────────────────────────────────────────────────
+
+export async function getBranchRounds(branchId: string): Promise<BranchRound[]> {
+  const data = await callRpc<BranchRound[]>('get_branch_rounds', { p_branch_id: branchId })
+  return Array.isArray(data) ? data : []
+}
+
+export async function getKitchenQueue(branchId: string): Promise<KitchenTicket[]> {
+  const data = await callRpc<KitchenTicket[]>('get_kitchen_queue', { p_branch_id: branchId })
+  if (Array.isArray(data)) {
+    assertMoneyFree(data)
+    return data
+  }
+  return []
+}
+
+export async function getSessionBill(sessionId: string): Promise<SessionBill> {
+  return callRpc<SessionBill>('get_session_bill', { p_session_id: sessionId })
+}
