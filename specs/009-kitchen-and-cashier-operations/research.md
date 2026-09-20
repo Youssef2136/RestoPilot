@@ -48,6 +48,17 @@ Phase 7 capture path read backwards: same engine, same inputs, same rounding
 (Risk 6, SC-003). The rebuild-from-captured-rows detail matters: re-pricing
 from `menu_items` would silently re-price old orders when a menu price changes.
 
+**As implemented (2026-09-20)**: the core's signature widened to
+`private.calculate_tax_totals(p_branch_id uuid, p_selections jsonb,
+p_price_overrides jsonb default null)` — a jsonb ARRAY parallel to the
+selections, each element `{unit_price, extras: {extra_id: price_adjustment}}`
+pinning that line's captured money (a parallel array because two lines of the
+SAME item may carry different captured prices; a per-item map cannot express
+that). Without the argument the behavior is byte-identical to the 006/008
+callers (the implementation re-applied cleanly against their suites:
+399/399). The pre-widening 2-arg overload is dropped in the migration so
+exactly one core remains.
+
 ## 5. Role resolution per action
 
 The membership row (restaurant_id, branch_id nullable, role) is the unit.
