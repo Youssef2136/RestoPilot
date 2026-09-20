@@ -16,7 +16,7 @@ Conventions inherited from features 004–006: every function is `security defin
 
 ### `open_session_at_table(p_restaurant_id uuid, p_branch_id uuid, p_table_id uuid, p_display_name text, p_phone text) → jsonb`
 
-- Validates in order: restaurant exists (`P0001` "Restaurant not found."); branch active and belongs to it (`P0001` "Branch not found." when inactive or foreign); table active, belongs to that branch (`P0001` "Table not found."); name `btrim` 1–60 (`P0001` "A display name is required." / "A display name may be at most 60 characters."); phone shape per research §6 (`P0001` "A valid phone number is required.").
+- Validates in order: restaurant exists (`P0001` "Restaurant not found."); branch belongs to it (`P0001` "Branch not found." when foreign — branches carry no activity state in this schema, only tables do); table active, belongs to that branch (`P0001` "Table not found."); name `btrim` 1–60 (`P0001` "A display name is required." / "A display name may be at most 60 characters."); phone shape per research §6 (`P0001` "A valid phone number is required.").
 - Behavior: if the table has an open session → **join** (append a participant, issue a new token for that session). Otherwise → **open** exactly one session (insert; the partial unique index makes the concurrent race produce one winner — the loser re-reads and joins, FR-005/FR-007).
 - Returns `{ session: { id, restaurant_id, branch_id, table_id, type, status, opened_at }, token: <base64url>, participant: { id, display_name, joined_at } }`. The token is returned once; only its SHA-256 hash is stored.
 - No audit record (customer actor; traceable through the timestamped rows — spec FR-018's posture).
