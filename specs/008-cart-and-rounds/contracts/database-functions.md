@@ -25,8 +25,12 @@ Validation chain, in order, each act before the next:
    here." naming nothing else (per-line first failure; zero rows written).
 4. Every extra id exists under its submitted item (`menu_item_extras`
    composite scope) — refusal `P0001` "An extra does not belong to its item."
-5. Taxes: `calculate_branch_taxes(session.branch_id, selections)` — the 006
-   engine's own validation applies; its refusal propagates verbatim.
+5. Taxes: `private.calculate_tax_totals(session.branch_id, selections)` — the
+   computation core extracted verbatim from the 006 engine
+   (`20260920103000_tax_core_split.sql`; the staff-facing
+   `calculate_branch_taxes` is now a thin authorizing delegator over it). The
+   token authorization in step 1 IS this call's authorization — the core's
+   own validation applies and its refusal propagates verbatim.
 6. Inserts (one transaction): the round (`state 'new'`, `subtotal` and
    `tax_total`/`tax_lines` from the engine's output), one `round_items` row per
    line (`unit_price` = the menu price, captured), one `round_item_extras` row

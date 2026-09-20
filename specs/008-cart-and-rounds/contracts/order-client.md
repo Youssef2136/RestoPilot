@@ -11,8 +11,11 @@ state; the cart UI lives beside the customer menu (feature 007's route).
 - `getSessionRounds()` → `SessionResult<RoundsPayload>` — one RPC round trip
   (`get_session_rounds`).
 - Error mapping reuses feature 007's machinery verbatim (`mapSessionError`,
-  the retry/denied/validation kinds, `SessionPayloadError` on malformed
-  payloads) — one canonical path (FR-017); no parallel error vocabulary.
+  the retry/denied/validation kinds) — one canonical path (FR-017); no
+  parallel error vocabulary. A malformed RPC payload degrades to the retry
+  kind (a local parse failure is a transient-shape problem, not a server
+  denial) — the deployed client validates shapes with fail-closed parsers
+  rather than a dedicated exception class.
 
 ## §2 Cart state (client-only, advisory)
 
