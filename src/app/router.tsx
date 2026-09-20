@@ -6,16 +6,18 @@ import { BranchDetailPage } from '../routes/BranchDetailPage'
 import { BranchMenuPage } from '../routes/BranchMenuPage'
 import { BranchTaxPage } from '../routes/BranchTaxPage'
 import { BranchesPage } from '../routes/BranchesPage'
+import { CustomerMenuPage } from '../routes/CustomerMenuPage'
 import { DashboardPage } from '../routes/DashboardPage'
 import { ManageRestaurantPage } from '../routes/ManageRestaurantPage'
 import { MenuPage } from '../routes/MenuPage'
 import { OrderPage } from '../routes/OrderPage'
 import { ProfilePage } from '../routes/ProfilePage'
 import { ResetPasswordPage } from '../routes/ResetPasswordPage'
-import { RestaurantPage } from '../routes/RestaurantPage'
+import { RestaurantPublicPage } from '../routes/RestaurantPublicPage'
 import { RootPage } from '../routes/RootPage'
 import { SignInPage } from '../routes/SignInPage'
 import { StaffListPage } from '../routes/StaffListPage'
+import { StaffSessionsPage } from '../routes/StaffSessionsPage'
 import { TaxPage } from '../routes/TaxPage'
 
 /**
@@ -42,11 +44,17 @@ export function AppRouter() {
   return (
     <Routes>
       <Route element={<AppShell />}>
-        {/* Public routes (Phase 0 placeholders unchanged). */}
+        {/* Public routes. The /r/:slug entry flow (spec 007 FR-001) supersedes
+            the Phase 0 restaurant placeholder — same path, real surface. */}
         <Route index element={<RootPage />} />
-        <Route path="/r/:restaurantSlug" element={<RestaurantPage />} />
         <Route path="/order/:branchId" element={<OrderPage />} />
         <Route path="/signin" element={<SignInPage />} />
+        {/* Customer session routes (spec 007 FR-001/FR-021): the public
+            entry flow and the token-guarded customer menu. Both render
+            WITHOUT dashboard chrome — the customer side has no auth context
+            at all; every read verifies the token server-side. */}
+        <Route path="/r/:slug" element={<RestaurantPublicPage />} />
+        <Route path="/r/:slug/menu" element={<CustomerMenuPage />} />
         {/* Password recovery (FR-018): PUBLIC and session-bearing — reached
             through the emailed recovery link, which establishes a session and
             fires PASSWORD_RECOVERY. Deliberately NOT RequireStaff-guarded: a
@@ -79,6 +87,19 @@ export function AppRouter() {
           element={
             <RequireStaff>
               <StaffListPage />
+            </RequireStaff>
+          }
+        />
+        {/* Session oversight (spec 007 US2/US4, FR-017): the signed-in
+            identity's readable branches with their open sessions and the
+            close action. The page's own gate renders the denial for
+            identities the session matrix excludes (kitchen and everyone
+            else), and the RPC re-checks scope server-side. */}
+        <Route
+          path="/dashboard/sessions"
+          element={
+            <RequireStaff>
+              <StaffSessionsPage />
             </RequireStaff>
           }
         />

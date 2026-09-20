@@ -35,8 +35,21 @@ import {
 
 const client = createDbClient()
 
+/**
+ * Audit high-water mark: the audit_log is shared across suites and the real
+ * app (committed rows from e2e image runs appear in broad `action like`
+ * queries). Every assertion counts only rows written at or after the mark.
+ */
+let auditFloor = '1970-01-01'
+
 beforeAll(async () => {
   await client.connect()
+  await client.query('set local role postgres')
+  const mark = await client.query<{ max: string | null }>(
+    'select max(created_at)::text as max from public.audit_log',
+  )
+  await client.query('reset role')
+  auditFloor = mark.rows[0]!.max ?? auditFloor
 })
 
 afterAll(async () => {
@@ -101,9 +114,9 @@ async function auditRows(where = 'true', values: unknown[] = []) {
   const { rows } = await client.query(
     `select actor_profile_id, action, resource_type, resource_id, reason, restaurant_id, branch_id
        from public.audit_log
-      where ${where}
+      where created_at > $${values.length + 1}::timestamptz and (${where})
       order by id`,
-    values,
+    [...values, auditFloor],
   )
   await client.query('set local role authenticated')
   return rows

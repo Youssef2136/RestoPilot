@@ -256,7 +256,12 @@ function DiningTablesSection({ branchId, isOwner }: { branchId: string; isOwner:
 
 export function BranchDetailPage() {
   const { branchId } = useParams<{ branchId: string }>()
-  const { isPending: contextPending, isError: contextError, canManageRestaurant } = useAuthContext()
+  const {
+    isPending: contextPending,
+    isError: contextError,
+    canManageRestaurant,
+    canViewSessions,
+  } = useAuthContext()
 
   const branchQuery = useQuery({
     queryKey: ['management', 'branch', branchId],
@@ -318,6 +323,12 @@ export function BranchDetailPage() {
       <p>
         <Link to={`/dashboard/branches/${branch.id}/tax`}>{`${branch.name} tax`}</Link>
       </p>
+
+      {canViewSessions(branch.id) && (
+        <p>
+          <Link to={`/dashboard/sessions?branch=${branch.id}`}>{`${branch.name} sessions`}</Link>
+        </p>
+      )}
 
       <section aria-labelledby="branch-working-hours-heading">
         <h2 id="branch-working-hours-heading">Working hours</h2>

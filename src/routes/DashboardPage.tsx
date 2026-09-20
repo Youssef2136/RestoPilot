@@ -238,6 +238,16 @@ export function DashboardPage() {
     return branches
   }, [branchesQuery.data, selectedRestaurant])
 
+  // Session oversight entry (spec 007 FR-017): owners see it for their
+  // restaurant; branch-scoped manager/cashier memberships see it for their
+  // branch; kitchen and everyone else do not. Presentation only.
+  const canViewSessionsSomewhere = (restaurantId: string) =>
+    memberships.some(
+      (m) =>
+        m.restaurant_id === restaurantId &&
+        (m.role === 'owner' || m.role === 'branch_manager' || m.role === 'cashier'),
+    )
+
   const effectiveBranchId =
     selectedBranchId !== null && branchOptions.some((option) => option.id === selectedBranchId)
       ? selectedBranchId
@@ -325,6 +335,11 @@ export function DashboardPage() {
               {canManageRestaurant(selectedRestaurant.restaurantId) && (
                 <li>
                   <Link to="/dashboard/tax">Tax</Link>
+                </li>
+              )}
+              {canViewSessionsSomewhere(selectedRestaurant.restaurantId) && (
+                <li>
+                  <Link to="/dashboard/sessions">Sessions</Link>
                 </li>
               )}
             </ul>

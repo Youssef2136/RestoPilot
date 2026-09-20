@@ -509,6 +509,165 @@ export type Database = {
         }
         Relationships: []
       }
+      session_participants: {
+        Row: {
+          created_at: string
+          display_name: string
+          id: string
+          joined_at: string
+          phone: string
+          restaurant_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          id?: string
+          joined_at?: string
+          phone: string
+          restaurant_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          id?: string
+          joined_at?: string
+          phone?: string
+          restaurant_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_participants_restaurant_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_participants_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_participants_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          restaurant_id: string
+          session_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          restaurant_id: string
+          session_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          restaurant_id?: string
+          session_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_tokens_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_tokens_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          branch_id: string
+          closed_at: string | null
+          closed_by_profile_id: string | null
+          created_at: string
+          id: string
+          opened_at: string
+          restaurant_id: string
+          status: string
+          table_id: string
+          type: string
+        }
+        Insert: {
+          branch_id: string
+          closed_at?: string | null
+          closed_by_profile_id?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          restaurant_id: string
+          status?: string
+          table_id: string
+          type?: string
+        }
+        Update: {
+          branch_id?: string
+          closed_at?: string | null
+          closed_by_profile_id?: string | null
+          created_at?: string
+          id?: string
+          opened_at?: string
+          restaurant_id?: string
+          status?: string
+          table_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_branch_scope_fkey"
+            columns: ["restaurant_id", "branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["restaurant_id", "id"]
+          },
+          {
+            foreignKeyName: "sessions_closed_by_fkey"
+            columns: ["closed_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sessions_table_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "dining_tables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_memberships: {
         Row: {
           branch_id: string | null
@@ -787,6 +946,7 @@ export type Database = {
         Args: { p_branch_id: string; p_selections: Json }
         Returns: Json
       }
+      close_session: { Args: { p_session_id: string }; Returns: Json }
       create_branch: {
         Args: { p_name: string; p_restaurant_id: string }
         Returns: {
@@ -937,7 +1097,11 @@ export type Database = {
         Returns: undefined
       }
       get_branch_menu: { Args: { p_branch_id: string }; Returns: Json }
+      get_branch_open_sessions: { Args: { p_branch_id: string }; Returns: Json }
       get_branch_tax_config: { Args: { p_branch_id: string }; Returns: Json }
+      get_public_restaurant: { Args: { p_slug: string }; Returns: Json }
+      get_session_context: { Args: { p_token: string }; Returns: Json }
+      get_session_menu: { Args: { p_token: string }; Returns: Json }
       move_menu_item: {
         Args: { p_category_id: string; p_item_id: string }
         Returns: {
@@ -959,6 +1123,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      open_session_at_table: {
+        Args: {
+          p_branch_id: string
+          p_display_name: string
+          p_phone: string
+          p_restaurant_id: string
+          p_table_id: string
+        }
+        Returns: Json
       }
       record_tax_snapshot: {
         Args: {

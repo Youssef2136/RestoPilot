@@ -327,3 +327,53 @@ on conflict (id) do nothing;
 insert into public.branch_tax_overrides (branch_id, rule_id, restaurant_id, rate) values
   ('00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000007001', '00000000-0000-4000-8000-000000000001', 8.7500)
 on conflict (branch_id, rule_id) do update set rate = excluded.rate;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Phase 6 — sessions (spec 007): two open dine-in demo sessions at Downtown
+-- T1/T2 with participants and the dev tokens' SHA-256 hashes computed in SQL
+-- (research §7). Deterministic ids per tests/database/helpers/fixtures.ts.
+-- Idempotent: on conflict updates the mutable fields, preserves the rest.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+insert into public.sessions
+  (id, restaurant_id, branch_id, table_id, type, status, opened_at)
+values
+  ('00000000-0000-4000-8000-000000008001', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-000000003001',
+   'dine-in', 'open', '2026-09-19T12:00:00Z'),
+  ('00000000-0000-4000-8000-000000008002', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-000000003002',
+   'dine-in', 'open', '2026-09-19T12:10:00Z')
+on conflict (id) do update set
+  restaurant_id = excluded.restaurant_id,
+  branch_id = excluded.branch_id,
+  table_id = excluded.table_id,
+  type = excluded.type,
+  status = excluded.status,
+  opened_at = excluded.opened_at;
+
+insert into public.session_participants
+  (id, session_id, restaurant_id, display_name, phone, joined_at)
+values
+  ('00000000-0000-4000-8000-000000008011', '00000000-0000-4000-8000-000000008001',
+   '00000000-0000-4000-8000-000000000001', 'Sara', '+15550101', '2026-09-19T12:01:00Z'),
+  ('00000000-0000-4000-8000-000000008012', '00000000-0000-4000-8000-000000008001',
+   '00000000-0000-4000-8000-000000000001', 'Omar', '05550102', '2026-09-19T12:03:00Z'),
+  ('00000000-0000-4000-8000-000000008013', '00000000-0000-4000-8000-000000008002',
+   '00000000-0000-4000-8000-000000000001', 'Lina', '+15550103', '2026-09-19T12:11:00Z')
+on conflict (id) do update set
+  display_name = excluded.display_name,
+  phone = excluded.phone,
+  joined_at = excluded.joined_at;
+
+insert into public.session_tokens
+  (id, session_id, restaurant_id, token_hash)
+values
+  ('00000000-0000-4000-8000-000000008021', '00000000-0000-4000-8000-000000008001',
+   '00000000-0000-4000-8000-000000000001',
+   encode(extensions.digest('dev-token-downtown-t1-2026', 'sha256'), 'hex')),
+  ('00000000-0000-4000-8000-000000008022', '00000000-0000-4000-8000-000000008002',
+   '00000000-0000-4000-8000-000000000001',
+   encode(extensions.digest('dev-token-downtown-t2-2026', 'sha256'), 'hex'))
+on conflict (id) do update set
+  token_hash = excluded.token_hash;

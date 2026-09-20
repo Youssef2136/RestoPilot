@@ -1008,3 +1008,95 @@ export const seedTaxEffective = {
     rules: [{ id: taxRuleIds.cedarTax, name: 'IGIC', rate: '7.0000', origin: 'restaurant' }],
   },
 } as const
+
+// ────────────────────────────────────────────────────────────────────────────
+// Phase 6 — sessions (spec 007; data-model.md). Deterministic ids, the two
+// demo open sessions at Downtown T1/T2, their participants, and the dev
+// tokens: plaintext constants here, SHA-256 hashes computed by the seed.
+// The dev tokens are development-only values — never secrets.
+// ────────────────────────────────────────────────────────────────────────────
+
+export const sessionIds = {
+  downtownT1: '00000000-0000-4000-8000-000000008001',
+  downtownT2: '00000000-0000-4000-8000-000000008002',
+} as const
+
+export const sessionParticipantIds = {
+  downtownT1P1: '00000000-0000-4000-8000-000000008011',
+  downtownT1P2: '00000000-0000-4000-8000-000000008012',
+  downtownT2P1: '00000000-0000-4000-8000-000000008013',
+} as const
+
+export const sessionTokenIds = {
+  downtownT1: '00000000-0000-4000-8000-000000008021',
+  downtownT2: '00000000-0000-4000-8000-000000008022',
+} as const
+
+/**
+ * The deterministic dev tokens (development-only plaintext; the seed stores
+ * only `encode(digest(token, 'sha256'), 'hex')`). Documented here so the
+ * suites and e2e can drive customer flows without authenticating anything.
+ */
+export const devSessionTokens = {
+  downtownT1: 'dev-token-downtown-t1-2026',
+  downtownT2: 'dev-token-downtown-t2-2026',
+} as const
+
+export const seedSessions = [
+  {
+    id: sessionIds.downtownT1,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    table_id: diningTableIds.downtownT1,
+    type: 'dine-in',
+    status: 'open',
+  },
+  {
+    id: sessionIds.downtownT2,
+    restaurant_id: restaurantIds.blueOlive,
+    branch_id: branchIds.downtown,
+    table_id: diningTableIds.downtownT2,
+    type: 'dine-in',
+    status: 'open',
+  },
+] as const
+
+export const seedSessionParticipants = [
+  {
+    id: sessionParticipantIds.downtownT1P1,
+    session_id: sessionIds.downtownT1,
+    restaurant_id: restaurantIds.blueOlive,
+    display_name: 'Sara',
+    phone: '+15550101',
+  },
+  {
+    id: sessionParticipantIds.downtownT1P2,
+    session_id: sessionIds.downtownT1,
+    restaurant_id: restaurantIds.blueOlive,
+    display_name: 'Omar',
+    phone: '05550102',
+  },
+  {
+    id: sessionParticipantIds.downtownT2P1,
+    session_id: sessionIds.downtownT2,
+    restaurant_id: restaurantIds.blueOlive,
+    display_name: 'Lina',
+    phone: '+15550103',
+  },
+] as const
+
+/** The token rows mirror `devSessionTokens` — hashes only in the database. */
+export const seedSessionTokenIds = sessionTokenIds
+
+/** Each dev token must resolve to exactly its session through the RPCs. */
+export const devTokenSession = {
+  [devSessionTokens.downtownT1]: sessionIds.downtownT1,
+  [devSessionTokens.downtownT2]: sessionIds.downtownT2,
+} as const
+
+/** The Downtown table labels as the payloads surface them. */
+export const downtownTableLabels = {
+  [diningTableIds.downtownT1]: 'T1',
+  [diningTableIds.downtownT2]: 'T2',
+  [diningTableIds.downtownT3]: 'T3',
+} as const

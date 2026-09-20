@@ -94,6 +94,19 @@ export type UseAuthContextResult = UseQueryResult<AuthContext, Error> & {
    * §2): an owner of the branch's restaurant, or that branch's `branch_manager`.
    */
   canManageBranchTax: (branchId: string) => boolean
+  /**
+   * Session oversight visibility (spec 007 FR-017/FR-019): an owner of the
+   * branch's restaurant, or a branch-scoped `branch_manager`/`cashier`
+   * membership on that branch — the same matrix `get_branch_open_sessions`
+   * enforces. Kitchen and everyone else false. Presentation only — the RPC's
+   * scope check is the boundary (Constitution IV).
+   */
+  canViewSessions: (branchId: string) => boolean
+  /**
+   * Session close control (spec 007 FR-009): the identical matrix —
+   * `close_session` authorizes exactly the roles that may view.
+   */
+  canCloseSession: (branchId: string) => boolean
 }
 
 export function useAuthContext(): UseAuthContextResult {
@@ -172,6 +185,21 @@ export function useAuthContext(): UseAuthContextResult {
     [memberships],
   )
 
+  // Session predicates (spec 007 US2/US4): ownership is restaurant-wide and a
+  // bare branch id cannot resolve it, so any owner passes the coarse gate and
+  // the session RPC's own scope check decides server-side. Branch-scoped
+  // members resolve exactly: manager or cashier on THAT branch; kitchen never.
+  const canViewSessions = useCallback(
+    (branchId: string) =>
+      memberships.some((m) => m.role === 'owner') ||
+      memberships.some(
+        (m) => m.branch_id === branchId && (m.role === 'branch_manager' || m.role === 'cashier'),
+      ),
+    [memberships],
+  )
+  // close_session authorizes exactly the roles that may view (FR-009/FR-019).
+  const canCloseSession = canViewSessions
+
   return {
     ...query,
     profile,
@@ -184,5 +212,7 @@ export function useAuthContext(): UseAuthContextResult {
     canManageBranchAvailability,
     canViewBranchTax,
     canManageBranchTax,
+    canViewSessions,
+    canCloseSession,
   }
 }
