@@ -58,7 +58,7 @@ description: "Task list for feature 009-kitchen-and-cashier-operations (Phase 8)
 - [X] T021 Full quality gate: `npm run verify` and `npm run test:e2e` both exit 0 with the extended suites; `package.json` unchanged — SC-006
 - [X] T022 [P] Constraint & boundary audit across the Phase 8 diff: no secrets; no new env vars; no new dependency; zero grants on the order tables still; no void/bill-edit/discount/payment/stock concept (Constitution I; Phase 10 owns void); no realtime transport (Phase 12); audit rows only from staff actions — record in the Notes section
 - [X] T023 Run the quickstart walkthroughs (`scripts/run-staffops-walkthroughs.mjs`) and append the validation record to `quickstart.md`; restore the project afterwards (`npm run db:reset -- --yes && npm run db:seed`)
-- [ ] T024 Final commit and push of all Phase 8 artifacts to GitHub `main` (the two migrations, `src/features/staffOps/`, the routes, regenerated types, the suites, `docs/development.md`, the spec artifacts) — mirrors feature 008's final task
+- [X] T024 Final commit and push of all Phase 8 artifacts to GitHub `main` (the two migrations, `src/features/staffOps/`, the routes, regenerated types, the suites, `docs/development.md`, the spec artifacts) — mirrors feature 008's final task
 
 ## Notes
 
