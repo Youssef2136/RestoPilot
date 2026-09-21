@@ -6,7 +6,11 @@ research §5. Grants: `revoke all … from public, anon; grant execute … to au
 for the staff RPCs; the entry + submission RPCs grant to `anon, authenticated` (the
 customer surface, as 007/008).
 
-## §1 `open_session_channel(p_restaurant_id uuid, p_branch_id uuid, p_channel text, p_display_name text, p_phone text, p_delivery_address text) → jsonb`
+## §1 `open_session_channel(p_restaurant_id uuid, p_branch_id uuid, p_channel text, p_display_name text, p_phone text, p_delivery_address text default null) → jsonb`
+
+*(Analyze reconciliation 2026-09-21: the deployed signature carries `default null`
+on `p_delivery_address` — takeaway callers omit it, and the generated supabase
+client type correctly marks it `string | null` optional.)*
 
 Customer entry for delivery/takeaway. Validation order: restaurant/branch exist and are
 active (the 007 texts); `p_channel in ('delivery','takeaway')` else
@@ -46,7 +50,9 @@ Same contract for `out_for_delivery → completed`. Terminal: nothing fires afte
 `get_branch_rounds(p_branch_id)` and `get_session_bill(p_session_id)` payloads add
 `session_type` per round, and top-level `delivery_address` (null for non-delivery).
 `get_kitchen_queue` is unchanged. `get_session_context`/`get_session_menu` already
-carry `type` — no change.
+carry `type`; `get_session_context` additionally echoes `delivery_address` in its
+session object (added this phase, spec FR-010's read-only indicator echo — no new
+customer read).
 
 ## §6 Grants
 
