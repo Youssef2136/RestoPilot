@@ -30,7 +30,7 @@
 - [X] T013 [P] Extend `docs/development.md`: the Phase 11 suite table and the "realtime drives invalidation, reads stay the render path" rationale (plan D3), the customer-poll decision (research §3)
 - [X] T014 Reset-and-rebuild determinism: `npm run db:reset -- --yes` → `npm run db:seed` → `npm run test:db` green; `types:gen` byte-identical
 - [X] T015 Run the quickstart walkthroughs (`scripts/run-realtime-walkthroughs.mjs`), append the validation record to `quickstart.md`; restore the project afterwards
-- [ ] T016 Final commit and push of all Phase 11 artifacts to GitHub `main`
+- [X] T016 Final commit and push of all Phase 11 artifacts to GitHub `main`
 
 ## Notes
 
