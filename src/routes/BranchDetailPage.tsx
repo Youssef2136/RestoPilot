@@ -12,6 +12,7 @@ import {
 } from '../features/management/managementClient'
 import { WorkingHoursEditor } from '../features/management/components/WorkingHoursEditor'
 import { WEEKDAY_LABELS, formatInterval, toEditorState } from '../features/management/workingHours'
+import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
 
 /**
  * The branch view (contracts/management-client.md §2; FR-008, FR-009,
@@ -189,6 +190,15 @@ function DiningTablesSection({ branchId, isOwner }: { branchId: string; isOwner:
   const [label, setLabel] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState<Feedback | null>(null)
+
+  // Live table list (spec 012 US5; research §2's event map): activation and
+  // label changes from another staff surface invalidate the tables read —
+  // realtime changes WHEN data arrives, never WHAT may be read (plan D3).
+  useRealtimeInvalidation({
+    scopeValue: branchId,
+    table: 'dining_tables',
+    invalidate: (qc) => qc.invalidateQueries({ queryKey: diningTablesQueryKey(branchId) }),
+  })
 
   // Only meaningful once the branch itself is readable — an out-of-scope id
   // never reaches a tables read.
