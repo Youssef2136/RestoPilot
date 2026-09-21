@@ -37,3 +37,11 @@
 - The customer surface (US3) is intentionally NOT a Postgres subscription — research §3's resolution: the 10s poll + mutation refetch through the unchanged reads; the quickstart asserts the cadence
 - Realtime NEVER renders payloads (plan D3) — the reads remain the only render path; money/PII never arrive via events
 - Policies reuse `private.has_branch_role` verbatim — zero authorization-vocabulary drift
+
+## Post-implement Analysis
+
+**Date**: 2026-09-21 · **Result**: 1 finding, fixed and committed (`90e17dd`).
+
+- **Deployed authorization vs contract** — verified live: the publication carries exactly the five tables; the three staff SELECT policies exist with byte-identical `private.has_branch_role(private.ops_profile_id(), …)` predicates after normalization (zero vocabulary drift); RLS enabled on all five; `authenticated` holds SELECT-only on rounds/kitchen_tickets/sessions (0 write grants); anon holds nothing (0 rows). Matches contracts/realtime-client.md and data-model.md exactly.
+- **Wire-in map vs code** — the §3 surface table was fully wired, but research §2's event map also lists `dining_tables UPDATE → entry/tables keys`, and the branch tables surface (BranchDetailPage's `DiningTablesSection`) had no subscription. Fixed: the tables read now invalidates live on `dining_tables` events; `verify` exit 0 and e2e 80/80 re-run after the change.
+- **No convergence gaps remain** — 16/16 tasks `[X]`, no convergence section appended.
