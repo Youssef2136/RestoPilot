@@ -370,6 +370,16 @@ export function DashboardPage() {
                   <Link to="/dashboard/kitchen">Kitchen</Link>
                 </li>
               )}
+              {(canManageRestaurant(selectedRestaurant.restaurantId) ||
+                memberships.some(
+                  (m) =>
+                    m.restaurant_id === selectedRestaurant.restaurantId &&
+                    m.role === 'branch_manager',
+                )) && (
+                <li>
+                  <Link to="/dashboard/audit">Audit trail</Link>
+                </li>
+              )}
             </ul>
           </nav>
 

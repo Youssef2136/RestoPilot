@@ -311,6 +311,7 @@ export type Database = {
           restaurant_id: string
           round_id: string
           state: string
+          voided: boolean
         }
         Insert: {
           branch_id: string
@@ -319,6 +320,7 @@ export type Database = {
           restaurant_id: string
           round_id: string
           state?: string
+          voided?: boolean
         }
         Update: {
           branch_id?: string
@@ -327,6 +329,7 @@ export type Database = {
           restaurant_id?: string
           round_id?: string
           state?: string
+          voided?: boolean
         }
         Relationships: [
           {
@@ -670,6 +673,10 @@ export type Database = {
           subtotal: number
           tax_lines: Json
           tax_total: number
+          void_reason: string | null
+          voided: boolean
+          voided_at: string | null
+          voided_by_profile_id: string | null
         }
         Insert: {
           branch_id: string
@@ -681,6 +688,10 @@ export type Database = {
           subtotal: number
           tax_lines?: Json
           tax_total: number
+          void_reason?: string | null
+          voided?: boolean
+          voided_at?: string | null
+          voided_by_profile_id?: string | null
         }
         Update: {
           branch_id?: string
@@ -692,6 +703,10 @@ export type Database = {
           subtotal?: number
           tax_lines?: Json
           tax_total?: number
+          void_reason?: string | null
+          voided?: boolean
+          voided_at?: string | null
+          voided_by_profile_id?: string | null
         }
         Relationships: [
           {
@@ -713,6 +728,13 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rounds_voided_by_profile_id_fkey"
+            columns: ["voided_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1308,6 +1330,10 @@ export type Database = {
         Args: { p_rule_id: string }
         Returns: undefined
       }
+      get_audit_log: {
+        Args: { p_action?: string; p_branch_id?: string; p_limit?: number }
+        Returns: Json
+      }
       get_branch_menu: { Args: { p_branch_id: string }; Returns: Json }
       get_branch_open_sessions: { Args: { p_branch_id: string }; Returns: Json }
       get_branch_rounds: { Args: { p_branch_id: string }; Returns: Json }
@@ -1703,6 +1729,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      void_round: {
+        Args: { p_reason: string; p_round_id: string }
+        Returns: Json
       }
     }
     Enums: {

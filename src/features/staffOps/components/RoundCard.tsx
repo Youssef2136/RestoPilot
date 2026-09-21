@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatPrice } from '../../menu/money'
 import { channelLabel } from '../../session/sessionClient'
 import type { BranchRound, RoundActionResult } from '../staffOpsClient'
@@ -27,6 +28,7 @@ export interface RoundCardProps {
   onLock: () => void
   onOutForDelivery: () => void
   onCompleted: () => void
+  onVoid: (reason: string) => void
   onSelectForBill: () => void
   billSelected: boolean
 }
@@ -40,6 +42,19 @@ const DISPATCHABLE = new Set(['ready'])
 const COMPLETABLE = new Set(['out_for_delivery'])
 const IS_DELIVERY = (round: BranchRound) => round.session_type === 'delivery'
 
+/**
+ * The void boundary per channel (spec 011 FR-004): dine-in at `lock`,
+ * delivery at `out_for_delivery`+ (the server accepts through `completed`),
+ * takeaway at `ready`. Below the boundary the control is not offered at all
+ * — void is not the edit path.
+ */
+function VOIDABLE(round: BranchRound): boolean {
+  if (round.session_type === 'dine-in') return round.state === 'lock'
+  if (round.session_type === 'delivery')
+    return round.state === 'out_for_delivery' || round.state === 'completed'
+  return round.state === 'ready'
+}
+
 export function RoundCard({
   round,
   busy,
@@ -51,11 +66,20 @@ export function RoundCard({
   onLock,
   onOutForDelivery,
   onCompleted,
+  onVoid,
   onSelectForBill,
   billSelected,
 }: RoundCardProps) {
+  const [voiding, setVoiding] = useState(false)
+  const [voidReason, setVoidReason] = useState('')
+  const reasonOk = voidReason.trim().length > 0
+
   return (
-    <article data-round-id={round.round_id} data-round-state={round.state}>
+    <article
+      data-round-id={round.round_id}
+      data-round-state={round.state}
+      data-voided={round.voided}
+    >
       <header>
         <h3>
           {round.table_label !== null
@@ -67,6 +91,12 @@ export function RoundCard({
         <p>
           State: <strong>{round.state}</strong>
         </p>
+        {round.voided && (
+          <p data-voided-note>
+            <strong>Voided</strong>
+            {round.void_reason !== null ? ` — ${round.void_reason}` : ''}
+          </p>
+        )}
         {IS_DELIVERY(round) && round.delivery_address ? (
           <p>Deliver to: {round.delivery_address}</p>
         ) : null}
@@ -114,38 +144,79 @@ export function RoundCard({
       )}
 
       <footer>
-        {ACCEPTABLE.has(round.state) && (
+        {!round.voided && ACCEPTABLE.has(round.state) && (
           <button type="button" disabled={busy} onClick={onAccept}>
             Accept round
           </button>
         )}
-        {STARTABLE.has(round.state) && (
+        {!round.voided && STARTABLE.has(round.state) && (
           <button type="button" disabled={busy} onClick={onStart}>
             Start preparation
           </button>
         )}
-        {READIABLE.has(round.state) && (
+        {!round.voided && READIABLE.has(round.state) && (
           <button type="button" disabled={busy} onClick={onReady}>
             Mark ready
           </button>
         )}
-        {LOCKABLE.has(round.state) && !IS_DELIVERY(round) && (
+        {!round.voided && LOCKABLE.has(round.state) && !IS_DELIVERY(round) && (
           <button type="button" disabled={busy} onClick={onLock}>
             Lock round
           </button>
         )}
-        {IS_DELIVERY(round) && DISPATCHABLE.has(round.state) && (
+        {!round.voided && IS_DELIVERY(round) && DISPATCHABLE.has(round.state) && (
           <button type="button" disabled={busy} onClick={onOutForDelivery}>
             Send out for delivery
           </button>
         )}
-        {IS_DELIVERY(round) && COMPLETABLE.has(round.state) && (
+        {!round.voided && IS_DELIVERY(round) && COMPLETABLE.has(round.state) && (
           <button type="button" disabled={busy} onClick={onCompleted}>
             Mark completed
           </button>
         )}
-        {round.state === 'lock' && <span>Served (locked)</span>}
-        {round.state === 'completed' && <span>Delivered (completed)</span>}
+        {round.state === 'lock' && !round.voided && <span>Served (locked)</span>}
+        {round.state === 'completed' && !round.voided && <span>Delivered (completed)</span>}
+
+        {/* The void control (spec 011 FR-004): boundary states only, the
+            reason prompt with the non-empty check as client-side feedback —
+            the server re-validates in its documented order regardless. */}
+        {!round.voided && VOIDABLE(round) && !voiding && (
+          <button type="button" disabled={busy} onClick={() => setVoiding(true)}>
+            Void round
+          </button>
+        )}
+        {!round.voided && VOIDABLE(round) && voiding && (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!reasonOk || busy) return
+              onVoid(voidReason.trim())
+              setVoiding(false)
+              setVoidReason('')
+            }}
+          >
+            <label htmlFor={`void-reason-${round.round_id}`}>Void reason</label>
+            <input
+              id={`void-reason-${round.round_id}`}
+              value={voidReason}
+              onChange={(event) => setVoidReason(event.target.value)}
+              maxLength={500}
+              placeholder="Why is this round being voided?"
+            />
+            <button type="submit" disabled={!reasonOk || busy}>
+              Confirm void
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setVoiding(false)
+                setVoidReason('')
+              }}
+            >
+              Cancel
+            </button>
+          </form>
+        )}
         <label>
           <input
             type="checkbox"

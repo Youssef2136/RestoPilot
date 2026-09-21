@@ -24,6 +24,7 @@ import {
   markRoundReady,
   modifyRoundLine,
   startPreparation,
+  voidRound,
   type ModifyAction,
 } from './staffOpsClient'
 
@@ -105,6 +106,20 @@ export function useModifyRoundLine(branchId: string | null) {
       action: ModifyAction
       quantity?: number
     }) => modifyRoundLine(input.roundId, input.itemId, input.action, input.quantity),
+    onSuccess: invalidate,
+  })
+}
+
+/**
+ * Void a round at its channel boundary (spec 011 FR-004) — success
+ * invalidates ALL branch reads (the rounds list, the bill the void reduced,
+ * and the kitchen queue whose ticket mirror went dark).
+ */
+export function useVoidRound(branchId: string | null) {
+  const invalidate = useInvalidateBranchReads(branchId)
+  return useMutation({
+    mutationFn: async (input: { roundId: string; reason: string }) =>
+      voidRound(input.roundId, input.reason),
     onSuccess: invalidate,
   })
 }

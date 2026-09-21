@@ -75,6 +75,12 @@ describe('order tables: declared columns, types, nullability (data-model.md)', (
       'tax_total',
       'tax_lines',
       'created_at',
+      // The Phase 10 void overlay (appended by 20260921120000): the void is
+      // an OVERLAY on the row — the state machine is untouched by a void.
+      'voided',
+      'voided_at',
+      'voided_by_profile_id',
+      'void_reason',
     ])
     expect(cols.map((c) => c.data_type)).toEqual([
       'uuid',
@@ -86,6 +92,10 @@ describe('order tables: declared columns, types, nullability (data-model.md)', (
       'numeric',
       'jsonb',
       'timestamp with time zone',
+      'boolean',
+      'timestamp with time zone',
+      'uuid',
+      'text',
     ])
     const state = cols.find((c) => c.column_name === 'state')
     expect(state?.column_default).toContain("'new'")
@@ -137,6 +147,8 @@ describe('order tables: declared columns, types, nullability (data-model.md)', (
       'round_id',
       'state',
       'created_at',
+      // Phase 10: the kitchen mirror of the void (the ticket goes dark).
+      'voided',
     ])
     const state = cols.find((c) => c.column_name === 'state')
     expect(state?.column_default).toContain("'new'")

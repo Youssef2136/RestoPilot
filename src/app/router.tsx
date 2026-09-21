@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../features/auth/guards'
 import { AdminPage } from '../routes/AdminPage'
+import { AuditLogPage } from '../routes/AuditLogPage'
 import { BranchDetailPage } from '../routes/BranchDetailPage'
 import { BranchMenuPage } from '../routes/BranchMenuPage'
 import { BranchTaxPage } from '../routes/BranchTaxPage'
@@ -124,6 +125,17 @@ export function AppRouter() {
           element={
             <RequireStaff>
               <KitchenDashboardPage />
+            </RequireStaff>
+          }
+        />
+        {/* The audit trail (spec 011 US3, `/dashboard/audit`): owner and
+            branch_manager only at the presentation layer; the RPC re-enforces
+            the reach for every caller regardless. */}
+        <Route
+          path="/dashboard/audit"
+          element={
+            <RequireStaff>
+              <AuditLogPage />
             </RequireStaff>
           }
         />

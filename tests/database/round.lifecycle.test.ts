@@ -477,8 +477,9 @@ describe('round reads: the staff surface scoping', () => {
       }>('select public.get_session_bill($1) as p', [sessionId])
       expect(bill.rows[0]!.p.rounds.map((r) => r.round_id)).toContain(roundId)
       // SC-005's exactness: the grand total is the EXACT sum of the captured
-      // per-round money — no re-derivation, no rounding drift.
-      const sum = bill.rows[0]!.p.rounds.reduce(
+      // per-round money over NON-voided rounds (spec 011 FR-003 — the void
+      // reduces the bill) — no re-derivation, no rounding drift.
+      const sum = bill.rows[0]!.p.rounds.filter((r) => !(r as { voided?: boolean }).voided).reduce(
         (acc, r) => acc + parseFloat(r.subtotal) + parseFloat(r.tax_total),
         0,
       )

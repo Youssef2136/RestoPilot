@@ -318,6 +318,36 @@ money, no new states (SC-004).
 | `tests/unit/channel.entry.test.ts`             | `npm run test:unit` | The entry wrapper's validation mapping (server refusals verbatim), the dine-in redirect identity, the takeaway null-address rule, and the cutoff refusals preserving token and cart while the unavailable-session refusal clears both. No network.                                                                                                                                                                                      |
 | `e2e/session.surfaces.test.ts` (channel block) | `npm run test:e2e`  | The browser channel journeys: the delivery entry (address validation + the chip and read-only address echo on the menu), the takeaway entry (neither table nor address), and the cutoff refusal rendered above the preserved cart after the cashier dispatches the round.                                                                                                                                                               |
 
+## Bill, void & audit test suites (Phase 10)
+
+Phase 10 (bill, void, and audit) closes the accounting-display boundary and
+adds ONE correction primitive. The governing design decision: **the void is
+an OVERLAY, not a state**. The `rounds.state` machine (`new → accepted →
+preparing → ready → out_for_delivery/completed / lock`) is terminal-closed
+and every 008–010 RPC guards on it — making `voided` a state would have
+widened every guard in three migrations' worth of code and invented bogus
+transitions. Instead the void is four additive columns on `rounds` plus a
+`kitchen_tickets.voided` mirror; the state is NEVER written by a void, so
+the 010 channel cutoffs (which read `state`) are not resurrected by one
+(FR-011: a voided completed delivery session stays closed).
+
+`void_round` validates in a documented order (reason required ≤500 trimmed →
+identity → the GUARDED channel-boundary update: `lock` dine-in,
+`out_for_delivery`+ delivery, `ready` takeaway — unknown-id/already-void/below-
+boundary all share the ONE generic refusal, the 009 indistinguishable posture)
+and everything lands in one transaction: the overlay columns, the ticket
+mirror, the `round.void` audit row. `get_audit_log` (owner restaurant-wide
+including `branch_id is null` rows; branch managers over their managed
+branches; everyone else 42501) reads the durable trail 005–010 already wrote.
+`get_session_bill` extends additively (per-line detail, tax lines,
+participants, the voided section) and its grand total sums NON-voided rounds
+only — the void reduces the bill (FR-003).
+
+| Suite                                    | Command            | Coverage                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/database/bill.void.audit.test.ts` | `npm run test:db`  | The void matrix (boundary per channel, just-below refusals with zero-change proofs, blank/501-char reasons verbatim, repeat-void, the dan/fiona/anon denials), the audit trail (reach rules incl. null-branch rows, the manager union, cross-branch 42501, the filters + clamp + ordering), and the extended bill (line detail byte-equal, participants, voided exclusion). |
+| `e2e/bill.void.audit.test.ts`            | `npm run test:e2e` | The browser journeys: carla voids a REAL locked customer round from the dashboard (empty-reason feedback, the voided display state, the bill's voided section and the grand total reduced by exactly the voided round's captured figures), and the audit trail renders the `round.void` entry with its reason for alice (owner) and bob (branch-scoped manager).            |
+
 ## Troubleshooting
 
 ### Missing environment variables

@@ -8,6 +8,7 @@ import {
   useBranchRounds,
   useModifyRoundLine,
   useRoundTransition,
+  useVoidRound,
 } from '../features/staffOps/useStaffOps'
 
 /**
@@ -78,14 +79,32 @@ export function CashierRoundsPage() {
   const outForDelivery = useRoundTransition(effectiveBranchId, 'out_for_delivery')
   const completed = useRoundTransition(effectiveBranchId, 'completed')
   const modify = useModifyRoundLine(effectiveBranchId)
+  const voidRound = useVoidRound(effectiveBranchId)
 
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
 
   // The card's refusal text: whichever mutation last failed for this round,
   // rendered verbatim — no optimistic state anywhere (§5.4).
   const refusalFor = (roundId: string): string | null => {
-    for (const mutation of [accept, startPrep, ready, lock, outForDelivery, completed, modify]) {
-      if (mutation.isError && mutation.variables === roundId) {
+    for (const mutation of [
+      accept,
+      startPrep,
+      ready,
+      lock,
+      outForDelivery,
+      completed,
+      modify,
+      voidRound,
+    ]) {
+      // voidRound's variables are `{ roundId, reason }` — match on the round id
+      // half so its verbatim refusal lands on the originating card.
+      if (
+        mutation.isError &&
+        (mutation.variables === roundId ||
+          (typeof mutation.variables === 'object' &&
+            mutation.variables !== null &&
+            (mutation.variables as { roundId?: string }).roundId === roundId))
+      ) {
         return mutation.error instanceof Error ? mutation.error.message : 'The action was refused.'
       }
     }
@@ -177,7 +196,8 @@ export function CashierRoundsPage() {
                   lock.isPending ||
                   outForDelivery.isPending ||
                   completed.isPending ||
-                  modify.isPending
+                  modify.isPending ||
+                  voidRound.isPending
                 }
                 refusal={refusalFor(round.round_id)}
                 billSelected={selectedSessionId === round.session_id}
@@ -195,6 +215,7 @@ export function CashierRoundsPage() {
                 onModify={(itemId, action, quantity) =>
                   modify.mutate({ roundId: round.round_id, itemId, action, quantity })
                 }
+                onVoid={(reason) => voidRound.mutate({ roundId: round.round_id, reason })}
               />
             ))
           )}

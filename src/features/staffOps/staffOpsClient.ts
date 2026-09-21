@@ -57,6 +57,10 @@ export interface BranchRound {
   delivery_address: string | null
   table_label: string | null
   state: string
+  /** The Phase 10 void overlay — set only on boundary-voided rounds. */
+  voided: boolean
+  void_reason: string | null
+  voided_at: string | null
   subtotal: string
   tax_total: string
   tax_lines: unknown
@@ -83,7 +87,7 @@ export interface KitchenTicket {
   items: Array<{ name: string; quantity: number; extras: string[] }>
 }
 
-/** The session bill (§8; 010 §5 additions): grouped rounds plus the captured grand total. */
+/** The session bill (§8; 010 §5 additions; 011 §3 extensions): the full display of captured money. */
 export interface SessionBill {
   session_id: string
   /** The session's channel (spec 010 §5). */
@@ -91,14 +95,28 @@ export interface SessionBill {
   /** Set for delivery only — the bill renders it when present (FR-009). */
   delivery_address: string | null
   table_label: string | null
+  /** The session's named participants (011 §3) — order of joining. */
+  participants: Array<{ id: string; display_name: string; joined_at: string }>
   rounds: Array<{
     round_id: string
     state: string
+    voided: boolean
+    void_reason: string | null
+    voided_at: string | null
     subtotal: string
     tax_total: string
     tax_lines: unknown
     created_at: string
+    /** The captured per-line detail (011 §3): name, quantity, captured unit price, extras. */
+    items: Array<{
+      item_id: string
+      name: string
+      quantity: number
+      unit_price: string
+      extras: string[]
+    }>
   }>
+  /** Sum over NON-voided rounds only (FR-003) — the void reduces the bill. */
   grand_total: string
 }
 
@@ -180,6 +198,18 @@ export async function markOutForDelivery(roundId: string): Promise<RoundActionRe
 /** `out_for_delivery → completed` — terminal; nothing fires after (FR-005). */
 export async function markCompleted(roundId: string): Promise<RoundActionResult> {
   return callRpc<RoundActionResult>('mark_completed', { p_round_id: roundId })
+}
+
+/**
+ * Void a round at its channel boundary (spec 011 FR-004; contracts §1).
+ * The server validates in the documented order; refusals throw the exact
+ * `StaffOpsPayloadError` (code + verbatim message) the UI renders.
+ */
+export async function voidRound(roundId: string, reason: string): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('void_round', {
+    p_round_id: roundId,
+    p_reason: reason,
+  })
 }
 
 export type ModifyAction = 'remove' | 'reduce'
