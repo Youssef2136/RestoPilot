@@ -39,13 +39,18 @@ describe('session tables: declared columns, types, nullability (data-model.md)',
       ['id', 'uuid', 'NO'],
       ['restaurant_id', 'uuid', 'NO'],
       ['branch_id', 'uuid', 'NO'],
-      ['table_id', 'uuid', 'NO'],
+      // Phase 9 (spec 010): delivery/takeaway sessions have no table — the
+      // 007-era NOT NULL is superseded (dine-in still requires one through
+      // its entry RPC and the check constraints).
+      ['table_id', 'uuid', 'YES'],
       ['type', 'text', 'NO'],
       ['status', 'text', 'NO'],
       ['opened_at', 'timestamp with time zone', 'NO'],
       ['closed_at', 'timestamp with time zone', 'YES'],
       ['closed_by_profile_id', 'uuid', 'YES'],
       ['created_at', 'timestamp with time zone', 'NO'],
+      // Phase 9 (spec 010): the delivery channel's address (null otherwise).
+      ['delivery_address', 'text', 'YES'],
     ],
     session_participants: [
       ['id', 'uuid', 'NO'],
@@ -117,13 +122,13 @@ describe('sessions constraints by name', () => {
     expect(partial.rows[0]!.indexdef).toContain("status = 'open'::text")
   })
 
-  it('rejects a session type outside dine-in (sessions_type_check)', async () => {
+  it('rejects a session type outside the channels (sessions_type_check — widened by Phase 9)', async () => {
     await inTransaction(client, async () => {
       await expectStatementToFail(
         client,
         '23514',
         `insert into public.sessions (restaurant_id, branch_id, table_id, type)
-         values ($1, $2, $3, 'takeaway')`,
+         values ($1, $2, $3, 'drive-thru')`,
         [restaurantIds.blueOlive, branchIds.downtown, diningTableIds.downtownT3],
       )
     })

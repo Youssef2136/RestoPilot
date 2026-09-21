@@ -75,10 +75,13 @@ export interface SessionSummary {
   id: string
   restaurant_id: string
   branch_id: string
-  table_id: string
+  /** NULL for delivery/takeaway — non-dine-in channels have no table (spec 010). */
+  table_id: string | null
   type: string
   status: string
   opened_at: string
+  /** Set for delivery at entry, never written again (FR-010's read-only echo). */
+  delivery_address: string | null
 }
 
 export interface SessionParticipantPayload {
@@ -95,7 +98,12 @@ export interface EntryPayload {
 
 export interface SessionContextPayload {
   session: SessionSummary
-  indicator: { restaurant_name: string; branch_name: string; table_label: string }
+  indicator: {
+    restaurant_name: string
+    branch_name: string
+    /** NULL for delivery/takeaway — the indicator shows the channel instead (FR-006). */
+    table_label: string | null
+  }
   participants: SessionParticipantPayload[]
 }
 
@@ -104,8 +112,9 @@ export type SessionMenu = BranchMenu
 export interface BranchOpenSessionsPayload {
   sessions: Array<{
     id: string
-    table_id: string
-    table_label: string
+    /** NULL for channel sessions (spec 010) — staff surface shows the channel. */
+    table_id: string | null
+    table_label: string | null
     opened_at: string
     participants: SessionParticipantPayload[]
   }>
@@ -157,10 +166,11 @@ function parseSession(raw: unknown): SessionSummary {
     id: requireString(raw, 'id'),
     restaurant_id: requireString(raw, 'restaurant_id'),
     branch_id: requireString(raw, 'branch_id'),
-    table_id: requireString(raw, 'table_id'),
+    table_id: optionalString(raw, 'table_id'),
     type: requireString(raw, 'type'),
     status: requireString(raw, 'status'),
     opened_at: requireString(raw, 'opened_at'),
+    delivery_address: optionalString(raw, 'delivery_address'),
   }
 }
 
@@ -232,7 +242,7 @@ export function parseSessionContext(payload: unknown): SessionContextPayload {
     indicator: {
       restaurant_name: requireString(indicator, 'restaurant_name'),
       branch_name: requireString(indicator, 'branch_name'),
-      table_label: requireString(indicator, 'table_label'),
+      table_label: optionalString(indicator, 'table_label'),
     },
     participants: requireArray(payload, 'participants').map(parseParticipant),
   }
@@ -249,8 +259,8 @@ function parseBranchOpenSessions(payload: unknown): BranchOpenSessionsPayload {
       }
       return {
         id: requireString(raw, 'id'),
-        table_id: requireString(raw, 'table_id'),
-        table_label: requireString(raw, 'table_label'),
+        table_id: optionalString(raw, 'table_id'),
+        table_label: optionalString(raw, 'table_label'),
         opened_at: requireString(raw, 'opened_at'),
         participants: requireArray(raw, 'participants').map(parseParticipant),
       }
@@ -421,6 +431,69 @@ export async function closeSession(sessionId: string): Promise<SessionResult<Clo
   }
   try {
     return { ok: true, data: parseClose(result.data) }
+  } catch {
+    return { ok: false, kind: 'retry', message: SESSION_RETRY_MESSAGE }
+  }
+}
+
+/* ── channel entry (spec 010, contracts/session-client.md §3) ─────────────── */
+
+/** The customer-visible channel names; keys are the DB `sessions.type` values. */
+export const CHANNELS = ['dine-in', 'delivery', 'takeaway'] as const
+export type Channel = (typeof CHANNELS)[number]
+
+export function isChannel(value: unknown): value is Channel {
+  return typeof value === 'string' && (CHANNELS as readonly string[]).includes(value)
+}
+
+/** The customer-facing channel label for indicators and dashboards. */
+export function channelLabel(type: string): string {
+  switch (type) {
+    case 'dine-in':
+      return 'Dine-in'
+    case 'delivery':
+      return 'Delivery'
+    case 'takeaway':
+      return 'Takeaway'
+    default:
+      return type
+  }
+}
+
+/** Refusal raised by `open_session_channel` when the chosen channel is dine-in. */
+export const DINE_IN_REDIRECT_MESSAGE = 'Choose delivery or takeaway.'
+
+/**
+ * Channel entry (FR-002/FR-003/FR-004): opens a delivery or takeaway session
+ * with the customer's name, phone, and (delivery only) address. One submit —
+ * the RPC validates everything and returns the same `{ session, token,
+ * participant }` payload as 007's `open_session`, stored through the same
+ * §2 token rules. Dine-in is deliberately refused here: that path is 007's
+ * `open_session` at table pick.
+ */
+export async function openChannelSession(input: {
+  restaurantId: string
+  branchId: string
+  channel: Exclude<Channel, 'dine-in'>
+  name: string
+  phone: string
+  address?: string
+}): Promise<SessionResult<EntryPayload>> {
+  const { data, error } = await getSupabaseClient().rpc('open_session_channel', {
+    p_restaurant_id: input.restaurantId,
+    p_branch_id: input.branchId,
+    p_channel: input.channel,
+    p_display_name: input.name,
+    p_phone: input.phone,
+    p_delivery_address: input.channel === 'delivery' ? (input.address ?? '') : undefined,
+  })
+  if (error !== null) {
+    return { ok: false, ...mapSessionError(error) }
+  }
+  try {
+    const entry = parseEntry(data)
+    storeSessionToken(entry.token)
+    return { ok: true, data: entry }
   } catch {
     return { ok: false, kind: 'retry', message: SESSION_RETRY_MESSAGE }
   }

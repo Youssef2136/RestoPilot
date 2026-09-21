@@ -19,6 +19,8 @@ import {
   getKitchenQueue,
   getSessionBill,
   lockRound,
+  markCompleted,
+  markOutForDelivery,
   markRoundReady,
   modifyRoundLine,
   startPreparation,
@@ -74,7 +76,7 @@ function useInvalidateBranchReads(branchId: string | null) {
 /** One mutation factory per transition — success invalidates the branch reads. */
 export function useRoundTransition(
   branchId: string | null,
-  action: 'accept' | 'start' | 'ready' | 'lock',
+  action: 'accept' | 'start' | 'ready' | 'lock' | 'out_for_delivery' | 'completed',
 ) {
   const invalidate = useInvalidateBranchReads(branchId)
   return useMutation({
@@ -84,6 +86,8 @@ export function useRoundTransition(
         start: startPreparation,
         ready: markRoundReady,
         lock: lockRound,
+        out_for_delivery: markOutForDelivery,
+        completed: markCompleted,
       } as const
       return map[action](roundId)
     },

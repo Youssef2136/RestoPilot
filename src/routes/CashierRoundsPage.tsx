@@ -75,6 +75,8 @@ export function CashierRoundsPage() {
   const startPrep = useRoundTransition(effectiveBranchId, 'start')
   const ready = useRoundTransition(effectiveBranchId, 'ready')
   const lock = useRoundTransition(effectiveBranchId, 'lock')
+  const outForDelivery = useRoundTransition(effectiveBranchId, 'out_for_delivery')
+  const completed = useRoundTransition(effectiveBranchId, 'completed')
   const modify = useModifyRoundLine(effectiveBranchId)
 
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
@@ -82,7 +84,7 @@ export function CashierRoundsPage() {
   // The card's refusal text: whichever mutation last failed for this round,
   // rendered verbatim — no optimistic state anywhere (§5.4).
   const refusalFor = (roundId: string): string | null => {
-    for (const mutation of [accept, startPrep, ready, lock, modify]) {
+    for (const mutation of [accept, startPrep, ready, lock, outForDelivery, completed, modify]) {
       if (mutation.isError && mutation.variables === roundId) {
         return mutation.error instanceof Error ? mutation.error.message : 'The action was refused.'
       }
@@ -125,6 +127,10 @@ export function CashierRoundsPage() {
     ['new', rounds.filter((r) => r.state === 'new')],
     ['in progress', rounds.filter((r) => r.state === 'accepted' || r.state === 'preparing')],
     ['ready', rounds.filter((r) => r.state === 'ready')],
+    // The delivery machine (spec 010 §3): dispatched and delivered rounds are
+    // terminal-adjacent groups of their own — dine-in never reaches them.
+    ['out for delivery', rounds.filter((r) => r.state === 'out_for_delivery')],
+    ['delivered', rounds.filter((r) => r.state === 'completed')],
     ['served', rounds.filter((r) => r.state === 'lock')],
   ]
 
@@ -169,6 +175,8 @@ export function CashierRoundsPage() {
                   startPrep.isPending ||
                   ready.isPending ||
                   lock.isPending ||
+                  outForDelivery.isPending ||
+                  completed.isPending ||
                   modify.isPending
                 }
                 refusal={refusalFor(round.round_id)}
@@ -182,6 +190,8 @@ export function CashierRoundsPage() {
                 onStart={() => startPrep.mutate(round.round_id)}
                 onReady={() => ready.mutate(round.round_id)}
                 onLock={() => lock.mutate(round.round_id)}
+                onOutForDelivery={() => outForDelivery.mutate(round.round_id)}
+                onCompleted={() => completed.mutate(round.round_id)}
                 onModify={(itemId, action, quantity) =>
                   modify.mutate({ roundId: round.round_id, itemId, action, quantity })
                 }

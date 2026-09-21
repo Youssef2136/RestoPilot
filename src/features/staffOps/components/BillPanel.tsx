@@ -1,11 +1,14 @@
 import { formatPrice } from '../../menu/money'
+import { channelLabel } from '../../session/sessionClient'
 import { useSessionBill } from '../useStaffOps'
 
 /**
- * The session bill (spec 009 T012; contracts/staff-ops-client.md §4; US2,
- * FR-009, SC-005): the selected session's rounds grouped by state with their
- * CAPTURED subtotals, tax lines and totals, and the grand total exactly as
- * the server summed the captured values.
+ * The session bill (spec 009 T012; spec 010 T013; contracts/staff-ops-client.md
+ * §4; US2/US3, FR-009, SC-005): the selected session's rounds grouped by state
+ * with their CAPTURED subtotals, tax lines and totals, and the grand total
+ * exactly as the server summed the captured values. The header names the
+ * table — or, for channel sessions, the channel — and delivery bills render
+ * the entry address (FR-009).
  *
  * Display-only: every figure comes from the bill payload; the client computes
  * nothing (Constitution I, II). No payment, invoice or discount concept
@@ -43,7 +46,13 @@ export function BillPanel({ sessionId }: { sessionId: string }) {
 
   return (
     <section aria-label="Session bill" data-testid="session-bill">
-      <h3>Bill — table {bill.table_label}</h3>
+      <h3>
+        Bill —{' '}
+        {bill.table_label !== null ? `table ${bill.table_label}` : channelLabel(bill.session_type)}
+      </h3>
+      {bill.delivery_address ? (
+        <p data-testid="bill-address">Deliver to: {bill.delivery_address}</p>
+      ) : null}
       {[...groups.entries()].map(([state, rounds]) => (
         <div key={state}>
           <h4>{state}</h4>

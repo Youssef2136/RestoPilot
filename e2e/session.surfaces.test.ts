@@ -452,10 +452,125 @@ test('two submissions render two rounds in the history; reload keeps it (US3, SC
   await expect(page.getByRole('status')).toContainText(/ticket/i)
 
   // Both rounds render with their distinct lines (1 and 3 hummus).
-  await expect(history.getByText(/Hummus × 1/)).toBeVisible()
-  await expect(history.getByText('Hummus × 3')).toBeVisible()
+  await expect(history.getByText(/Hummus × 1/).first()).toBeVisible()
+  await expect(history.getByText('Hummus × 3').first()).toBeVisible()
 
   // Reload: the history is recovered from the server (SC-005's server half).
   await page.reload()
-  await expect(history.getByText('Hummus × 3')).toBeVisible()
+  await expect(history.getByText('Hummus × 3').first()).toBeVisible()
+})
+
+/* ── US4/spec 010: the channel entry block (T014; FR-002/FR-003/FR-004) ────── */
+
+test('the delivery entry validates the address client-side, then opens a channel session (FR-002/FR-004)', async ({
+  page,
+}) => {
+  await page.goto(`/r/${SLUG}`)
+  await page.getByLabel('Branch').selectOption({ label: 'Downtown' })
+
+  // Dine-in is the default channel — the table picker renders first.
+  await expect(page.getByLabel('Table')).toBeVisible()
+
+  // Switch to delivery: the table picker goes away, the address textarea
+  // appears with its live count.
+  await page.getByRole('radio', { name: 'Delivery' }).check()
+  await expect(page.getByLabel('Table')).toHaveCount(0)
+  const address = page.getByLabel('Delivery address')
+  await expect(address).toBeVisible()
+
+  // Client-side bound: empty address refused before any submission.
+  await page.getByLabel('Your name').fill('Delivery Guest')
+  await page.getByLabel('Phone number').fill('+15559000021')
+  await page.getByRole('button', { name: 'Start a delivery order' }).click()
+  await expect(page.getByText('A delivery address is required.')).toBeVisible()
+
+  // Success: one submit through open_session_channel, landing on the menu
+  // with the channel chip and the read-only address echo (FR-006/FR-010).
+  await address.fill('12 King Fahd Rd, Apt 4')
+  await page.getByRole('button', { name: 'Start a delivery order' }).click()
+  await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
+  await expect(page.getByText(/Blue Olive · Downtown · Delivery/)).toBeVisible()
+  await expect(page.getByText(/12 King Fahd Rd, Apt 4/)).toBeVisible()
+})
+
+test('the takeaway entry renders neither table nor address and opens a channel session (FR-002)', async ({
+  page,
+}) => {
+  await page.goto(`/r/${SLUG}`)
+  await page.getByLabel('Branch').selectOption({ label: 'Downtown' })
+  await page.getByRole('radio', { name: 'Takeaway' }).check()
+  await expect(page.getByLabel('Table')).toHaveCount(0)
+  await expect(page.getByLabel('Delivery address')).toHaveCount(0)
+
+  await page.getByLabel('Your name').fill('Takeaway Guest')
+  await page.getByLabel('Phone number').fill('+15559000022')
+  await page.getByRole('button', { name: 'Start a takeaway order' }).click()
+  await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
+  await expect(page.getByText(/Blue Olive · Downtown · Takeaway/)).toBeVisible()
+  await expect(page.getByText(/Table /)).toHaveCount(0)
+})
+
+test('the delivery cutoff refuses additional orders above the preserved cart (FR-011)', async ({
+  page,
+}) => {
+  test.setTimeout(90_000) // full sign-in + four staff transitions in one test
+  const address = `1 Cutoff Lane ${Date.now()}` // unique per run — rerun residue
+
+  // Enter as delivery and submit a first round.
+  await page.goto(`/r/${SLUG}`)
+  await page.getByLabel('Branch').selectOption({ label: 'Downtown' })
+  await page.getByRole('radio', { name: 'Delivery' }).check()
+  await page.getByLabel('Delivery address').fill(address)
+  await page.getByLabel('Your name').fill('Cutoff Guest')
+  await page.getByLabel('Phone number').fill('+15559000023')
+  await page.getByRole('button', { name: 'Start a delivery order' }).click()
+  await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
+
+  const cart = page.getByRole('region', { name: 'Cart' })
+  const addHummus = async (quantity: string) => {
+    const hummusSection = page.locator('li').filter({ hasText: 'Hummus' }).first()
+    await hummusSection.getByRole('spinbutton').fill(quantity)
+    await hummusSection.getByRole('button', { name: 'Add to cart' }).click()
+  }
+  await addHummus('1')
+  await page.getByRole('button', { name: 'Send order to the kitchen' }).click()
+  await expect(page.getByRole('status')).toContainText(/ticket/i)
+
+  // Drive the round past the cutoff server-side: the seeded cashier accepts,
+  // prepares, marks ready, then dispatches (out_for_delivery fires the cutoff).
+  const staff = await page.context().browser()!.newContext()
+  const staffPage = await staff.newPage()
+  await signInAs(staffPage, seedCredentials.carla)
+  await staffPage.goto('/dashboard/rounds')
+  // The branch rounds payload is name-free (the read is round-scoped), so the
+  // card is found by its channel chip plus the session's delivery address —
+  // the only customer-visible strings a delivery card carries. The card
+  // re-renders into the next state's group after every transition (the
+  // invalidation refetch), so the locator re-binds by state at each step.
+  const cardIn = (state: string) =>
+    staffPage
+      .locator(`article[data-round-state="${state}"]`)
+      .filter({ hasText: 'Delivery' })
+      .filter({ hasText: address })
+      .first()
+  const card = cardIn('new')
+  await expect(card).toBeVisible()
+  await card.getByRole('button', { name: 'Accept round' }).click()
+  await expect(cardIn('accepted').getByRole('button', { name: 'Start preparation' })).toBeVisible()
+  await cardIn('accepted').getByRole('button', { name: 'Start preparation' }).click()
+  await expect(cardIn('preparing').getByRole('button', { name: 'Mark ready' })).toBeVisible()
+  await cardIn('preparing').getByRole('button', { name: 'Mark ready' }).click()
+  await expect(cardIn('ready').getByRole('button', { name: 'Send out for delivery' })).toBeVisible()
+  await cardIn('ready').getByRole('button', { name: 'Send out for delivery' }).click()
+  await expect(
+    cardIn('out_for_delivery').getByRole('button', { name: 'Mark completed' }),
+  ).toBeVisible()
+  await staff.close()
+
+  // Back in the customer tab: the second submission hits the cutoff verbatim,
+  // and the cart is preserved above it (FR-011, T010's contract).
+  await addHummus('2')
+  await page.getByRole('button', { name: 'Send order to the kitchen' }).click()
+  await expect(page.getByRole('alert').filter({ hasText: 'already on its way' })).toBeVisible()
+  await expect(cart.getByText('Hummus × 2')).toBeVisible()
 })

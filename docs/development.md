@@ -293,6 +293,31 @@ actor. The DB owns the transitions; the transport (realtime) is Phase 12's.
 | `tests/unit/staffops.client.test.ts`            | `npm run test:unit` | The client wrappers' payload discipline (rpc error → typed error; null payload → fail closed; clean payload → typed), the money-free queue parser rejecting ANY money key (FR-010 client half), and the verbatim bill shape. No network.                                                                                                                                                                                                                          |
 | `e2e/kitchen.cashier.test.ts`                   | `npm run test:e2e`  | The browser journeys (serial): dan's kitchen queue at Marina with no cashier-route access and no money text; carla's full cashier journey on a REAL customer-submitted round — accept → modify → start/ready → lock → the bill panel rendering the captured figures.                                                                                                                                                                                              |
 
+## Channel test suites (Phase 9)
+
+Phase 9 (delivery and takeaway) reuses the Phase 6–8 substrate and adds only
+channel-specific behavior: `sessions.type` widens to `dine-in / delivery /
+takeaway`, delivery carries an address set once at entry (no write path
+after), `open_session_channel` handles non-dine-in entry (no table join
+semantics — one customer per channel session), and `submit_round` gains the
+STATE-DRIVEN cutoffs (delivery refuses additional rounds once any round is
+`out_for_delivery`/`completed`; takeaway once any round is `ready`/`lock`;
+dine-in never — session close governs). The cutoffs are evaluated inside the
+submission transaction over the same serialization as the transitions, so a
+racing transition + submission resolves deterministically. The two cashier
+transitions `mark_out_for_delivery` (`ready → out_for_delivery`) and
+`mark_completed` (`out_for_delivery → completed`, terminal) are delivery-only,
+kitchen-denied, and audited. The staff reads carry `session_type` (+ the
+address on the bill) — the kitchen queue stays CHANNEL-BLIND: no address, no
+money, no new states (SC-004).
+
+| Suite                                          | Command             | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/database/channel.schema.test.ts`        | `npm run test:db`   | The widened schema: `sessions_type_check`, the delivery address checks (null for non-delivery; ≤200 trimmed chars; required for delivery), `table_id` nullable (channel sessions have no table; NULLs distinct keep the one-open-per-table guarantee for dine-in), the extended round states, and the channel-safe reads (branch rounds / bill / kitchen queue over NULL tables; the payload keys `session_type` / `delivery_address`). |
+| `tests/database/channel.rpc.test.ts`           | `npm run test:db`   | The channel RPC matrix: entry validation and the dine-in redirect, the delivery and takeaway journeys end-to-end (entry → submit → transitions → cutoff → terminal), both cutoffs refusing verbatim with zero writes, dine-in passing untouched, the two delivery transitions per allowed/denied role, and the audit trail for the extended actions.                                                                                    |
+| `tests/unit/channel.entry.test.ts`             | `npm run test:unit` | The entry wrapper's validation mapping (server refusals verbatim), the dine-in redirect identity, the takeaway null-address rule, and the cutoff refusals preserving token and cart while the unavailable-session refusal clears both. No network.                                                                                                                                                                                      |
+| `e2e/session.surfaces.test.ts` (channel block) | `npm run test:e2e`  | The browser channel journeys: the delivery entry (address validation + the chip and read-only address echo on the menu), the takeaway entry (neither table nor address), and the cutoff refusal rendered above the preserved cart after the cashier dispatches the round.                                                                                                                                                               |
+
 ## Troubleshooting
 
 ### Missing environment variables

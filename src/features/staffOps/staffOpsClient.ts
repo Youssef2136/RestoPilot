@@ -47,11 +47,15 @@ export interface RoundActionResult {
   ticket_state: string
 }
 
-/** A branch round as `get_branch_rounds` surfaces it (§6). */
+/** A branch round as `get_branch_rounds` surfaces it (§6; 010 §5 additions). */
 export interface BranchRound {
   round_id: string
   session_id: string
-  table_label: string
+  /** The session's channel (spec 010 §5) — drives the cashier's delivery controls. */
+  session_type: 'dine-in' | 'delivery' | 'takeaway'
+  /** Set for delivery only; the kitchen queue never carries it (SC-004). */
+  delivery_address: string | null
+  table_label: string | null
   state: string
   subtotal: string
   tax_total: string
@@ -79,10 +83,14 @@ export interface KitchenTicket {
   items: Array<{ name: string; quantity: number; extras: string[] }>
 }
 
-/** The session bill (§8): grouped rounds plus the captured grand total. */
+/** The session bill (§8; 010 §5 additions): grouped rounds plus the captured grand total. */
 export interface SessionBill {
   session_id: string
-  table_label: string
+  /** The session's channel (spec 010 §5). */
+  session_type: 'dine-in' | 'delivery' | 'takeaway'
+  /** Set for delivery only — the bill renders it when present (FR-009). */
+  delivery_address: string | null
+  table_label: string | null
   rounds: Array<{
     round_id: string
     state: string
@@ -160,6 +168,18 @@ export async function markRoundReady(roundId: string): Promise<RoundActionResult
 
 export async function lockRound(roundId: string): Promise<RoundActionResult> {
   return callRpc<RoundActionResult>('lock_round', { p_round_id: roundId })
+}
+
+// ── Delivery transitions (spec 010 §3–§4; delivery-only, kitchen-denied) ────
+
+/** `ready → out_for_delivery` — cashier dispatches the driver (FR-005). */
+export async function markOutForDelivery(roundId: string): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('mark_out_for_delivery', { p_round_id: roundId })
+}
+
+/** `out_for_delivery → completed` — terminal; nothing fires after (FR-005). */
+export async function markCompleted(roundId: string): Promise<RoundActionResult> {
+  return callRpc<RoundActionResult>('mark_completed', { p_round_id: roundId })
 }
 
 export type ModifyAction = 'remove' | 'reduce'

@@ -7,6 +7,7 @@ import {
   getPublicRestaurant,
   getSessionContext,
   getSessionMenu,
+  openChannelSession,
   readSessionToken,
 } from './sessionClient'
 
@@ -81,6 +82,42 @@ export function useEnterSession() {
     },
     onSuccess: () => {
       // The token changed — drop every token-scoped customer cache entry.
+      void queryClient.invalidateQueries({ queryKey: ['session'] })
+    },
+  })
+}
+
+/**
+ * The channel entry mutation (spec 010 FR-002): delivery/takeaway entry
+ * through `open_session_channel`. Same token discipline as dine-in — the
+ * payload's token is stored through the client, and every token-scoped
+ * customer cache entry drops on success.
+ */
+export function useEnterChannelSession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: {
+      restaurantId: string
+      branchId: string
+      channel: 'delivery' | 'takeaway'
+      displayName: string
+      phone: string
+      address?: string
+    }) => {
+      const result = await openChannelSession({
+        restaurantId: input.restaurantId,
+        branchId: input.branchId,
+        channel: input.channel,
+        name: input.displayName,
+        phone: input.phone,
+        address: input.address,
+      })
+      if (!result.ok) {
+        throw new Error(result.message)
+      }
+      return result.data
+    },
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['session'] })
     },
   })

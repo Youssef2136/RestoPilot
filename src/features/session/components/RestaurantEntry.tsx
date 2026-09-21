@@ -1,34 +1,47 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { useEnterSession, usePublicRestaurant } from '../useSession'
+import { useEnterChannelSession, useEnterSession, usePublicRestaurant } from '../useSession'
 
 /**
- * The public entry flow (contracts/session-client.md §1; spec 007 US1,
- * FR-001…FR-004).
+ * The public entry flow (contracts/session-client.md §1+§3; spec 007 US1 and
+ * spec 010 US2, FR-001…FR-004).
  *
  * Steps: restaurant payload → branch (rendered only when more than one
- * branch exists — FR-002) → table (the branch's ACTIVE tables — FR-003) →
- * name/phone → `open_session_at_table`. Client-side bounds are feedback
- * only; the server re-validates every input (FR-004) and its messages are
- * surfaced verbatim. Unknown restaurants render the not-found state.
+ * branch exists — FR-002) → channel (dine-in default) → dine-in: table pick;
+ * delivery: address; takeaway: nothing further → name/phone → the matching
+ * entry RPC. Client-side bounds are feedback only; the server re-validates
+ * every input (FR-004) and its messages are surfaced verbatim. Unknown
+ * restaurants render the not-found state.
+ *
+ * Dine-in keeps 007's `open_session_at_table` at table pick; delivery and
+ * takeaway go through 010's `open_session_channel` — one submit, no table
+ * join semantics (research §1).
  */
 
 interface Props {
   slug: string
 }
 
+type Channel = 'dine-in' | 'delivery' | 'takeaway'
+
+const ADDRESS_MAX = 200
+
 export function RestaurantEntry({ slug }: Props) {
   const navigate = useNavigate()
   const restaurantQuery = usePublicRestaurant(slug)
   const enterMutation = useEnterSession()
+  const channelMutation = useEnterChannelSession()
 
   const [branchId, setBranchId] = useState<string | null>(null)
+  const [channel, setChannel] = useState<Channel>('dine-in')
   const [tableId, setTableId] = useState<string | null>(null)
+  const [address, setAddress] = useState('')
   const [displayName, setDisplayName] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const payload = restaurantQuery.data
+  const pending = enterMutation.isPending || channelMutation.isPending
 
   // Reset the picks whenever the restaurant payload changes.
   useEffect(() => {
@@ -53,7 +66,7 @@ export function RestaurantEntry({ slug }: Props) {
 
   const branches = payload.branches
   // A single-branch restaurant skips its picker (FR-002) but is still the
-  // effective selection — the table options render without a choice step.
+  // effective selection — the next step renders without a choice.
   const effectiveBranchId = branchId ?? (branches.length === 1 ? (branches[0]?.id ?? null) : null)
   const branch = branches.find((b) => b.id === effectiveBranchId) ?? null
   const tables = branch?.tables ?? []
@@ -61,12 +74,13 @@ export function RestaurantEntry({ slug }: Props) {
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     setError(null)
-    if (!payload || effectiveBranchId === null || tableId === null) {
-      setError('Choose a table to continue.')
+    if (!payload || effectiveBranchId === null) {
+      setError('Choose a branch to continue.')
       return
     }
     const name = displayName.trim()
     const trimmedPhone = phone.replace(/[\s\-()]/g, '')
+    const trimmedAddress = address.trim()
     if (name.length < 1) {
       setError('A display name is required.')
       return
@@ -79,23 +93,44 @@ export function RestaurantEntry({ slug }: Props) {
       setError('A valid phone number is required.')
       return
     }
-    enterMutation.mutate(
-      {
-        restaurantId: payload.restaurant.id,
-        branchId: effectiveBranchId,
-        tableId,
-        displayName: name,
-        phone: trimmedPhone,
+    if (channel === 'dine-in' && tableId === null) {
+      setError('Choose a table to continue.')
+      return
+    }
+    if (channel === 'delivery' && trimmedAddress.length < 1) {
+      setError('A delivery address is required.')
+      return
+    }
+    if (channel === 'delivery' && trimmedAddress.length > ADDRESS_MAX) {
+      setError(`A delivery address may be at most ${ADDRESS_MAX} characters.`)
+      return
+    }
+    const shared = {
+      restaurantId: payload.restaurant.id,
+      branchId: effectiveBranchId,
+      displayName: name,
+      phone: trimmedPhone,
+    }
+    const onDone = {
+      onSuccess: () => {
+        void navigate(`/r/${slug}/menu`)
       },
-      {
-        onSuccess: () => {
-          void navigate(`/r/${slug}/menu`)
-        },
-        onError: (err: Error) => {
-          setError(err.message)
-        },
+      onError: (err: Error) => {
+        setError(err.message)
       },
-    )
+    }
+    if (channel === 'dine-in') {
+      enterMutation.mutate({ ...shared, tableId: tableId as string }, onDone)
+    } else {
+      channelMutation.mutate(
+        {
+          ...shared,
+          channel,
+          address: channel === 'delivery' ? trimmedAddress : undefined,
+        },
+        onDone,
+      )
+    }
   }
 
   return (
@@ -127,6 +162,42 @@ export function RestaurantEntry({ slug }: Props) {
       )}
 
       {effectiveBranchId !== null ? (
+        <fieldset>
+          <legend>How would you like your order?</legend>
+          <label>
+            <input
+              type="radio"
+              name="channel"
+              value="dine-in"
+              checked={channel === 'dine-in'}
+              onChange={() => setChannel('dine-in')}
+            />{' '}
+            Dine-in
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="channel"
+              value="delivery"
+              checked={channel === 'delivery'}
+              onChange={() => setChannel('delivery')}
+            />{' '}
+            Delivery
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="channel"
+              value="takeaway"
+              checked={channel === 'takeaway'}
+              onChange={() => setChannel('takeaway')}
+            />{' '}
+            Takeaway
+          </label>
+        </fieldset>
+      ) : null}
+
+      {effectiveBranchId !== null && channel === 'dine-in' ? (
         <label>
           Table
           <select value={tableId ?? ''} onChange={(e) => setTableId(e.target.value || null)}>
@@ -140,29 +211,51 @@ export function RestaurantEntry({ slug }: Props) {
         </label>
       ) : null}
 
-      <form onSubmit={submit}>
+      {effectiveBranchId !== null && channel === 'delivery' ? (
         <label>
-          Your name
-          <input
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            maxLength={80}
-            placeholder="Shown to the staff"
+          Delivery address
+          <textarea
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            maxLength={ADDRESS_MAX + 20}
+            rows={3}
+            placeholder="Street, building, apartment…"
           />
+          <small>{`${address.trim().length}/${ADDRESS_MAX}`}</small>
         </label>
-        <label>
-          Phone number
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+15551234567"
-          />
-        </label>
-        {error ? <p role="alert">{error}</p> : null}
-        <button type="submit" disabled={enterMutation.isPending}>
-          {enterMutation.isPending ? 'Joining…' : 'Join the table'}
-        </button>
-      </form>
+      ) : null}
+
+      {effectiveBranchId !== null ? (
+        <form onSubmit={submit}>
+          <label>
+            Your name
+            <input
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={80}
+              placeholder="Shown to the staff"
+            />
+          </label>
+          <label>
+            Phone number
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+15551234567"
+            />
+          </label>
+          {error ? <p role="alert">{error}</p> : null}
+          <button type="submit" disabled={pending}>
+            {pending
+              ? 'Joining…'
+              : channel === 'dine-in'
+                ? 'Join the table'
+                : channel === 'delivery'
+                  ? 'Start a delivery order'
+                  : 'Start a takeaway order'}
+          </button>
+        </form>
+      ) : null}
     </section>
   )
 }

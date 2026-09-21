@@ -1,11 +1,14 @@
 import { useQueryClient } from '@tanstack/react-query'
+import { channelLabel } from '../sessionClient'
 import { forgetSession, useSessionContext } from '../useSession'
 
 /**
- * The minimal session indicator (spec 007 FR-021, clarification 4):
- * restaurant · branch · table, a link back to the menu route, and nothing
- * else — no controls, no state machine. Rendered on every customer route
- * while a session context resolves.
+ * The minimal session indicator (spec 007 FR-021, clarification 4; spec 010
+ * FR-006): restaurant · branch · table — or, for channel sessions, the
+ * channel chip plus the read-only delivery address (FR-010, address rendered
+ * from the context echo, no new customer read). No controls, no state
+ * machine. Rendered on every customer route while a session context
+ * resolves.
  *
  * The context query clears the stored token through the client when the
  * session is refused (the closed/unknown indistinguishable refusal, FR-014);
@@ -36,7 +39,21 @@ export function SessionIndicator() {
     )
   }
 
-  const { indicator } = contextQuery.data
+  const { session, indicator } = contextQuery.data
+
+  // Channel sessions have no table — the chip names the channel instead
+  // (FR-006), and delivery echoes the entry address read-only (FR-010).
+  if (session.table_id === null) {
+    return (
+      <p aria-live="polite">
+        {indicator.restaurant_name} · {indicator.branch_name} ·{' '}
+        <strong>{channelLabel(session.type)}</strong>
+        {session.type === 'delivery' && session.delivery_address ? (
+          <span> — {session.delivery_address}</span>
+        ) : null}
+      </p>
+    )
+  }
 
   return (
     <p aria-live="polite">

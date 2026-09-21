@@ -1021,6 +1021,18 @@ export const sessionIds = {
   downtownT2: '00000000-0000-4000-8000-000000008002',
 } as const
 
+/**
+ * Phase 9 (spec 010) — the channel fixture sessions: one delivery (with the
+ * demo address) and one takeaway, both open at Downtown, no rounds.
+ */
+export const deliverySessionIds = {
+  downtownDelivery: '00000000-0000-4000-8000-000000008003',
+} as const
+
+export const takeawaySessionIds = {
+  downtownTakeaway: '00000000-0000-4000-8000-000000008004',
+} as const
+
 export const sessionParticipantIds = {
   downtownT1P1: '00000000-0000-4000-8000-000000008011',
   downtownT1P2: '00000000-0000-4000-8000-000000008012',
@@ -1030,6 +1042,8 @@ export const sessionParticipantIds = {
 export const sessionTokenIds = {
   downtownT1: '00000000-0000-4000-8000-000000008021',
   downtownT2: '00000000-0000-4000-8000-000000008022',
+  downtownDelivery: '00000000-0000-4000-8000-000000008023',
+  downtownTakeaway: '00000000-0000-4000-8000-000000008024',
 } as const
 
 /**
@@ -1040,7 +1054,12 @@ export const sessionTokenIds = {
 export const devSessionTokens = {
   downtownT1: 'dev-token-downtown-t1-2026',
   downtownT2: 'dev-token-downtown-t2-2026',
+  downtownDelivery: 'dev-token-downtown-delivery-2026',
+  downtownTakeaway: 'dev-token-downtown-takeaway-2026',
 } as const
+
+/** The demo delivery address the seed stamps on the delivery session. */
+export const seedDeliveryAddress = '12 Marina Walk'
 
 export const seedSessions = [
   {
@@ -1092,6 +1111,8 @@ export const seedSessionTokenIds = sessionTokenIds
 export const devTokenSession = {
   [devSessionTokens.downtownT1]: sessionIds.downtownT1,
   [devSessionTokens.downtownT2]: sessionIds.downtownT2,
+  [devSessionTokens.downtownDelivery]: deliverySessionIds.downtownDelivery,
+  [devSessionTokens.downtownTakeaway]: takeawaySessionIds.downtownTakeaway,
 } as const
 
 /** The Downtown table labels as the payloads surface them. */

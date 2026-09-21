@@ -814,11 +814,12 @@ export type Database = {
           closed_at: string | null
           closed_by_profile_id: string | null
           created_at: string
+          delivery_address: string | null
           id: string
           opened_at: string
           restaurant_id: string
           status: string
-          table_id: string
+          table_id: string | null
           type: string
         }
         Insert: {
@@ -826,11 +827,12 @@ export type Database = {
           closed_at?: string | null
           closed_by_profile_id?: string | null
           created_at?: string
+          delivery_address?: string | null
           id?: string
           opened_at?: string
           restaurant_id: string
           status?: string
-          table_id: string
+          table_id?: string | null
           type?: string
         }
         Update: {
@@ -838,11 +840,12 @@ export type Database = {
           closed_at?: string | null
           closed_by_profile_id?: string | null
           created_at?: string
+          delivery_address?: string | null
           id?: string
           opened_at?: string
           restaurant_id?: string
           status?: string
-          table_id?: string
+          table_id?: string | null
           type?: string
         }
         Relationships: [
@@ -1316,6 +1319,8 @@ export type Database = {
       get_session_menu: { Args: { p_token: string }; Returns: Json }
       get_session_rounds: { Args: { p_token: string }; Returns: Json }
       lock_round: { Args: { p_round_id: string }; Returns: Json }
+      mark_completed: { Args: { p_round_id: string }; Returns: Json }
+      mark_out_for_delivery: { Args: { p_round_id: string }; Returns: Json }
       mark_round_ready: { Args: { p_round_id: string }; Returns: Json }
       modify_round_line: {
         Args: {
@@ -1355,6 +1360,17 @@ export type Database = {
           p_phone: string
           p_restaurant_id: string
           p_table_id: string
+        }
+        Returns: Json
+      }
+      open_session_channel: {
+        Args: {
+          p_branch_id: string
+          p_channel: string
+          p_delivery_address?: string
+          p_display_name: string
+          p_phone: string
+          p_restaurant_id: string
         }
         Returns: Json
       }

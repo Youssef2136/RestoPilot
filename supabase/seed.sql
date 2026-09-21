@@ -350,6 +350,9 @@ on conflict (id) do update set
   table_id = excluded.table_id,
   type = excluded.type,
   status = excluded.status,
+  -- reopening clears any closure residue (e2e closes demo sessions)
+  closed_at = null,
+  closed_by_profile_id = null,
   opened_at = excluded.opened_at;
 
 insert into public.session_participants
@@ -375,5 +378,57 @@ values
   ('00000000-0000-4000-8000-000000008022', '00000000-0000-4000-8000-000000008002',
    '00000000-0000-4000-8000-000000000001',
    encode(extensions.digest('dev-token-downtown-t2-2026', 'sha256'), 'hex'))
+on conflict (id) do update set
+  token_hash = excluded.token_hash;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Phase 9 — channel sessions (spec 010): one delivery + one takeaway demo
+-- session at Downtown with dev tokens; no rounds — histories start empty.
+-- The address ("12 Marina Walk") lives once on the delivery session.
+-- Deterministic ids per tests/database/helpers/fixtures.ts. Idempotent.
+-- ─────────────────────────────────────────────────────────────────────────────
+
+insert into public.sessions
+  (id, restaurant_id, branch_id, table_id, type, status, delivery_address, opened_at)
+values
+  ('00000000-0000-4000-8000-000000008003', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000000101', null,
+   'delivery', 'open', '12 Marina Walk', '2026-09-20T12:00:00Z'),
+  ('00000000-0000-4000-8000-000000008004', '00000000-0000-4000-8000-000000000001',
+   '00000000-0000-4000-8000-000000000101', null,
+   'takeaway', 'open', null, '2026-09-20T12:10:00Z')
+on conflict (id) do update set
+  restaurant_id = excluded.restaurant_id,
+  branch_id = excluded.branch_id,
+  table_id = excluded.table_id,
+  type = excluded.type,
+  status = excluded.status,
+  -- reopening clears any closure residue (e2e closes demo sessions)
+  closed_at = null,
+  closed_by_profile_id = null,
+  delivery_address = excluded.delivery_address,
+  opened_at = excluded.opened_at;
+
+insert into public.session_participants
+  (id, session_id, restaurant_id, display_name, phone, joined_at)
+values
+  ('00000000-0000-4000-8000-000000008014', '00000000-0000-4000-8000-000000008003',
+   '00000000-0000-4000-8000-000000000001', 'Nour', '+15550104', '2026-09-20T12:01:00Z'),
+  ('00000000-0000-4000-8000-000000008015', '00000000-0000-4000-8000-000000008004',
+   '00000000-0000-4000-8000-000000000001', 'Zaid', '+15550105', '2026-09-20T12:11:00Z')
+on conflict (id) do update set
+  display_name = excluded.display_name,
+  phone = excluded.phone,
+  joined_at = excluded.joined_at;
+
+insert into public.session_tokens
+  (id, session_id, restaurant_id, token_hash)
+values
+  ('00000000-0000-4000-8000-000000008023', '00000000-0000-4000-8000-000000008003',
+   '00000000-0000-4000-8000-000000000001',
+   encode(extensions.digest('dev-token-downtown-delivery-2026', 'sha256'), 'hex')),
+  ('00000000-0000-4000-8000-000000008024', '00000000-0000-4000-8000-000000008004',
+   '00000000-0000-4000-8000-000000000001',
+   encode(extensions.digest('dev-token-downtown-takeaway-2026', 'sha256'), 'hex'))
 on conflict (id) do update set
   token_hash = excluded.token_hash;

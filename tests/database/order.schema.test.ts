@@ -149,9 +149,10 @@ describe('order tables: named constraints', () => {
     const rows = await constraints('rounds')
     const defs = rows.map((r) => r.def).join('\n')
     // Phase 8 (spec 009) widened the closed Phase 7 check ('new') to the full
-    // state machine — the 008-era single-state assertion is superseded.
+    // state machine; Phase 9 (spec 010) added the delivery channel states —
+    // the 008-era single-state assertion is superseded.
     expect(defs).toMatch(
-      /state = ANY \(ARRAY\['new'::text, 'accepted'::text, 'preparing'::text, 'ready'::text, 'lock'::text\]\)/,
+      /state = ANY \(ARRAY\['new'::text, 'accepted'::text, 'preparing'::text, 'ready'::text, 'out_for_delivery'::text, 'completed'::text, 'lock'::text\]\)/,
     )
     expect(defs).toMatch(/subtotal >= \(0\)::numeric/)
     expect(defs).toMatch(/tax_total >= \(0\)::numeric/)
