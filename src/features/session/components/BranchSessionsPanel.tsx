@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useBranchOpenSessions, useCloseSession } from '../useSession'
+import { useRealtimeInvalidation } from '../../realtime/useRealtimeInvalidation'
+import { branchSessionsKey, useBranchOpenSessions, useCloseSession } from '../useSession'
 
 /**
  * The staff oversight surface for one branch (spec 007 FR-017): the branch's
@@ -21,6 +22,13 @@ interface BranchSessionsPanelProps {
 }
 
 export function BranchSessionsPanel({ branchId, branchName, canClose }: BranchSessionsPanelProps) {
+  // The live session list (spec 012 US5, FR-009): session-state changes
+  // (closes) invalidate the branch sessions read — no manual refresh.
+  useRealtimeInvalidation({
+    scopeValue: branchId,
+    table: 'sessions',
+    invalidate: (qc) => qc.invalidateQueries({ queryKey: branchSessionsKey(branchId) }),
+  })
   const sessionsQuery = useBranchOpenSessions(branchId)
   const closeMutation = useCloseSession(branchId)
   // The session awaiting confirmation, and the outcome of the last close.

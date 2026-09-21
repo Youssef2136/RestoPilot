@@ -2,9 +2,12 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
+import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
 import { BillPanel } from '../features/staffOps/components/BillPanel'
 import { RoundCard } from '../features/staffOps/components/RoundCard'
 import {
+  branchRoundsKey,
+  kitchenQueueKey,
   useBranchRounds,
   useModifyRoundLine,
   useRoundTransition,
@@ -70,6 +73,22 @@ export function CashierRoundsPage() {
     (requestedBranchId !== null && branchOptions.some((b) => b.id === requestedBranchId)
       ? requestedBranchId
       : (branchOptions[0]?.id ?? null))
+
+  // The live dashboard (spec 012 US1, FR-005): any committed write to this
+  // branch's rounds (customer submissions, staff transitions, modifications,
+  // voids) invalidates the branch reads — the next render refetches the
+  // authoritative truth through the unchanged RPC reads. The bill keys are
+  // ALL invalidated (the payload carries every selected session's rounds).
+  useRealtimeInvalidation({
+    scopeValue: effectiveBranchId,
+    table: 'rounds',
+    invalidate: (qc) =>
+      Promise.all([
+        qc.invalidateQueries({ queryKey: branchRoundsKey(effectiveBranchId) }),
+        qc.invalidateQueries({ queryKey: kitchenQueueKey(effectiveBranchId) }),
+        qc.invalidateQueries({ queryKey: ['staffOps', 'sessionBill'] }),
+      ]),
+  })
 
   const roundsQuery = useBranchRounds(effectiveBranchId)
   const accept = useRoundTransition(effectiveBranchId, 'accept')

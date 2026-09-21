@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { useMemo, useState, type FormEvent } from 'react'
 import { getSupabaseClient } from '../lib/supabase'
+import { DashboardLiveCue } from './DashboardLiveCue'
 import { NotAuthorized } from '../features/auth/guards'
 import {
   AUTH_CONTEXT_QUERY_KEY,
@@ -274,6 +275,7 @@ export function DashboardPage() {
   return (
     <section>
       <h1>Staff Dashboard</h1>
+      <DashboardLiveCue branchId={effectiveBranchId} />
       {isPending ? (
         <p>Loading your staff context…</p>
       ) : isError ? (

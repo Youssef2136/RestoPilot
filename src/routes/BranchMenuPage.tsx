@@ -1,12 +1,13 @@
 import { Link, useParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
+import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
 import {
   BranchAvailabilityToggle,
   RestaurantAvailabilityToggle,
 } from '../features/menu/components/AvailabilityControls'
 import { BranchMenuPreview } from '../features/menu/components/BranchMenuPreview'
-import { useBranchMenu } from '../features/menu/useMenu'
+import { branchMenuQueryKey, useBranchMenu } from '../features/menu/useMenu'
 
 /**
  * Branch menu view (contracts/menu-client.md §2; spec 005 US2, FR-014/FR-015)
@@ -29,6 +30,15 @@ export function BranchMenuPage() {
     canManageBranchAvailability,
     canManageRestaurant,
   } = useAuthContext()
+
+  // The live menu (spec 012 US5, FR-009): availability changes on this
+  // branch (toggle, 005's unavailability rules) invalidate the branch menu
+  // read — the projection recomputes effective availability on refetch.
+  useRealtimeInvalidation({
+    scopeValue: branchId ?? null,
+    table: 'branch_unavailable_items',
+    invalidate: (qc) => qc.invalidateQueries({ queryKey: branchMenuQueryKey(branchId ?? null) }),
+  })
 
   const branchMenuQuery = useBranchMenu(branchId ?? null)
   const menu = branchMenuQuery.data

@@ -261,7 +261,28 @@ describe('session_tokens constraints', () => {
 
 describe('zero-grant posture: the RPC layer is the entire surface (Constitution IV)', () => {
   for (const table of ['sessions', 'session_participants', 'session_tokens']) {
+    // Phase 11 (spec 012): `sessions` carries the realtime SELECT grant for
+    // `authenticated` (Realtime needs the grant to deliver even a
+    // policy-filtered read — migration 20260921150000 §2); the other two
+    // stay fully grant-less.
+    const realtimeGranted = table === 'sessions'
+
     it(`${table}: anon and authenticated hold no table privileges`, async () => {
+      if (realtimeGranted) {
+        const anonOnly = await client.query<{ has: boolean }>(
+          `select has_table_privilege('anon', 'public.${table}', 'select') as has`,
+        )
+        expect(anonOnly.rows[0].has, 'anon must stay grant-less').toBe(false)
+        expect(
+          (
+            await client.query<{ has: boolean }>(
+              `select has_table_privilege('authenticated', 'public.${table}', 'select') as has`,
+            )
+          ).rows[0].has,
+          'authenticated carries the realtime SELECT grant',
+        ).toBe(true)
+        return
+      }
       const res = await client.query<{ has: boolean }>(
         `select
            has_table_privilege('anon', 'public.${table}', 'select') as has
@@ -280,13 +301,20 @@ describe('zero-grant posture: the RPC layer is the entire surface (Constitution 
     })
   }
 
-  it('no policy exists on any session table (grant-less posture needs none)', async () => {
-    const res = await client.query<{ policyname: string }>(
-      `select policyname from pg_policies
+  it('session-table policies: participants/tokens keep the grant-less zero-policy posture; sessions carries exactly the Phase 11 realtime SELECT policy', async () => {
+    // Phase 11 (spec 012): `sessions` gains exactly ONE policy — the
+    // staff-scoped realtime SELECT authorization (data-model.md §2). The
+    // grant-less posture itself is unchanged: zero table grants, zero write
+    // paths — the policy authorizes Realtime's per-row delivery only.
+    const res = await client.query<{ tablename: string; policyname: string; cmd: string }>(
+      `select tablename, policyname, cmd from pg_policies
         where schemaname = 'public'
-          and tablename in ('sessions', 'session_participants', 'session_tokens')`,
+          and tablename in ('sessions', 'session_participants', 'session_tokens')
+        order by tablename`,
     )
-    expect(res.rows).toEqual([])
+    expect(res.rows).toEqual([
+      { tablename: 'sessions', policyname: 'sessions_select_authorized', cmd: 'SELECT' },
+    ])
   })
 })
 

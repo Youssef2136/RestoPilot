@@ -2,8 +2,13 @@ import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
+import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
 import { TicketCard } from '../features/staffOps/components/TicketCard'
-import { useKitchenQueue, useRoundTransition } from '../features/staffOps/useStaffOps'
+import {
+  kitchenQueueKey,
+  useKitchenQueue,
+  useRoundTransition,
+} from '../features/staffOps/useStaffOps'
 
 /**
  * The kitchen dashboard (spec 009 T014/T015, `/dashboard/kitchen`): the
@@ -51,6 +56,22 @@ export function KitchenDashboardPage() {
     (requestedBranchId !== null && branchOptions.some((b) => b.id === requestedBranchId)
       ? requestedBranchId
       : (branchOptions[0]?.id ?? null))
+
+  // The live queue (spec 012 US2, FR-006): new tickets and ticket state
+  // changes invalidate the queue — the money-free, channel-blind contract
+  // is unchanged (the events invalidate, the READ decides what may render).
+  useRealtimeInvalidation({
+    scopeValue: effectiveBranchId,
+    table: 'kitchen_tickets',
+    invalidate: (qc) => qc.invalidateQueries({ queryKey: kitchenQueueKey(effectiveBranchId) }),
+  })
+  // A newly submitted round creates the ticket — `rounds` events keep the
+  // queue live for the incoming column too.
+  useRealtimeInvalidation({
+    scopeValue: effectiveBranchId,
+    table: 'rounds',
+    invalidate: (qc) => qc.invalidateQueries({ queryKey: kitchenQueueKey(effectiveBranchId) }),
+  })
 
   const queueQuery = useKitchenQueue(effectiveBranchId)
   const start = useRoundTransition(effectiveBranchId, 'start')

@@ -225,16 +225,43 @@ describe('order tables: named constraints', () => {
 })
 
 describe('order tables: the zero-grant posture (Constitution IV)', () => {
+  // Phase 11 (spec 012) relaxed the posture for exactly two tables: Realtime
+  // needs a SELECT grant to deliver (a missing grant is `permission denied`
+  // before any policy evaluation — migration 20260921150000 §2), and the
+  // grant carries the per-row staff policy with it. Writes remain
+  // RPC-only everywhere (Constitution IV holds).
+  const REALTIME_GRANTED = new Set(['rounds', 'kitchen_tickets'])
+
   it('no client role holds any privilege on any order table', async () => {
     for (const table of ORDER_TABLES) {
       for (const role of CLIENT_ROLES) {
         for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
+          if (privilege === 'SELECT' && REALTIME_GRANTED.has(table)) {
+            continue
+          }
           const res = await client.query(
             `select has_table_privilege($1, 'public.' || $2, $3) as allowed`,
             [role, table, privilege],
           )
           expect(res.rows[0].allowed, `${role} must not hold ${privilege} on ${table}`).toBe(false)
         }
+      }
+    }
+  })
+
+  it('the realtime-granted tables are SELECT-only for authenticated, nothing for anon', async () => {
+    for (const table of REALTIME_GRANTED) {
+      const anonRes = await client.query(
+        `select has_table_privilege('anon', 'public.' || $1, 'select') as has`,
+        [table],
+      )
+      expect(anonRes.rows[0].has, `anon must not read ${table}`).toBe(false)
+      for (const privilege of ['INSERT', 'UPDATE', 'DELETE']) {
+        const res = await client.query(
+          `select has_table_privilege('authenticated', 'public.' || $1, $2) as has`,
+          [table, privilege],
+        )
+        expect(res.rows[0].has, `authenticated must stay write-closed on ${table}`).toBe(false)
       }
     }
   })

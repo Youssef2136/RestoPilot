@@ -348,6 +348,44 @@ only — the void reduces the bill (FR-003).
 | `tests/database/bill.void.audit.test.ts` | `npm run test:db`  | The void matrix (boundary per channel, just-below refusals with zero-change proofs, blank/501-char reasons verbatim, repeat-void, the dan/fiona/anon denials), the audit trail (reach rules incl. null-branch rows, the manager union, cross-branch 42501, the filters + clamp + ordering), and the extended bill (line detail byte-equal, participants, voided exclusion). |
 | `e2e/bill.void.audit.test.ts`            | `npm run test:e2e` | The browser journeys: carla voids a REAL locked customer round from the dashboard (empty-reason feedback, the voided display state, the bill's voided section and the grand total reduced by exactly the voided round's captured figures), and the audit trail renders the `round.void` entry with its reason for alice (owner) and bob (branch-scoped manager).            |
 
+## Realtime & notifications (Phase 11)
+
+Phase 11 makes the operational surfaces LIVE. The governing design decision
+(plan D3): **realtime drives INVALIDATION; the reads stay the only render
+path**. A committed database write produces a Postgres change event; the
+subscribed client's react-query keys are invalidated (coalesced over a
+200 ms window); the next render refetches through the UNCHANGED authorized
+RPC reads. No payload data is ever rendered — an event names what changed
+(a table), never carries money/PII into the DOM — so "the kitchen queue in
+realtime = the kitchen queue in REST" (FR-010) holds by construction.
+
+Recovery (FR-004) is refetch-based, not replay-based: the channel's
+SUBSCRIBED moment (first connect AND every reconnect) fires one
+invalidation, which re-reads authoritative state and heals anything missed
+while offline. The one deliberate exception is the US4 cue
+(`useNewRoundCue`): it is event-DERIVED state with no recovery read (a
+round committed while nobody watched needs no cue), so any test or
+walkthrough that asserts the cue must wait for the channel's SUBSCRIBED
+handshake before driving the write.
+
+Authorization (FR-002) is server-side per-row: the `supabase_realtime`
+publication carries the five event tables, and staff SELECT policies
+(reusing `private.has_branch_role` VERBATIM — zero vocabulary drift) filter
+delivery per subscriber; Realtime needs the SELECT grant to deliver even a
+policy-filtered read (migration `20260921150000`), so `rounds`,
+`kitchen_tickets`, and `sessions` carry a SELECT-only grant for
+`authenticated` — writes stay RPC-only everywhere (Constitution IV), and
+the zero-grant schema suites encode the narrowed contract. Customers get
+NO subscription (research §3): their live-adjacent status is the 10 s poll
+
+- mutation refetch through the unchanged reads.
+
+| Suite                                    | Command             | Coverage                                                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/database/realtime.schema.test.ts` | `npm run test:db`   | The publication carries exactly the five tables; the policies exist with the exact `has_branch_role` predicates; RLS stays enabled; zero new write grants; the fail-closed direction (an unauthorized identity matches no policy row); dan reads real Marina rows through the policy (the 009 scratch-round chain).                     |
+| `tests/unit/realtime.test.ts`            | `npm run test:unit` | The binding contracts with the channel mocked: the event → invalidator mapping per surface, the 200 ms coalescing window (N events → one invalidate), the SUBSCRIBED recovery refetch, the cleanup discipline, and the cue's set/clear cycle.                                                                                           |
+| `e2e/realtime.test.ts`                   | `npm run test:e2e`  | Two-browser liveness: a customer submission from a second browser context appears in the open cashier dashboard without refresh; a round advanced in one staff browser moves the groups in another; the kitchen queue updates live and stays money-free; the cue renders after its SUBSCRIBED handshake and the reload path reconciles. |
+
 ## Troubleshooting
 
 ### Missing environment variables
