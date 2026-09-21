@@ -6,7 +6,7 @@
 
 ## Foundation
 
-- [ ] T001 Baseline: `npm run test:db` green and `git status` clean of Phase 11 work before any change
+- [X] T001 Baseline: `npm run test:db` green and `git status` clean of Phase 11 work before any change
 - [X] T002 Migration `supabase/migrations/<ts>_realtime_authorization.sql` (data-model.md §1–§2): the `supabase_realtime` publication additions (five tables), the staff SELECT policies on `rounds`/`kitchen_tickets`/`sessions` reusing the 009 role predicate verbatim, no new grants; apply with `npm run db:migrate`; `npm run types:gen` clean
 - [X] T003 `tests/database/realtime.schema.test.ts` (data-model.md, research §6): the publication carries exactly the five tables with INSERT+UPDATE+DELETE; the policies exist with the exact `has_branch_role` predicates; RLS stays enabled; zero new direct-table grants; the fail-closed direction (an unauthorized identity matches no policy row); the OTHER tables remain unpublished
 - [X] T004 Full `npm run test:db` regression green; mark the foundation complete
