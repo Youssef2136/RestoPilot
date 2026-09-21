@@ -26,10 +26,21 @@
 - [X] T014 Extend `docs/development.md` with the Phase 10 suite table (the void matrix, the audit read) and the "void is an overlay, not a state" rationale
 - [X] T015 Reset-and-rebuild determinism: `npm run db:reset -- --yes` → seed → `test:db` green; `types:gen` byte-identical
 - [X] T016 Run the quickstart walkthroughs (`scripts/run-billvoid-walkthroughs.mjs`), append the validation record to `quickstart.md`; restore the project afterwards
-- [ ] T017 Final commit and push of all Phase 10 artifacts to GitHub `main`
+- [X] T017 Final commit and push of all Phase 10 artifacts to GitHub `main`
 
 ## Notes
 
 - Voiding NEVER changes `rounds.state` (research §1) — the cutoff logic is untouched and FR-011 holds by construction
 - The bill's grand-total change (voided excluded) is the spec's own FR-003; no prior client depended on voided-inclusive totals
 - The audit read is management-level; carla (cashier) is denied by design
+
+## Post-Implement Analysis (2026-09-21)
+
+Contract-vs-deployed verification against the live database:
+
+- Signatures verified: `void_round(uuid, text) → jsonb`, `get_audit_log(text default null, uuid default null, integer default 100) → jsonb`, the additive `get_session_bill` and `get_branch_rounds` (§5) — all match contracts/database-functions.md
+- Grants verified via `aclexplode`: both new functions are `authenticated` + owner only — anon/public have no EXECUTE (§4 exact)
+- The void overlay columns verified in ordinal position: `voided boolean`, `voided_at timestamptz`, `voided_by_profile_id uuid`, `void_reason text`
+- One reconciliation made during implementation: `get_branch_rounds` gained the `voided`/`void_reason`/`voided_at` keys (§5 of the migration) so the cashier card renders the voided display state — additive only, contracts §3 updated to note it
+- Both checklists remain reviewer-owned and intentionally unchecked (the 005–010 convention); every `[ ]` item is a reviewer acceptance, not an implementation gap
+- Convergence: 17/17 tasks `[X]`, no unchecked implementation work → converged (no convergence section needed)
