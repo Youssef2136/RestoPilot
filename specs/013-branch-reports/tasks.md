@@ -69,3 +69,20 @@ house suites: `tests/database/*.test.ts` (pg, transactions), `tests/unit/`,
 - Reviewer-owned checklist items in
   `checklists/report-correctness-and-reach.md` stay unchecked (house
   convention since 005).
+
+## Analysis Notes (post-implement, 2026-09-22)
+
+Deployed-surface verification against the contracts:
+
+- **Signatures**: `get_branch_sales_report(uuid, uuid, text, date)` and
+  `get_branch_void_report(uuid, uuid, integer)` deployed as `security
+  definer`, exactly the contract shapes.
+- **Grants**: EXECUTE to `authenticated` only (anon/public revoked) — the
+  011 posture, verified via `information_schema.routine_privileges`.
+- **Anti-drift**: zero materialized views, zero summary/total tables exist
+  (`pg_matviews` empty; no report-named tables) — §23's rule holds by
+  construction; all figures derive at read time from `rounds` + `sessions`.
+- **No write paths**: the migration contains no INSERT/UPDATE/grants beyond
+  EXECUTE — the phase added read RPCs and nothing else.
+- **Client/DB agreement**: the client calls both RPCs with the deployed
+  parameter names; unit suite locks the mapping.
