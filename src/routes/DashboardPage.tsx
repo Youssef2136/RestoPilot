@@ -382,6 +382,29 @@ export function DashboardPage() {
                   <Link to="/dashboard/audit">Audit trail</Link>
                 </li>
               )}
+              {/* Reports + void log (spec 013 US1–US3): owner/manager only
+                  in the navigation (FR-007 absence); the pages and RPCs
+                  re-enforce the reach for every caller regardless. */}
+              {(canManageRestaurant(selectedRestaurant.restaurantId) ||
+                memberships.some(
+                  (m) =>
+                    m.restaurant_id === selectedRestaurant.restaurantId &&
+                    m.role === 'branch_manager',
+                )) && (
+                <li>
+                  <Link to="/dashboard/reports">Reports</Link>
+                </li>
+              )}
+              {(canManageRestaurant(selectedRestaurant.restaurantId) ||
+                memberships.some(
+                  (m) =>
+                    m.restaurant_id === selectedRestaurant.restaurantId &&
+                    m.role === 'branch_manager',
+                )) && (
+                <li>
+                  <Link to="/dashboard/voids">Void log</Link>
+                </li>
+              )}
             </ul>
           </nav>
 

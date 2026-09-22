@@ -3,6 +3,8 @@ import { AppShell } from '../components/AppShell'
 import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../features/auth/guards'
 import { AdminPage } from '../routes/AdminPage'
 import { AuditLogPage } from '../routes/AuditLogPage'
+import { ReportsPage } from '../routes/ReportsPage'
+import { VoidReportPage } from '../routes/VoidReportPage'
 import { BranchDetailPage } from '../routes/BranchDetailPage'
 import { BranchMenuPage } from '../routes/BranchMenuPage'
 import { BranchTaxPage } from '../routes/BranchTaxPage'
@@ -136,6 +138,28 @@ export function AppRouter() {
           element={
             <RequireStaff>
               <AuditLogPage />
+            </RequireStaff>
+          }
+        />
+        {/* Branch reports (spec 013 US1/US2, `/dashboard/reports`): owner
+            and branch_manager in the navigation and the page's own gate; a
+            cashier/kitchen deep link renders the denial, and both report
+            RPCs re-enforce reach regardless (Constitution IV). */}
+        <Route
+          path="/dashboard/reports"
+          element={
+            <RequireStaff>
+              <ReportsPage />
+            </RequireStaff>
+          }
+        />
+        {/* The void log (spec 013 US3, `/dashboard/voids`): same gate
+            posture as the audit trail. */}
+        <Route
+          path="/dashboard/voids"
+          element={
+            <RequireStaff>
+              <VoidReportPage />
             </RequireStaff>
           }
         />

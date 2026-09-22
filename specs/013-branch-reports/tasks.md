@@ -33,14 +33,14 @@ house suites: `tests/database/*.test.ts` (pg, transactions), `tests/unit/`,
 
 ## Phase 3: Client + surfaces
 
-- [ ] T006 `src/features/reports/`: client (RPC calls, refusal mapping),
+- [X] T006 `src/features/reports/`: client (RPC calls, refusal mapping),
       `useReports` hook (period/branch parameters, no client math)
-- [ ] T007 Owner route `/dashboard/reports` (branch + period pickers,
+- [X] T007 Owner route `/dashboard/reports` (branch + period pickers,
       aggregates grid, channel breakdown, best-sellers, empty states);
       comparison view across the restaurant's branches
-- [ ] T008 Manager route reuse: same surfaces scoped to the manager's
+- [X] T008 Manager route reuse: same surfaces scoped to the manager's
       branch(es), no cross-branch picker
-- [ ] T009 Void log page (owner+manager): `get_audit_log` with
+- [X] T009 Void log page (owner+manager): `get_audit_log` with
       `p_action='round.void'`, who/what/when/reason rendering; nav entry
       gated to owner/manager only (cashier/kitchen absence)
 
