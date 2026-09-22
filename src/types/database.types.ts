@@ -1337,7 +1337,20 @@ export type Database = {
       get_branch_menu: { Args: { p_branch_id: string }; Returns: Json }
       get_branch_open_sessions: { Args: { p_branch_id: string }; Returns: Json }
       get_branch_rounds: { Args: { p_branch_id: string }; Returns: Json }
+      get_branch_sales_report: {
+        Args: {
+          p_anchor_date: string
+          p_branch_id: string
+          p_period: string
+          p_restaurant_id: string
+        }
+        Returns: Json
+      }
       get_branch_tax_config: { Args: { p_branch_id: string }; Returns: Json }
+      get_branch_void_report: {
+        Args: { p_branch_id: string; p_limit?: number; p_restaurant_id: string }
+        Returns: Json
+      }
       get_kitchen_queue: { Args: { p_branch_id: string }; Returns: Json }
       get_public_restaurant: { Args: { p_slug: string }; Returns: Json }
       get_session_bill: { Args: { p_session_id: string }; Returns: Json }
