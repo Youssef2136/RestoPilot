@@ -43,9 +43,9 @@ join the standing gates.
 - [x] T009 Full gates: `npm run verify` + full e2e
 - [x] T010 `docs/development.md` Phase 15 entry (baselines workflow +
       reliability coverage); quickstart note for re-running baselines
-- [ ] T011 Determinism: reset → seed → full db regression → `types:gen`
+- [x] T011 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical
-- [ ] T012 Post-implement analyze record + final commit (the launch-gate
+- [x] T012 Post-implement analyze record + final commit (the launch-gate
       record, FR-005)
 
 ## Notes
@@ -72,3 +72,25 @@ join the standing gates.
 - T008 evidence: the recovery-refetch contract extended for the
   resubscribe cycle in `tests/unit/realtime.test.ts`; 007's
   `session.schema.test.ts` cited for simultaneous customer actions.
+
+## Post-implement analyze (2026-09-22)
+
+Deployed surface verified against the spec, all six FRs on disk:
+
+- **FR-001** ✓ — the committed script measures all nine areas (probe:
+  `baselines.json` keys) with medians-of-5 + warm-up and env metadata.
+- **FR-002** ✓ — customer-path budgets recorded and met (menu 106/1500 ms,
+  submission 306/800 ms). No breach ⇒ FR-004's targeted-fix clause is
+  vacuous: zero product changes, the anti-drift rule held untouched.
+- **FR-003** ✓ — all eight §26 scenarios mapped: refresh, duplicate
+  submit, double-click, and simultaneous-customer-actions cited to their
+  existing proving tests (T006 notes); network interruption, stale tab,
+  concurrent cashiers covered by the new suite (T007); realtime
+  disconnect by the extended 012 contract (T008).
+- **FR-005** ✓ — the launch-gate record is committed (baselines.json +
+  suites + this tasks.md trail).
+- **FR-006** ✓ — recovery is proven by a deterministic unit probe (the
+  unsubscribe→resubscribe cycle), not assumed.
+
+No unchecked items remain; no convergence gaps found. The two custom
+checklists stay reviewer-owned (the 005–015 convention).
