@@ -42,6 +42,11 @@ describe('tenancy tables: declared columns, types, nullability (data-model.md)',
       ['contact_email', 'text', 'YES'],
       ['contact_phone', 'text', 'YES'],
       ['timezone', 'text', 'NO'],
+      // Phase 13 platform-disablement overlay (spec 014 FR-006; added by
+      // 20260922110000 — the kill-switch axis, separate from subscriptions).
+      ['platform_disabled', 'boolean', 'NO'],
+      ['platform_disabled_reason', 'text', 'YES'],
+      ['platform_disabled_by_profile_id', 'uuid', 'YES'],
     ],
     branches: [
       ['id', 'uuid', 'NO'],

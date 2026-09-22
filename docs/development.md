@@ -537,3 +537,56 @@ captured substrate — no new engines, tables, or write paths:
 scripts/run-reports-walkthroughs.mjs` — real sign-ins, a submitted round,
   a driven-and-voided round, and the reconciliation checks; restores
   deterministic state afterwards.
+
+## Platform admin and subscriptions (Phase 13)
+
+Phase 13 adds the SaaS administration layer (master plan §24): the platform
+admin sees every restaurant, controls the subscription lifecycle, and holds
+exactly one kill-switch. The lifecycle never blocks ordering on its own —
+disablement is manual-only:
+
+- Migration `20260922110000_platform_admin.sql`: `public.subscriptions`
+  (one row per restaurant, `restaurant_id` PK; `start_date`/`end_date`
+  nullable — never_activated until the platform sets them), three
+  `restaurants` columns for the disablement overlay
+  (`platform_disabled`, `_reason`, `_by_profile_id`), and the derived
+  lifecycle as a read-time CASE (`private.subscription_state`):
+  never_activated / active / nearing_expiration (≤ 7 days) / expired —
+  no stored state, nothing scheduled (plan D1).
+- Four RPCs: `get_platform_overview()` (every restaurant + subscription +
+  usage counts, super-admin only), `get_my_subscription()` (the caller's
+  owner payload), `set_subscription_dates(restaurant, start, end)` and
+  `set_restaurant_platform_disabled(restaurant, disabled, reason)` — both
+  audited via `private.write_audit`, both idempotent, reason mandatory on
+  disablement. Reach is `profiles.is_super_admin` — the flag is the only
+  key (plan D4): no membership required, and the seeded platform admin
+  carries no memberships.
+- **The two doors**: `open_session_at_table`, `open_session_channel`, and
+  `submit_round` refuse with 'This restaurant is not available.' (P0001)
+  when the restaurant is platform-disabled. The bodies are the verbatim
+  deployed definitions with exactly one inserted predicate each — the
+  client-parsed shapes (parseEntry/parseRound), the Phase 9 channel
+  cutoffs, and the availability checks are untouched. **The Important
+  rule**: expired and never_activated never block ordering — only the
+  manual flag does (FR-006).
+- Tenant surface: the dashboard shell renders `SubscriptionBanner`
+  (FR-007) — silent when active/never_activated, the nearing-expiration
+  warning, the informational expired notice (ordering stays available),
+  and the platform-disabled notice. Nothing derives state client-side.
+- Staff surface: `/dashboard/console` (FR-001, FR-008) — the restaurant
+  list with lifecycle state, usage counts, date editors, and the
+  disablement control with mandatory reason. Gated to the super admin in
+  navigation and page; every other identity sees the denial (FR-009).
+- Fresh rebuilds: `supabase/seed.sql` owns the subscription fixture rows
+  (migrations run before the seed's restaurants exist; the migration's
+  insert covers in-place upgrades only). A missing row makes a tenant
+  invisible in the overview — every restaurant always has a row.
+- Suites: `tests/database/platform.admin.test.ts` (reach + derivation
+  matrix), `tests/database/platform.enforcement.test.ts` (the two doors
+  over real ordering + the Important rule), `tests/unit/platform.test.ts`,
+  `e2e/platform.surfaces.test.ts` (console journeys, banner states,
+  non-super-admin denial).
+- Walkthrough: `node --env-file-if-exists=.env
+scripts/run-platform-walkthroughs.mjs` — real sign-ins; the console read,
+  the derivation matrix, the doors over a live ordering run, and the
+  disablement/restore; restores deterministic state afterwards.

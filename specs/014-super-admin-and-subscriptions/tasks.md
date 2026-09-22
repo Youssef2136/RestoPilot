@@ -46,11 +46,11 @@ real browser surfaces).
 
 - [ ] T010 Unit suite `tests/unit/platform.test.ts`: client contract +
       banner-state selection
-- [ ] T011 E2E `e2e/platform.surfaces.test.ts`: console as super admin
+- [X] T011 E2E `e2e/platform.surfaces.test.ts`: console as super admin
       (all restaurants visible, dates set, disable with reason, re-enable);
       tenant banners; non-flag deep-link denial; disabled entry refusal
-- [ ] T012 Full gates: `npm run verify` + full e2e
-- [ ] T013 `docs/development.md` Phase 13 entry; quickstart walkthrough
+- [X] T012 Full gates: `npm run verify` + full e2e
+- [x] T013 `docs/development.md` Phase 13 entry; quickstart walkthrough
       script + validation record
 - [ ] T014 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical
