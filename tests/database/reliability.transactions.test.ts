@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { createDbClient, inTransaction, type DbClient } from './helpers/db'
+import { createDbClient, inTransaction } from './helpers/db'
 import {
   authUserIds,
   branchIds,
@@ -114,11 +114,15 @@ describe('reliability: transactions under failure (T007)', () => {
 
       // The stale tab tries everything: reads, submission. One refusal.
       await client.query('set local role anon')
-      for (const [sql, values] of [
-        ['select public.get_session_context($1)', [staleToken]],
-        ['select public.get_session_menu($1)', [staleToken]],
-        ['select public.submit_round($1, $2)', [staleToken, JSON.stringify(hummusSelection)]],
-      ] as const) {
+      const staleProbes: Array<{ sql: string; values: unknown[] }> = [
+        { sql: 'select public.get_session_context($1)', values: [staleToken] },
+        { sql: 'select public.get_session_menu($1)', values: [staleToken] },
+        {
+          sql: 'select public.submit_round($1, $2)',
+          values: [staleToken, JSON.stringify(hummusSelection)],
+        },
+      ]
+      for (const { sql, values } of staleProbes) {
         await client.query('savepoint stale_probe')
         try {
           await client.query(sql, values)

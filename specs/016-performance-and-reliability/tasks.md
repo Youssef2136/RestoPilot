@@ -40,8 +40,8 @@ join the standing gates.
 
 ## Phase 4: Gates + docs
 
-- [ ] T009 Full gates: `npm run verify` + full e2e
-- [ ] T010 `docs/development.md` Phase 15 entry (baselines workflow +
+- [x] T009 Full gates: `npm run verify` + full e2e
+- [x] T010 `docs/development.md` Phase 15 entry (baselines workflow +
       reliability coverage); quickstart note for re-running baselines
 - [ ] T011 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical

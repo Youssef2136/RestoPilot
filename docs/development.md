@@ -627,3 +627,51 @@ contract refusals:
 RPC level, token scope never leaked, every escalation refused, and no
 privileged credential reached the client. The exit condition is standing:
 the security suites run inside `test:db`/`test:unit` on every verify.
+
+## Performance and reliability (Phase 15)
+
+Phase 15 (master plan §26) measured the system before touching anything and
+encoded the reliability journeys as permanent tests. Two artifacts:
+
+### The performance baselines
+
+`scripts/run-perf-baselines.mjs` measures all nine §26 areas against the
+real development project through the real data APIs (the walkthrough
+pattern: real sign-ins, real RPCs, real Storage, real channels), medians of
+5 with a discarded warm-up, and writes
+`specs/016-performance-and-reliability/baselines.json` with environment
+metadata. Run:
+
+```sh
+node --env-file-if-exists=.env scripts/run-perf-baselines.mjs
+```
+
+The first committed artifact is the launch baseline: customer path
+`get_session_menu` 106 ms (budget 1500) and `submit_round` 306 ms (budget 800) — both met with wide margins, so no targeted fix was needed (T005 a
+no-op by design). Timing assertions are deliberately NOT standing gates
+(the artifact is the record; re-run after meaningful schema or query
+changes and compare).
+
+The script encodes three house rules worth knowing when extending it:
+supabase-js builders are lazy — `await` before checking the envelope (an
+un-awaited builder passes vacuously and never runs); one-shot state
+transitions need a fresh round per measured iteration; and Storage goes
+through the owner path grammar with the reference-decides-read rule
+(private bucket, image MIME, signed-URL reads — never `getPublicUrl`).
+
+### The reliability journeys
+
+`tests/database/reliability.transactions.test.ts` proves the three failure
+classes in rolled-back transactions: an aborted submission leaves zero
+partial rows in all four order tables (network interruption), a
+closed-session token refuses all three surfaces with the single
+indistinguishable refusal and a fresh entry recovers (stale tab), and the
+second mover in a staff transition race gets the generic refusal with zero
+change (guarded-update single-winner semantics, Race 7 class).
+
+The realtime recovery contract in `tests/unit/realtime.test.ts` now also
+covers the deliberate unsubscribe→resubscribe cycle: a fresh binding
+refetches on its first SUBSCRIBED and the removed binding stays dead. The
+three pre-existing scenarios (refresh, duplicate submit, double-click) are
+cited to their proving tests in
+[specs/016-performance-and-reliability/tasks.md](../specs/016-performance-and-reliability/tasks.md).
