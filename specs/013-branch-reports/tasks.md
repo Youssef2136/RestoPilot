@@ -9,23 +9,23 @@ house suites: `tests/database/*.test.ts` (pg, transactions), `tests/unit/`,
 
 ## Phase 1: Setup
 
-- [ ] T001 Read master plan §23, prior contracts (006 capture, 008 rounds,
+- [X] T001 Read master plan §23, prior contracts (006 capture, 008 rounds,
       010 void overlay, 011/012 conventions), and the seeded fixture
       landscape; confirm `rounds`/`sessions`/`round_items`/`audit_log`
       shapes; set `.specify/feature.json`
-- [ ] T002 Migration `20260922090000_branch_reports.sql`: the two security
+- [X] T002 Migration `20260922090000_branch_reports.sql`: the two security
       definer RPCs (`get_branch_sales_report`, `get_branch_void_report`),
       reach via `private.has_branch_role` verbatim, generic refusals, grants
       (authenticated execute only) — plan D1–D5
-- [ ] T003 `npm run types:gen`; contract regen for the two RPCs
+- [X] T003 `npm run types:gen`; contract regen for the two RPCs
       (`contracts/database-functions.md`)
 
 ## Phase 2: Database tests (Foundational)
 
-- [ ] T004 Reach matrix suite `tests/database/reports.access.test.ts`:
+- [X] T004 Reach matrix suite `tests/database/reports.access.test.ts`:
       owner any-branch, manager own OK / foreign refused / two-branch union,
       cashier+kitchen+anon `42501`, refusal indistinguishability
-- [ ] T005 Correctness suite `tests/database/reports.calc.test.ts`:
+- [X] T005 Correctness suite `tests/database/reports.calc.test.ts`:
       day/week/month buckets incl. year boundary and empty bucket; anti-drift
       reconciliation (hand-sum from source rows equals the RPC); void
       overlay effects; channel breakdown incl. zero channels; best-seller
