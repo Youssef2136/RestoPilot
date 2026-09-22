@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { asUser, createDbClient, inTransaction } from './helpers/db'
+import { createDbClient, inTransaction } from './helpers/db'
 import {
   authUserIds,
   branchIds,

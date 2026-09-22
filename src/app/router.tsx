@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router'
 import { AppShell } from '../components/AppShell'
 import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../features/auth/guards'
 import { AdminPage } from '../routes/AdminPage'
+import { PlatformConsolePage } from '../routes/PlatformConsolePage'
 import { AuditLogPage } from '../routes/AuditLogPage'
 import { ReportsPage } from '../routes/ReportsPage'
 import { VoidReportPage } from '../routes/VoidReportPage'
@@ -242,6 +243,17 @@ export function AppRouter() {
           element={
             <RequireSuperAdmin>
               <AdminPage />
+            </RequireSuperAdmin>
+          }
+        />
+        {/* The platform console (spec 014 FR-001–FR-005): the super admin's
+            restaurant/subscription management surface. Route gate only —
+            every console RPC re-verifies the flag (Constitution IV). */}
+        <Route
+          path="/admin/platform"
+          element={
+            <RequireSuperAdmin>
+              <PlatformConsolePage />
             </RequireSuperAdmin>
           }
         />

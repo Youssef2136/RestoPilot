@@ -8,39 +8,39 @@ real browser surfaces).
 
 ## Phase 1: Setup + migration
 
-- [ ] T001 Read §24, prior contracts (002 tenancy, 003 auth/audit, 009
+- [X] T001 Read §24, prior contracts (002 tenancy, 003 auth/audit, 009
       refusals), the audit helper shape, and the entry/submit RPC bodies;
       set `.specify/feature.json`
-- [ ] T002 Migration `20260922110000_platform_admin.sql`: `subscriptions`
+- [X] T002 Migration `20260922110000_platform_admin.sql`: `subscriptions`
       table (one row per restaurant, idempotent seed for existing
       restaurants), `restaurants.platform_disabled` + reason/actor columns;
       four RPCs (`get_platform_overview`, `get_my_subscription`,
       `set_subscription_dates`, `set_restaurant_platform_disabled`); the
       disablement predicate in the entry RPCs + `submit_round`; grants
       (plan D1–D4)
-- [ ] T003 `npm run types:gen`; contracts/database-functions.md for the four
+- [X] T003 `npm run types:gen`; contracts/database-functions.md for the four
       RPCs + the new refusal message
 
 ## Phase 2: Database tests
 
-- [ ] T004 Reach + derivation suite `tests/database/platform.admin.test.ts`:
+- [X] T004 Reach + derivation suite `tests/database/platform.admin.test.ts`:
       super-admin-only matrix, state CASE matrix incl. the 7-day boundary,
       no-write state flips (the Important rule), audit + idempotence
-- [ ] T005 Enforcement suite `tests/database/platform.enforcement.test.ts`:
+- [X] T005 Enforcement suite `tests/database/platform.enforcement.test.ts`:
       disabled → entry + submit refusals verbatim, re-enable restores,
       expired → ordering succeeds, tenant data intact
 
 ## Phase 3: Client + surfaces
 
-- [ ] T006 `src/features/platform/`: client (RPC calls, refusal mapping) +
+- [X] T006 `src/features/platform/`: client (RPC calls, refusal mapping) +
       hooks
-- [ ] T007 Platform console under `/admin` (or `/admin/platform`):
+- [X] T007 Platform console under `/admin` (or `/admin/platform`):
       all-restaurants table with state, dates, disabled flag, usage, and
       the activate/dates/disable controls with reason prompt
-- [ ] T008 Tenant banner component in the dashboard shell (active silent /
+- [X] T008 Tenant banner component in the dashboard shell (active silent /
       nearing warning / expired informational / disabled notice /
       never-activated silent)
-- [ ] T009 Contracts doc for the tenant payload + banner rules
+- [X] T009 Contracts doc for the tenant payload + banner rules
 
 ## Phase 4: Tests + polish
 

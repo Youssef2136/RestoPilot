@@ -32,8 +32,8 @@ export function AdminPage() {
             </>
           )}
           <p>
-            This area provides no restaurant data access in this phase. Platform-wide capabilities
-            arrive with Phase 13.
+            <a href="/admin/platform">Open the platform console</a> — every restaurant, its
+            subscription state, and platform usage (Phase 13).
           </p>
         </>
       )}

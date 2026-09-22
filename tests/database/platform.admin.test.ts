@@ -27,7 +27,6 @@ afterAll(async () => {
 const RID = restaurantIds.blueOlive as string
 const RID2 = restaurantIds.cedarGrill as string
 const SUPER_ADMIN = authUserIds.platformAdmin
-const TODAY = () => new Date().toISOString().slice(0, 10)
 
 /** The 7-day boundary helper: an ISO date N days from today. */
 function daysFromToday(n: number): string {
@@ -152,7 +151,7 @@ describe('lifecycle derivation: read-time CASE, no stored state (FR-002, FR-010)
         'select get_platform_overview() as o',
       )
       const cedar = r.rows[0]!.o.find((x) => x.restaurant_id === RID2)
-      expect(cedar.state).toBe('expired')
+      expect(cedar?.state).toBe('expired')
       // The overview alone moved the state — no trigger, no job, nothing
       // wrote (the state lives only in the CASE).
     })
