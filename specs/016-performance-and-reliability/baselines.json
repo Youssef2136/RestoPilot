@@ -1,0 +1,180 @@
+{
+  "generated_at": "2026-09-22T17:23:58.460Z",
+  "environment": {
+    "project_url": "https://yyghtaimzjsclolcwzrg.supabase.co",
+    "fixture": "seed.sql deterministic fixture (2 restaurants, 14 items, 4 open sessions)",
+    "runs_per_area": 5,
+    "warmup_discarded": true
+  },
+  "budgets": {
+    "menu_loading_ms": 1500,
+    "round_submission_ms": 800,
+    "source": "spec 016 FR-002 (§26 customer-path priority)"
+  },
+  "results": {
+    "menu_loading": {
+      "budget_ms": 1500,
+      "get_session_menu": {
+        "name": "get_session_menu",
+        "median_ms": 106,
+        "runs_ms": [
+          109,
+          104,
+          100,
+          106,
+          116
+        ]
+      }
+    },
+    "dashboard_queries": {
+      "get_branch_rounds": {
+        "name": "get_branch_rounds",
+        "median_ms": 118,
+        "runs_ms": [
+          123,
+          118,
+          119,
+          117,
+          118
+        ]
+      },
+      "get_branch_open_sessions": {
+        "name": "get_branch_open_sessions",
+        "median_ms": 103,
+        "runs_ms": [
+          103,
+          101,
+          102,
+          103,
+          108
+        ]
+      },
+      "get_audit_log": {
+        "name": "get_audit_log",
+        "median_ms": 109,
+        "runs_ms": [
+          108,
+          111,
+          124,
+          107,
+          109
+        ]
+      }
+    },
+    "realtime_fanout": {
+      "subscribe_to_subscribed_ms": 218,
+      "note": "single handshake; fan-out latency is asserted by the 012 e2e journeys"
+    },
+    "session_retrieval": {
+      "get_session_context": {
+        "name": "get_session_context",
+        "median_ms": 105,
+        "runs_ms": [
+          106,
+          105,
+          101,
+          114,
+          101
+        ]
+      }
+    },
+    "round_submission": {
+      "budget_ms": 800,
+      "median_ms": 306,
+      "runs_ms": [
+        107,
+        315,
+        306,
+        210,
+        397
+      ]
+    },
+    "kitchen_ticket_updates": {
+      "start_preparation": {
+        "name": "start_preparation",
+        "median_ms": 186,
+        "runs_ms": [
+          236,
+          186,
+          214,
+          114,
+          114
+        ]
+      },
+      "mark_round_ready": {
+        "name": "mark_round_ready",
+        "median_ms": 111,
+        "runs_ms": [
+          111,
+          111,
+          112,
+          105,
+          108
+        ]
+      }
+    },
+    "report_query": {
+      "day": {
+        "name": "sales_report_day",
+        "median_ms": 103,
+        "runs_ms": [
+          102,
+          108,
+          103,
+          115,
+          103
+        ]
+      },
+      "week": {
+        "name": "sales_report_week",
+        "median_ms": 109,
+        "runs_ms": [
+          109,
+          104,
+          111,
+          111,
+          102
+        ]
+      },
+      "month": {
+        "name": "sales_report_month",
+        "median_ms": 108,
+        "runs_ms": [
+          106,
+          109,
+          109,
+          108,
+          105
+        ]
+      }
+    },
+    "image_handling": {
+      "upload": {
+        "name": "storage_upload",
+        "median_ms": 189,
+        "runs_ms": [
+          179,
+          189,
+          197,
+          178,
+          333
+        ]
+      },
+      "read": {
+        "name": "storage_signed_read",
+        "median_ms": 258,
+        "runs_ms": [
+          258,
+          309,
+          261,
+          255,
+          255
+        ]
+      }
+    },
+    "reconnection": {
+      "first_handshake_ms": 72,
+      "resubscribe_ms": 72
+    }
+  }
+}

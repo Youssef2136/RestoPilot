@@ -27,31 +27,31 @@ join the standing gates.
 
 ## Phase 3: Reliability journeys
 
-- [x] T006 Cite the three existing scenarios (refresh, duplicate submit,
+- [ ] T006 Cite the three existing scenarios (refresh, duplicate submit,
       double-click) in tasks + docs with their proving test files
-- [x] T007 `tests/database/reliability.transactions.test.ts`: network
+- [ ] T007 `tests/database/reliability.transactions.test.ts`: network
       interruption (zero partial rows on aborted submission), stale tab
       (closed-session token refusal), concurrent cashiers (guarded-update
       single-winner semantics)
-- [x] T008 Realtime disconnect recovery: extend the 012 unit suite's
+- [ ] T008 Realtime disconnect recovery: extend the 012 unit suite's
       recovery-refetch contract to the unsubscribe→resubscribe cycle
       (FR-006); simultaneous-customer-actions cited to 007's open-or-join
       suite
 
 ## Phase 4: Gates + docs
 
-- [x] T009 Full gates: `npm run verify` + full e2e
-- [x] T010 `docs/development.md` Phase 15 entry (baselines workflow +
+- [ ] T009 Full gates: `npm run verify` + full e2e
+- [ ] T010 `docs/development.md` Phase 15 entry (baselines workflow +
       reliability coverage); quickstart note for re-running baselines
-- [x] T011 Determinism: reset → seed → full db regression → `types:gen`
+- [ ] T011 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical
-- [x] T012 Post-implement analyze record + final commit (the launch-gate
+- [ ] T012 Post-implement analyze record + final commit (the launch-gate
       record, FR-005)
 
 ## Notes
 
-- T004 evidence: committed `baselines.json` — menu 487 ms (budget 1500),
-  submission 402 ms (budget 800); all other areas recorded without
+- T004 evidence: committed `baselines.json` — menu 106 ms (budget 1500),
+  submission 306 ms (budget 800); all other areas recorded without
   budgets. No breach → T005 was a no-op by design (the Important rule
   applied to ourselves).
 - T008 evidence: the recovery-refetch contract extended for the
