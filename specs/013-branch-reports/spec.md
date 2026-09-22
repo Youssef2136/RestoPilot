@@ -6,6 +6,12 @@
 
 **Status**: Draft
 
+## Clarifications
+
+### Session 2026-09-22
+
+- No open questions: the master plan §23 constraints (scope, roles, anti-drift architecture), the Phase 6–10 capture/void/audit artifacts, and the established refusal vocabulary resolve every question the draft raised. Assumptions stated in the spec (period alignment, net-of-void ranking, VAT-inclusive capture, no exports) are conservative readings of the mandate "basic operational reporting" — none is load-bearing enough to block planning.
+
 **Input**: Master plan §23 (Phase 12 — Reports): basic operational reporting
 that never becomes a financial/accounting system. Owners get daily, weekly,
 and monthly aggregates, best-selling items, branch comparison, channel
@@ -136,9 +142,7 @@ through their role, and no route. Unauthenticated visitors get nothing.
 
 ### Clarifications
 
-*(none — constraints from the master plan, Phases 6–10 artifacts, and the
-established architecture resolve every question this spec raised; see
-plan.md's Constitution checks for the derivation)*
+*(none — see the `## Clarifications` session above)*
 
 ## Review & Acceptance Checklist
 
