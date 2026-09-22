@@ -48,7 +48,7 @@ house suites: `tests/database/*.test.ts` (pg, transactions), `tests/unit/`,
 
 - [X] T010 Unit suite `tests/unit/reports.test.ts`: client refusal mapping,
       parameter shaping, money formatter passthrough (no arithmetic)
-- [ ] T011 E2E `e2e/reports.surfaces.test.ts`: owner aggregates + comparison
+- [X] T011 E2E `e2e/reports.surfaces.test.ts`: owner aggregates + comparison
       live; manager own-branch-only; cashier/kitchen no nav + denial
       deep-link; void log listing; empty-period zero state
 - [ ] T012 Full gates: `npm run verify` + full e2e; fix or document any
