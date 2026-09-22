@@ -590,3 +590,40 @@ disablement is manual-only:
 scripts/run-platform-walkthroughs.mjs` — real sign-ins; the console read,
   the derivation matrix, the doors over a live ordering run, and the
   disablement/restore; restores deterministic state afterwards.
+
+## Security hardening (Phase 14)
+
+Phase 14 is the adversarial audit of the authorization architecture (master
+plan §25) — review-and-prove, not new product. Every §25 area became a
+permanent suite of probes that drive REAL roles (anon, authenticated staff
+fixtures, customer tokens) inside rolled-back transactions and assert the
+contract refusals:
+
+- `tests/database/security.isolation.test.ts` — tenant isolation both
+  directions (owner→foreign restaurant across menu/branch/table/staff/
+  report/settings RPCs and direct RLS writes), the token's single-session
+  scope, and audit-trail immutability (insert/update/delete refused for
+  anon and authenticated; the customer journey writes zero audit rows).
+- `tests/database/security.roles.test.ts` — every upward escalation
+  (cashier→kitchen→manager→owner, kitchen→cashier, manager→sibling branch
+  and owner-only ops, platform RPCs) refused, plus a positive control
+  proving the boundaries are role-scoped.
+- `tests/database/security.validation.test.ts` — `submit_round`'s crafted
+  carts (bounds 0/100/negative/non-numeric/integer-overflow, unknown and
+  foreign-restaurant items, foreign extras, malformed shapes), lifecycle
+  guards, entry-form bounds (61-char names, letter phones, malformed
+  UUIDs), and privileged-column writes.
+- `tests/database/security.session.test.ts` — token guessing (plausible
+  patterns share the SAME verbatim refusal), cross-session/table/restaurant
+  scope, and full replay-after-close on all three token surfaces.
+- `tests/unit/security.bundle.test.ts` — secrets posture: `src/` reads only
+  the two public `VITE_` vars through the one env module, no privileged
+  credential pattern in source or (when present) in `dist/`, and the env
+  contract stays two-public-vars. The variable NAME `SUPABASE_DB_URL` in
+  the tooling validator is the documented exception; its VALUE shape is
+  refused everywhere.
+
+**T008 findings: zero real bypasses.** The audit trail held at grants/RLS/
+RPC level, token scope never leaked, every escalation refused, and no
+privileged credential reached the client. The exit condition is standing:
+the security suites run inside `test:db`/`test:unit` on every verify.

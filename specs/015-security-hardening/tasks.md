@@ -46,7 +46,7 @@ R1). Each T-task ends with its checkbox marked and a one-line evidence note.
 
 - [x] T009 Full gates: `npm run verify` + full e2e (no UI change expected;
       the run proves it)
-- [ ] T010 `docs/development.md` Phase 14 entry; the security posture note
+- [x] T010 `docs/development.md` Phase 14 entry; the security posture note
       (what is asserted where) in the house doc style
 - [ ] T011 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical
