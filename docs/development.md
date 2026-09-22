@@ -502,3 +502,38 @@ Changing any other hosted auth setting (SMTP, confirmations, rate limits, flow
 type) is a platform-configuration change under this same workflow and must be
 re-validated against
 `specs/003-auth-and-rbac/contracts/supabase-auth-surface.md`.
+
+## Branch reports (Phase 12)
+
+Phase 12 adds read-only operational reporting (master plan §23) on top of the
+captured substrate — no new engines, tables, or write paths:
+
+- Migration `20260922090000_branch_reports.sql` ships two `security definer`
+  RPCs: `get_branch_sales_report(restaurant, branch, period, anchor_date)`
+  (day/week/month calendar buckets — Monday-start weeks via `date_trunc` —
+  with rounds submitted/voided, net money over non-voided rounds, a
+  three-channel breakdown with explicit zeros, and top-10 best sellers by
+  captured quantity) and `get_branch_void_report(restaurant, branch, limit)`
+  (the void ledger with who/when/why and the captured total). Reach is
+  `private.has_branch_role` verbatim: owner restaurant-wide, manager their
+  branch, cashier/kitchen/anon refused with the generic 42501.
+- §23's anti-drift rule holds by construction: figures are derived at read
+  time from `rounds` (captured money, void overlay) joined to `sessions`
+  (channel). No materialized view, no summary table, no counters. The
+  database tests reconcile every report figure against a hand derivation
+  from the source rows (`tests/database/reports.calc.test.ts`).
+- The void log is a filtered view of Phase 10's void overlay — NOT a second
+  ledger. The client renders `get_branch_void_report`; the full action trail
+  stays in `get_audit_log`.
+- Surfaces: `/dashboard/reports` (owner picker + comparison, manager
+  single-branch) and `/dashboard/voids`, gated to owner/manager in the
+  navigation and the pages. Cashier/kitchen deep links render the denial
+  (US4 absence, tested).
+- Suites: `tests/database/reports.access.test.ts` (reach matrix),
+  `tests/database/reports.calc.test.ts` (buckets, void overlay,
+  reconciliation), `tests/unit/reports.test.ts` (client contract),
+  `e2e/reports.surfaces.test.ts` (live journeys).
+- Walkthrough: `node --env-file-if-exists=.env
+scripts/run-reports-walkthroughs.mjs` — real sign-ins, a submitted round,
+  a driven-and-voided round, and the reconciliation checks; restores
+  deterministic state afterwards.
