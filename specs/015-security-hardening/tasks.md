@@ -48,9 +48,9 @@ R1). Each T-task ends with its checkbox marked and a one-line evidence note.
       the run proves it)
 - [x] T010 `docs/development.md` Phase 14 entry; the security posture note
       (what is asserted where) in the house doc style
-- [ ] T011 Determinism: reset → seed → full db regression → `types:gen`
+- [x] T011 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical
-- [ ] T012 Post-implement analyze record + final commit
+- [x] T012 Post-implement analyze record + final commit
 
 ## Notes
 
@@ -61,3 +61,17 @@ R1). Each T-task ends with its checkbox marked and a one-line evidence note.
   branch-scoped sessions; no code change required).
 - The exit condition is now standing: the security suites run inside
   `npm run test:db` / `test:unit` on every verify.
+
+## Post-implement analysis record (2026-09-22)
+
+All seven §25 review areas are encoded as standing suites and green:
+`test:db` 487/487 (16 new security probes), unit 248/248 (+4 secrets
+posture), e2e 92/92 (one worker — the documented deterministic gate), full
+`npm run verify` exit 0, reset→seed→regression deterministic, `types:gen`
+byte-identical. T008 triage found ZERO real authorization bypasses — every
+probe the plan specified was already refused by the deployed architecture.
+Two probe-shape corrections were made during authoring (not product
+fixes): staff-RPC cross-tenant refusals are the generic 42501 (not P0001),
+and void_round's unknown-id refusal shares the 009 indistinguishable
+posture. The audit trail is append-only through grants, RLS, and the RPC
+surface; the client env contract is exactly the two public VITE_ vars.
