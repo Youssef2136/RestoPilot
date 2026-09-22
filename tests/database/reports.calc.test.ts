@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { asAnon, asUser, createDbClient, inTransaction } from './helpers/db'
+import { asUser, createDbClient, inTransaction } from './helpers/db'
 import {
   authUserIds,
   branchIds,
@@ -31,8 +31,12 @@ const RID = restaurantIds.blueOlive as string
 const DOWNTOWN = branchIds.downtown as string
 const TOKEN_T1 = devSessionTokens.downtownT1
 
-const kebabSelection = [{ item_id: menuItemIds.lambKebab, extras: [], quantity: '2' }]
-const hummusSelection = [{ item_id: menuItemIds.hummus, extras: [], quantity: '1' }]
+const kebabSelection: Array<{ item_id: string; extras: unknown[]; quantity: string }> = [
+  { item_id: menuItemIds.lambKebab, extras: [], quantity: '2' },
+]
+const hummusSelection: Array<{ item_id: string; extras: unknown[]; quantity: string }> = [
+  { item_id: menuItemIds.hummus, extras: [], quantity: '1' },
+]
 
 /** Act as an identity (the house inline simulation). */
 async function asIdentity(authUserId: string): Promise<void> {
@@ -173,7 +177,6 @@ describe('reports correctness: buckets, void overlay, reconciliation', () => {
       expect(hand.submitted).toBe(2)
       expect(hand.voided).toBe(1)
 
-      const report = await salesReport('day')
       // The void overlay: the report's own shape carries both figures — and
       // the void report lists the void with its reason verbatim.
       const voidReport = await (async () => {
@@ -230,17 +233,12 @@ describe('reports correctness: buckets, void overlay, reconciliation', () => {
         item_id: string
         quantity: number
       }>
-      const hummusAfter = afterBest.filter((b) => b.item_id === menuItemIds.hummus)
-      // Whatever hummus quantity remains must exclude the voided round's 1.
-      const hand = await handDerivation(
-        (
-          await client.query<{ session_id: string }>(
-            'select session_id from public.rounds where id = $1',
-            [first],
-          )
-        ).rows[0]!.session_id,
-      )
-      expect(hand.voided).toBe(1)
+      // Whatever hummus quantity remains must exclude the voided round's 1:
+      // the post-void hummus total is at most the pre-void figure minus 1.
+      const hummusAfter = afterBest
+        .filter((b) => b.item_id === menuItemIds.hummus)
+        .reduce((acc, b) => acc + Number(b.quantity), 0)
+      expect(hummusAfter).toBeLessThan(3)
     })
   })
 
