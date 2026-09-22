@@ -533,6 +533,9 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          platform_disabled: boolean
+          platform_disabled_by_profile_id: string | null
+          platform_disabled_reason: string | null
           slug: string
           timezone: string
           updated_at: string
@@ -544,6 +547,9 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          platform_disabled?: boolean
+          platform_disabled_by_profile_id?: string | null
+          platform_disabled_reason?: string | null
           slug: string
           timezone?: string
           updated_at?: string
@@ -555,11 +561,22 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          platform_disabled?: boolean
+          platform_disabled_by_profile_id?: string | null
+          platform_disabled_reason?: string | null
           slug?: string
           timezone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "restaurants_platform_disabled_by_profile_id_fkey"
+            columns: ["platform_disabled_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       round_item_extras: {
         Row: {
@@ -950,6 +967,35 @@ export type Database = {
           },
         ]
       }
+      subscriptions: {
+        Row: {
+          end_date: string | null
+          restaurant_id: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          end_date?: string | null
+          restaurant_id: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          end_date?: string | null
+          restaurant_id?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: true
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tax_rule_categories: {
         Row: {
           category_id: string
@@ -1280,6 +1326,9 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          platform_disabled: boolean
+          platform_disabled_by_profile_id: string | null
+          platform_disabled_reason: string | null
           slug: string
           timezone: string
           updated_at: string
@@ -1352,6 +1401,8 @@ export type Database = {
         Returns: Json
       }
       get_kitchen_queue: { Args: { p_branch_id: string }; Returns: Json }
+      get_my_subscription: { Args: never; Returns: Json }
+      get_platform_overview: { Args: never; Returns: Json }
       get_public_restaurant: { Args: { p_slug: string }; Returns: Json }
       get_session_bill: { Args: { p_session_id: string }; Returns: Json }
       get_session_context: { Args: { p_token: string }; Returns: Json }
@@ -1576,6 +1627,18 @@ export type Database = {
         Args: { p_image_path: string; p_item_id: string }
         Returns: string
       }
+      set_restaurant_platform_disabled: {
+        Args: { p_disabled: boolean; p_reason: string; p_restaurant_id: string }
+        Returns: Json
+      }
+      set_subscription_dates: {
+        Args: {
+          p_end_date: string
+          p_restaurant_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       start_preparation: { Args: { p_round_id: string }; Returns: Json }
       submit_round: { Args: { p_items: Json; p_token: string }; Returns: Json }
       update_menu_category: {
@@ -1662,6 +1725,9 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          platform_disabled: boolean
+          platform_disabled_by_profile_id: string | null
+          platform_disabled_reason: string | null
           slug: string
           timezone: string
           updated_at: string
@@ -1682,6 +1748,9 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          platform_disabled: boolean
+          platform_disabled_by_profile_id: string | null
+          platform_disabled_reason: string | null
           slug: string
           timezone: string
           updated_at: string
