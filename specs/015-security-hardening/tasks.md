@@ -16,35 +16,35 @@ R1). Each T-task ends with its checkbox marked and a one-line evidence note.
 
 ## Phase 2: The security suites
 
-- [ ] T003 `tests/database/security.isolation.test.ts` (FR-001 + audit
+- [x] T003 `tests/database/security.isolation.test.ts` (FR-001 + audit
       integrity FR-006): cross-restaurant staff RPCs (menu, branch, staff,
       session, report, lifecycle surfaces) both directions; foreign-tenant
       table writes; customer token used across restaurants; audit UPDATE/
       DELETE/INSERT refused for anon/authenticated through grants + RLS
-- [ ] T004 `tests/database/security.roles.test.ts` (FR-002): cashier →
+- [x] T004 `tests/database/security.roles.test.ts` (FR-002): cashier →
       kitchen/manager/owner ops; kitchen → cashier/manager ops; manager →
       sibling branch + owner-only ops (menu writes, staff mgmt,
       subscription/platform RPCs)
-- [ ] T005 `tests/database/security.validation.test.ts` (FR-003):
+- [x] T005 `tests/database/security.validation.test.ts` (FR-003):
       submit_round malformed/oversized carts, quantity bounds, unknown/
       unavailable items, foreign extras; lifecycle transitions refused;
       oversized names/addresses; malformed tokens; privileged column
       writes
-- [ ] T006 `tests/database/security.session.test.ts` (FR-004): guessed/
+- [x] T006 `tests/database/security.session.test.ts` (FR-004): guessed/
       fabricated tokens, closed-session reuse, cross-session/cross-table
       access, replay after forbidden states
-- [ ] T007 `tests/unit/security.bundle.test.ts` (FR-005): the built bundle
+- [x] T007 `tests/unit/security.bundle.test.ts` (FR-005): the built bundle
       + source env contract carry no privileged credential
 
 ## Phase 3: Findings and fixes
 
-- [ ] T008 Run all suites; triage every refusal that doesn't come (a real
+- [x] T008 Run all suites; triage every refusal that doesn't come (a real
       bypass) — fix per plan D5 with regression tests; re-run the full
       chain (reset → seed → test:db) if a migration changed
 
 ## Phase 4: Gates + docs
 
-- [ ] T009 Full gates: `npm run verify` + full e2e (no UI change expected;
+- [x] T009 Full gates: `npm run verify` + full e2e (no UI change expected;
       the run proves it)
 - [ ] T010 `docs/development.md` Phase 14 entry; the security posture note
       (what is asserted where) in the house doc style
