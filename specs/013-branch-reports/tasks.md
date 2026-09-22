@@ -58,7 +58,7 @@ house suites: `tests/database/*.test.ts` (pg, transactions), `tests/unit/`,
       restore) + validation record
 - [X] T014 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical; final commit + push
-- [ ] T015 Post-implement analyze record: deployed signatures, grants, and
+- [X] T015 Post-implement analyze record: deployed signatures, grants, and
       anti-drift spot-check against the contract
 
 ## Notes
