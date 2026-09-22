@@ -153,6 +153,43 @@ describe('the recovery refetch (contracts §1.4, FR-004)', () => {
     expect(invalidate).toHaveBeenCalledTimes(2)
     vi.useRealTimers()
   })
+
+  it('the full disconnect cycle: unsubscribe→resubscribe refetches like an auto-reconnect (016 T008; FR-006)', () => {
+    vi.useFakeTimers()
+    const client = makeRecordingClient()
+    const invalidate = vi.fn(() => Promise.resolve())
+    const binding = bindRealtimeInvalidation(client as never, {
+      scopeValue: 'b1',
+      table: 'kitchen_tickets',
+      invalidate,
+    })
+    const channel = harness.channels[harness.channels.length - 1]!
+    channel.statusHandlers.forEach((h) => h('SUBSCRIBED'))
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    // A deliberate unsubscribe (the reliability journey's half-offline tab:
+    // the user backgrounds the app and the client drops the channel).
+    binding.unmount()
+    expect(harness.removeChannel).toHaveBeenCalledWith(channel)
+
+    // Re-entry is a FRESH binding on the same client: in production a new
+    // channel object (the old one was removed); the recording harness reuses
+    // the channel by name, so the new binding's status handler APPENDS to it
+    // and only that new handler fires for the fresh subscription — mirroring
+    // a brand-new channel's first SUBSCRIBED.
+    const handlersBefore = channel.statusHandlers.length
+    const invalidate2 = vi.fn(() => Promise.resolve())
+    bindRealtimeInvalidation(client as never, {
+      scopeValue: 'b1',
+      table: 'kitchen_tickets',
+      invalidate: invalidate2,
+    })
+    expect(channel.statusHandlers.length).toBe(handlersBefore + 1)
+    channel.statusHandlers.slice(handlersBefore).forEach((h) => h('SUBSCRIBED'))
+    expect(invalidate2).toHaveBeenCalledTimes(1)
+    expect(invalidate).toHaveBeenCalledTimes(1) // the old binding stays dead
+    vi.useRealTimers()
+  })
 })
 
 describe('cleanup (contracts §1.6)', () => {

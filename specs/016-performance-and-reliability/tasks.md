@@ -27,13 +27,13 @@ join the standing gates.
 
 ## Phase 3: Reliability journeys
 
-- [ ] T006 Cite the three existing scenarios (refresh, duplicate submit,
+- [x] T006 Cite the three existing scenarios (refresh, duplicate submit,
       double-click) in tasks + docs with their proving test files
-- [ ] T007 `tests/database/reliability.transactions.test.ts`: network
+- [x] T007 `tests/database/reliability.transactions.test.ts`: network
       interruption (zero partial rows on aborted submission), stale tab
       (closed-session token refusal), concurrent cashiers (guarded-update
       single-winner semantics)
-- [ ] T008 Realtime disconnect recovery: extend the 012 unit suite's
+- [x] T008 Realtime disconnect recovery: extend the 012 unit suite's
       recovery-refetch contract to the unsubscribe→resubscribe cycle
       (FR-006); simultaneous-customer-actions cited to 007's open-or-join
       suite
@@ -49,6 +49,21 @@ join the standing gates.
       record, FR-005)
 
 ## Notes
+
+- T006 citations — the three existing reliability scenarios and their
+  proving tests:
+  - **Refresh** (a reload reconciles without data loss): the client's
+    refused-recovery contract (`tests/unit/session.client.test.ts`, FR-013/14)
+    and the live reload path in `e2e/realtime.test.ts` ("the reload path
+    reconciles").
+  - **Duplicate submit** (two rounds stay independent; nothing partial):
+    `tests/database/order.rpc.test.ts` US2 block — sequential independence
+    plus the concurrent race proof (Race 7), both zero-partial-write.
+  - **Double-click** (the UI guard): `src/features/order/components/
+    SubmitControl.tsx` disables while `submitRound.isPending` — the server
+    halves are the same US2 postures; the entry-form twin is the
+    open-or-join race in `tests/database/session.rpc.test.ts`
+    ("A session is already open at this table. Join it instead.").
 
 - T004 evidence: committed `baselines.json` — menu 106 ms (budget 1500),
   submission 306 ms (budget 800); all other areas recorded without
