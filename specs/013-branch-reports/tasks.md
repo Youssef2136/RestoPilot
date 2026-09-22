@@ -46,7 +46,7 @@ house suites: `tests/database/*.test.ts` (pg, transactions), `tests/unit/`,
 
 ## Phase 4: Tests + polish
 
-- [ ] T010 Unit suite `tests/unit/reports.test.ts`: client refusal mapping,
+- [X] T010 Unit suite `tests/unit/reports.test.ts`: client refusal mapping,
       parameter shaping, money formatter passthrough (no arithmetic)
 - [ ] T011 E2E `e2e/reports.surfaces.test.ts`: owner aggregates + comparison
       live; manager own-branch-only; cashier/kitchen no nav + denial
