@@ -51,12 +51,12 @@ house suites: `tests/database/*.test.ts` (pg, transactions), `tests/unit/`,
 - [X] T011 E2E `e2e/reports.surfaces.test.ts`: owner aggregates + comparison
       live; manager own-branch-only; cashier/kitchen no nav + denial
       deep-link; void log listing; empty-period zero state
-- [ ] T012 Full gates: `npm run verify` + full e2e; fix or document any
+- [X] T012 Full gates: `npm run verify` + full e2e; fix or document any
       regression
-- [ ] T013 `docs/development.md` Phase 12 entry; quickstart walkthrough
+- [X] T013 `docs/development.md` Phase 12 entry; quickstart walkthrough
       script (real sign-ins, seeded-period reconciliation, deterministic
       restore) + validation record
-- [ ] T014 Determinism: reset → seed → full db regression → `types:gen`
+- [X] T014 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical; final commit + push
 - [ ] T015 Post-implement analyze record: deployed signatures, grants, and
       anti-drift spot-check against the contract
