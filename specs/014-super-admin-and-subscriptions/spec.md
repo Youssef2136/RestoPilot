@@ -6,6 +6,17 @@
 
 **Status**: Draft
 
+## Clarifications
+
+### Session 2026-09-22
+
+- No open questions: §24's two governing rules (expiration never disables —
+  the platform owner acts manually; an in-app warning precedes expiration),
+  the stated defaults (≤7-day warning window, `never_activated` initial
+  state, disabled = a manual platform flag distinct from the date-derived
+  lifecycle), and the house conventions (read-time derivation, audited
+  manual actions, generic refusals) resolve everything the draft raised.
+
 **Input**: Master plan §24 (Phase 13 — Super Admin and Subscriptions):
 SaaS-level administration. The super admin views all restaurants, views
 subscription state, manually activates subscriptions, manually changes
