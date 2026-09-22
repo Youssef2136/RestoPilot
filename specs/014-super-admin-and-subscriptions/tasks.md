@@ -44,7 +44,7 @@ real browser surfaces).
 
 ## Phase 4: Tests + polish
 
-- [ ] T010 Unit suite `tests/unit/platform.test.ts`: client contract +
+- [x] T010 Unit suite `tests/unit/platform.test.ts`: client contract +
       banner-state selection
 - [X] T011 E2E `e2e/platform.surfaces.test.ts`: console as super admin
       (all restaurants visible, dates set, disable with reason, re-enable);
@@ -52,9 +52,9 @@ real browser surfaces).
 - [X] T012 Full gates: `npm run verify` + full e2e
 - [x] T013 `docs/development.md` Phase 13 entry; quickstart walkthrough
       script + validation record
-- [ ] T014 Determinism: reset → seed → full db regression → `types:gen`
+- [x] T014 Determinism: reset → seed → full db regression → `types:gen`
       byte-identical
-- [ ] T015 Post-implement analyze record + final commit
+- [x] T015 Post-implement analyze record + final commit
 
 ## Notes
 
@@ -65,3 +65,20 @@ real browser surfaces).
 - Reviewer-owned checklist items in
   `checklists/platform-authority-and-lifecycle.md` stay unchecked (house
   convention since 005).
+
+## Post-implement analysis record (2026-09-22)
+
+Verified the deployed surface against contracts/database-functions.md via
+live pg_catalog probes: all four platform RPCs `security definer`,
+`authenticated`-only (anon has no EXECUTE); the three doors keep
+`security definer` + anon EXECUTE with the verbatim canonical bodies (one
+inserted predicate each); `subscriptions` carries exactly the four declared
+columns with `restaurant_id` PK; zero stored lifecycle columns anywhere
+(read-time derivation only, probed). Audit actions are the three contract
+names, idempotent writes only. Two walkthrough findings were resolved as
+contract clarifications (dates set-never-cleared; audit read keeps Phase 10
+tenant reach) — both asserted in the walkthrough script (A6, D2). Gaps
+found and closed by this analyze: the missing contracts/database-functions.md
+artifact (T003/T009 pointer) written against the deployed surface, and T010
+confirmed complete (8/8 unit tests, green in verify's 244). All 15 tasks
+verified complete.
