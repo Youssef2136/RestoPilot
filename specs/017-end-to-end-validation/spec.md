@@ -82,10 +82,10 @@ without a standing proof is a gap.
 | 3 | Unavailable item during ordering | e2e `session.surfaces.test.ts` (unavailable items hidden/refused) + db `channel.rpc.test.ts` |
 | 4 | Price change before a new session | **NEW** (017 T006): db probe — owner changes price, a NEW session's round uses the new price |
 | 5 | Price change while an old session remains open | **NEW** (017 T006): db probe — the open session's EXISTING rounds keep captured prices; its next round after the change uses the new price |
-| 6 | Tax changes | db `tax` suites (rule CRUD + recomputation) — cited; the money path re-asserted in the US1 journey |
+| 6 | Tax changes | db `tax.rpc.test.ts` + `tax.schema.test.ts` (rule CRUD, overrides, recomputation) — cited; the money path re-asserted in the US1 journey |
 | 7 | Branch overrides | e2e `menu.surfaces.test.ts` + db `menu.rpc.test.ts` (branch_unavailable_items) — cited |
 | 8 | Delivery cutoff | e2e `session.surfaces.test.ts` "delivery cutoff refuses additional orders" — cited |
-| 9 | Takeaway cutoff | db `channel.rpc.test.ts` (the cutoff at ready) — cited |
+| 9 | Takeaway cutoff | db `channel.rpc.test.ts` "takeaway refuses at ready; dine-in never cuts off" — cited |
 | 10 | Void | e2e `bill.void.audit.test.ts` (void a locked round; bill shows the voided section) — cited |
 | 11 | Unauthorized branch access | e2e `auth.routes.test.ts` + role denials in `tax`/`management` suites — cited |
 | 12 | Multiple restaurant tenants | db `tenancy.rls.test.ts` + `security.isolation.test.ts` — cited |
