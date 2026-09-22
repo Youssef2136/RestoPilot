@@ -303,8 +303,13 @@ end;
 $$;
 
 -- ── §4 the two doors (plan D3; FR-006) ──────────────────────────────────────
--- The disablement predicate slots into each function's EXISTING validation
--- chain, after the restaurant existence check. The message is verbatim.
+-- The platform-disablement predicate is INSERTED into each function's
+-- canonical body — the bodies below are the verbatim deployed definitions
+-- (open_session_at_table = 007's 20260919205000; open_session_channel and
+-- submit_round = 010's 20260920160000, cutoffs and availability checks
+-- included) with exactly one insertion each, marked "Phase 13". Zero other
+-- drift: the shapes the client parses (parseEntry/parseRound) and the
+-- validation messages the UI maps are the deployed ones.
 
 create or replace function public.open_session_at_table(
   p_restaurant_id uuid,
@@ -327,7 +332,6 @@ declare
   v_open_session public.sessions;
   v_participant public.session_participants;
   v_token text;
-  v_token_row public.session_tokens;
   v_token_hash text;
 begin
   -- Validation chain, in contract order; each act before the next.
@@ -335,7 +339,7 @@ begin
     raise exception 'Restaurant not found.' using errcode = 'P0001';
   end if;
 
-  -- Phase 13: the platform kill-switch (before any other work).
+  -- Phase 13: the platform kill-switch (before any other work; FR-006).
   if exists (
     select 1 from public.restaurants r
     where r.id = p_restaurant_id and r.platform_disabled
@@ -367,59 +371,90 @@ begin
     raise exception 'A valid phone number is required.' using errcode = 'P0001';
   end if;
 
-  -- (The remainder is the deployed 007 body, unchanged: open-session reuse,
-  -- participant upsert, token minting — 32 server-random bytes base64url,
-  -- only the SHA-256 hex stored.)
-  select * into v_open_session from public.sessions s
-  where s.table_id = p_table_id and s.status = 'open';
-  if v_open_session.id is not null then
-    v_session := v_open_session;
-  else
-    insert into public.sessions (restaurant_id, branch_id, table_id, type, status)
-    values (p_restaurant_id, p_branch_id, p_table_id, 'dine-in', 'open')
-    returning * into v_session;
-  end if;
-
-  select * into v_participant from public.session_participants sp
-  where sp.session_id = v_session.id and sp.phone = v_phone;
-  if v_participant.id is null then
-    insert into public.session_participants (session_id, restaurant_id, display_name, phone)
-    values (v_session.id, p_restaurant_id, v_name, v_phone)
-    returning * into v_participant;
-  else
-    update public.session_participants sp
-    set display_name = v_name
-    where sp.id = v_participant.id
-    returning * into v_participant;
-  end if;
-
+  -- Token: 32 server-random bytes, base64url; only the SHA-256 hex is stored.
   v_token := encode(extensions.gen_random_bytes(32), 'base64');
   v_token := replace(replace(rtrim(v_token, '=' || chr(10)), '+', '-'), '/', '_');
+  v_token_hash := encode(extensions.digest(v_token, 'sha256'), 'hex');
+
+  -- Open-or-join (research §3): the pre-check reads intent; the partial
+  -- unique index `sessions_one_open_per_table` is the race-free guarantee.
+  select * into v_open_session
+  from public.sessions s
+  where s.restaurant_id = p_restaurant_id
+    and s.branch_id = p_branch_id
+    and s.table_id = p_table_id
+    and s.status = 'open';
+
+  if v_open_session.id is not null then
+    insert into public.session_participants (session_id, restaurant_id, display_name, phone)
+    values (v_open_session.id, p_restaurant_id, v_name, v_phone)
+    returning * into v_participant;
+
+    insert into public.session_tokens (session_id, restaurant_id, token_hash)
+    values (v_open_session.id, p_restaurant_id, v_token_hash);
+
+    return jsonb_build_object(
+      'session', jsonb_build_object(
+        'id', v_open_session.id,
+        'restaurant_id', v_open_session.restaurant_id,
+        'branch_id', v_open_session.branch_id,
+        'table_id', v_open_session.table_id,
+        'type', v_open_session.type,
+        'status', v_open_session.status,
+        'opened_at', v_open_session.opened_at
+      ),
+      'token', v_token,
+      'participant', jsonb_build_object(
+        'id', v_participant.id,
+        'display_name', v_participant.display_name,
+        'joined_at', v_participant.joined_at
+      )
+    );
+  end if;
+
+  begin
+    insert into public.sessions (restaurant_id, branch_id, table_id)
+    values (p_restaurant_id, p_branch_id, p_table_id)
+    returning * into v_session;
+  exception
+    -- Lost the open race (a concurrent entry won the partial unique index);
+    -- identified by the constraint's name, per the contract.
+    when unique_violation then
+      get stacked diagnostics v_constraint = constraint_name;
+      if v_constraint = 'sessions_one_open_per_table' then
+        raise exception 'A session is already open at this table. Join it instead.'
+          using errcode = 'P0001';
+      end if;
+      raise;
+  end;
+
+  insert into public.session_participants (session_id, restaurant_id, display_name, phone)
+  values (v_session.id, p_restaurant_id, v_name, v_phone)
+  returning * into v_participant;
+
   insert into public.session_tokens (session_id, restaurant_id, token_hash)
-  values (v_session.id, p_restaurant_id, encode(extensions.digest(v_token, 'sha256'), 'hex'))
-  returning * into v_token_row;
+  values (v_session.id, p_restaurant_id, v_token_hash);
 
   return jsonb_build_object(
     'session', jsonb_build_object(
       'id', v_session.id,
-      'type', v_session.type,
+      'restaurant_id', v_session.restaurant_id,
+      'branch_id', v_session.branch_id,
       'table_id', v_session.table_id,
-      'status', v_session.status
+      'type', v_session.type,
+      'status', v_session.status,
+      'opened_at', v_session.opened_at
     ),
-    'participant', jsonb_build_object('id', v_participant.id, 'display_name', v_participant.display_name),
-    'token', v_token
+    'token', v_token,
+    'participant', jsonb_build_object(
+      'id', v_participant.id,
+      'display_name', v_participant.display_name,
+      'joined_at', v_participant.joined_at
+    )
   );
-exception
-  when unique_violation then
-    get stacked diagnostics v_constraint = constraint_name;
-    if v_constraint = 'sessions_one_open_per_table' then
-      raise exception 'This table is already occupied.' using errcode = 'P0001';
-    end if;
-    raise;
 end;
 $$;
 
--- §4b The channel entry door (Phase 9's function, with the same predicate).
 create or replace function public.open_session_channel(
   p_restaurant_id uuid,
   p_branch_id uuid,
@@ -452,7 +487,7 @@ begin
     raise exception 'Restaurant or branch not found.' using errcode = 'P0001';
   end if;
 
-  -- Phase 13: the platform kill-switch.
+  -- Phase 13: the platform kill-switch (FR-006).
   if exists (
     select 1 from public.restaurants r
     where r.id = p_restaurant_id and r.platform_disabled
@@ -476,19 +511,25 @@ begin
       raise exception 'A delivery address is required.' using errcode = 'P0001';
     end if;
   else
-    v_address := null;
+    v_address := null; -- takeaway ignores any address passed (research §1)
   end if;
 
-  -- ── 2. Open the channel session (the 010 body, unchanged) ────────────────
-  insert into public.sessions (restaurant_id, branch_id, table_id, type, status, delivery_address)
-  values (p_restaurant_id, p_branch_id, null, case v_channel when 'delivery' then 'delivery' else 'takeaway' end, 'open', v_address)
+  -- ── 2. The channel session: no join semantics, one customer ─────────────
+  insert into public.sessions
+    (restaurant_id, branch_id, table_id, type, status, delivery_address, opened_at)
+  values
+    (p_restaurant_id, p_branch_id, null, v_channel, 'open',
+     case when v_channel = 'delivery' then v_address end, now())
   returning * into v_session;
 
-  insert into public.session_participants (session_id, restaurant_id, display_name, phone)
-  values (v_session.id, p_restaurant_id, v_name, v_phone)
+  insert into public.session_participants
+    (session_id, restaurant_id, display_name, phone, joined_at)
+  values
+    (v_session.id, p_restaurant_id, v_name, v_phone, now())
   returning * into v_participant;
 
-  -- The 007 issuance discipline, verbatim (32 bytes base64url, hash stored).
+  -- ── 3. The token (the 007 issuance discipline, verbatim) ─────────────────
+  -- 32 server-random bytes, base64url; only the SHA-256 hex is stored.
   v_token := encode(extensions.gen_random_bytes(32), 'base64');
   v_token := replace(replace(rtrim(v_token, '=' || chr(10)), '+', '-'), '/', '_');
   insert into public.session_tokens (session_id, restaurant_id, token_hash)
@@ -498,17 +539,24 @@ begin
   return jsonb_build_object(
     'session', jsonb_build_object(
       'id', v_session.id,
+      'restaurant_id', v_session.restaurant_id,
+      'branch_id', v_session.branch_id,
+      'table_id', v_session.table_id,
       'type', v_session.type,
       'status', v_session.status,
-      'delivery_address', v_session.delivery_address
+      'delivery_address', v_session.delivery_address,
+      'opened_at', v_session.opened_at
     ),
-    'participant', jsonb_build_object('id', v_participant.id, 'display_name', v_participant.display_name),
-    'token', v_token
+    'token', v_token,
+    'participant', jsonb_build_object(
+      'id', v_participant.id,
+      'display_name', v_participant.display_name,
+      'joined_at', v_participant.joined_at
+    )
   );
 end;
 $$;
 
--- §4c The ordering door (Phase 9's deployed submit_round body + predicate).
 create or replace function public.submit_round(p_token text, p_items jsonb)
 returns jsonb
 language plpgsql
@@ -516,6 +564,7 @@ volatile
 security definer
 set search_path = ''
 as $$
+
 declare
   v_token_hash text := encode(extensions.digest(coalesce(p_token, ''), 'sha256'), 'hex');
   v_token_row public.session_tokens;
@@ -533,6 +582,7 @@ declare
   v_round_item public.round_items;
 begin
   -- ── 1. Token → session (open) — the indistinguishable refusal otherwise ──
+
   select * into v_token_row from public.session_tokens t where t.token_hash = v_token_hash;
   if v_token_row.id is null then
     raise exception 'This session is no longer available.' using errcode = 'P0001';
@@ -540,53 +590,158 @@ begin
 
   select * into v_session from public.sessions s where s.id = v_token_row.session_id;
   if v_session.id is null or v_session.status <> 'open' then
+    -- Unknown and closed are deliberately indistinguishable (007's FR-014).
     raise exception 'This session is no longer available.' using errcode = 'P0001';
   end if;
 
-  -- Phase 13: the platform kill-switch (unknown/closed stays indistinguishable).
+  -- Phase 13: the platform kill-switch — unknown/closed stays indistinguishable
+  -- and the disablement refusal fires before any cart work (FR-006).
   if exists (
-    select 1 from public.restaurants r where r.id = v_session.restaurant_id and r.platform_disabled
+    select 1 from public.restaurants r
+    where r.id = v_session.restaurant_id and r.platform_disabled
   ) then
     raise exception 'This restaurant is not available.' using errcode = 'P0001';
   end if;
 
-  -- ── 2. Selection validation (the 008 discipline, verbatim) ───────────────
-  if jsonb_typeof(coalesce(p_items, 'null'::jsonb)) <> 'array' or jsonb_array_length(p_items) = 0 then
-    raise exception 'An order requires at least one item.' using errcode = 'P0001';
+  -- ── 1b. The channel cutoffs (Phase 9; state-driven — spec 010 research §2) ─
+  -- Delivery: any round out_for_delivery/completed. Takeaway: any round
+  -- ready (or beyond). Dine-in: never (session close governs). Evaluated in
+  -- this transaction — the same serialization backs the transitions, so a
+  -- racing transition + submission resolves to one deterministic outcome.
+  -- (v_session MUST be assigned before this block — the probe proved the
+  -- unassigned-variable NULL silently disables both checks.)
+  if v_session.type = 'delivery' then
+    if exists (
+      select 1 from public.rounds r
+      where r.session_id = v_session.id
+        and r.state in ('out_for_delivery', 'completed')
+    ) then
+      raise exception 'Your order is already on its way — no additional items can be added.'
+        using errcode = 'P0001';
+    end if;
+  elsif v_session.type = 'takeaway' then
+    if exists (
+      select 1 from public.rounds r
+      where r.session_id = v_session.id
+        and r.state in ('ready', 'lock')
+    ) then
+      raise exception 'Your order is ready for pickup — no additional items can be added.'
+        using errcode = 'P0001';
+    end if;
+  end if;
+
+  -- ── 2. Cart shape: non-empty array of well-formed lines ──────────────────
+  if p_items is null or jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    raise exception 'A cart line is required.' using errcode = 'P0001';
   end if;
   if jsonb_array_length(p_items) > 50 then
-    raise exception 'An order may contain at most 50 items.' using errcode = 'P0001';
+    raise exception 'A cart line is malformed.' using errcode = 'P0001';
   end if;
 
   v_selections := '[]'::jsonb;
+
   for v_line in select * from jsonb_array_elements(p_items) loop
-    v_item_id := nullif(btrim(coalesce(v_line->>'item_id', '')), '');
-    if v_item_id is null then
-      raise exception 'Each order line requires an item.' using errcode = 'P0001';
+    if jsonb_typeof(v_line) <> 'object'
+      or jsonb_typeof(v_line -> 'item_id') <> 'string'
+      or (v_line ->> 'item_id') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+    then
+      raise exception 'A cart line is malformed.' using errcode = 'P0001';
     end if;
-    select * into v_item from public.menu_items m where m.id = v_item_id::uuid;
-    if v_item.id is null then
-      raise exception 'Menu item not found.' using errcode = 'P0001';
+
+    v_item_id := (v_line ->> 'item_id')::uuid;
+
+    -- Quantity: an integer string 1..99 (the server bound is authoritative).
+    if jsonb_typeof(v_line -> 'quantity') <> 'string'
+      or (v_line ->> 'quantity') !~ '^[0-9]+$'
+      or (v_line ->> 'quantity')::int < 1
+      or (v_line ->> 'quantity')::int > 99
+    then
+      raise exception 'A quantity must be between 1 and 99.' using errcode = 'P0001';
     end if;
-    v_quantity := nullif(btrim(coalesce(v_line->>'quantity', '')), '');
-    if v_quantity is null or v_quantity < 1 or v_quantity > 99 then
-      raise exception 'A quantity between 1 and 99 is required.' using errcode = 'P0001';
+    v_quantity := (v_line ->> 'quantity')::int;
+
+    -- Extras: an array of string ids or {extra_id} objects, ≤ 20 per line.
+    if v_line -> 'extras' is not null and jsonb_typeof(v_line -> 'extras') <> 'array' then
+      raise exception 'A cart line is malformed.' using errcode = 'P0001';
     end if;
-    v_line_extras := coalesce(v_line->'extras', '[]'::jsonb);
-    if jsonb_typeof(v_line_extras) <> 'array' then
-      raise exception 'Extras must be a list.' using errcode = 'P0001';
+    v_line_extras := case when v_line -> 'extras' is null then '[]'::jsonb else v_line -> 'extras' end;
+    if jsonb_array_length(v_line_extras) > 20 then
+      raise exception 'A cart line is malformed.' using errcode = 'P0001';
     end if;
-    v_selections := v_selections || jsonb_build_array(jsonb_build_object(
-      'item_id', v_item_id, 'quantity', v_quantity, 'extras', v_line_extras
-    ));
+    if exists (
+      select 1
+      from jsonb_array_elements(v_line_extras) as t(x)
+      where jsonb_typeof(t.x) not in ('string', 'object')
+        or (jsonb_typeof(t.x) = 'string' and (t.x #>> '{}') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+        or (jsonb_typeof(t.x) = 'object' and (t.x ->> 'extra_id') is null)
+    ) then
+      raise exception 'A cart line is malformed.' using errcode = 'P0001';
+    end if;
+
+    -- ── 3. Availability: the item exists in the session's restaurant, is
+    -- available restaurant-wide, and is not overridden at this branch ───────
+    select * into v_item
+    from public.menu_items i
+    where i.id = v_item_id and i.restaurant_id = v_session.restaurant_id;
+    if v_item.id is null
+      or not v_item.is_available
+      or exists (
+        select 1 from public.branch_unavailable_items u
+        where u.branch_id = v_session.branch_id and u.item_id = v_item_id
+      )
+    then
+      raise exception 'This item is not available here.' using errcode = 'P0001';
+    end if;
+
+    -- ── 4. Extras scope: every extra belongs to the submitted item ─────────
+    select count(*) into v_count
+    from jsonb_array_elements(v_line_extras) as t(x)
+    where not exists (
+      select 1 from public.menu_item_extras e
+      where e.id = case jsonb_typeof(t.x)
+                     when 'string' then (t.x #>> '{}')::uuid
+                     else (t.x ->> 'extra_id')::uuid
+                   end
+        and e.item_id = v_item_id
+        and e.restaurant_id = v_session.restaurant_id
+    );
+    if v_count > 0 then
+      raise exception 'An extra does not belong to its item.' using errcode = 'P0001';
+    end if;
+
+    -- Duplicate extras within one line would violate the unique index.
+    select count(*) into v_count
+    from (
+      select case jsonb_typeof(t.x)
+               when 'string' then t.x #>> '{}'
+               else t.x ->> 'extra_id'
+             end as eid
+      from jsonb_array_elements(v_line_extras) as t(x)
+    ) d;
+    if v_count <> (select count(distinct eid) from (
+      select case jsonb_typeof(t.x)
+               when 'string' then t.x #>> '{}'
+               else t.x ->> 'extra_id'
+             end as eid
+      from jsonb_array_elements(v_line_extras) as t(x)
+    ) d2) then
+      raise exception 'A cart line is malformed.' using errcode = 'P0001';
+    end if;
+
+    v_selections := v_selections || jsonb_build_array(
+      jsonb_build_object(
+        'item_id', v_item_id,
+        'extras', v_line_extras,
+        'quantity', v_quantity::text
+      )
+    );
   end loop;
 
-  -- ── 3. Tax capture via the engine (Phase 6 — the deployed helper) ────────
+  -- ── 5. Taxes: the privileged core — the token authorization above IS the
+  -- caller's authorization; one canonical money math (Risk 6) ─────────────
   v_calc := private.calculate_tax_totals(v_session.branch_id, v_selections);
 
-  -- ── 4. The writes — the deployed 008/009 body, verbatim: captured money
-  -- (subtotal + total as numeric text → numeric), captured unit prices, one
-  -- ticket, one transaction; any failure aborts all ───────────────────────
+  -- ── 6. The writes: one body = one transaction; any failure aborts all ────
   insert into public.rounds (restaurant_id, branch_id, session_id, state, subtotal, tax_total, tax_lines)
   values (
     v_session.restaurant_id,
@@ -599,14 +754,22 @@ begin
   )
   returning * into v_round;
 
+  insert into public.kitchen_tickets (restaurant_id, branch_id, round_id, state)
+  values (v_session.restaurant_id, v_session.branch_id, v_round.id, 'new')
+  returning * into v_ticket;
+
+  -- One round_items row per line; captured unit_price from menu_items.
   for v_line in select * from jsonb_array_elements(v_selections) loop
     v_item_id := (v_line ->> 'item_id')::uuid;
     v_quantity := (v_line ->> 'quantity')::int;
     v_line_extras := v_line -> 'extras';
+
     select * into v_item from public.menu_items i where i.id = v_item_id;
+
     insert into public.round_items (restaurant_id, round_id, item_id, quantity, unit_price)
     values (v_session.restaurant_id, v_round.id, v_item_id, v_quantity, v_item.price)
     returning * into v_round_item;
+
     insert into public.round_item_extras (restaurant_id, round_item_id, extra_id, price_adjustment)
     select
       v_session.restaurant_id,
@@ -618,22 +781,42 @@ begin
       on e.id = case jsonb_typeof(t.x) when 'string' then (t.x #>> '{}')::uuid else (t.x ->> 'extra_id')::uuid end;
   end loop;
 
-  insert into public.kitchen_tickets (restaurant_id, branch_id, round_id, state)
-  values (v_round.restaurant_id, v_round.branch_id, v_round.id, 'new')
-  returning * into v_ticket;
-
   return jsonb_build_object(
     'round', jsonb_build_object(
       'id', v_round.id,
+      'restaurant_id', v_round.restaurant_id,
+      'branch_id', v_round.branch_id,
       'session_id', v_round.session_id,
       'state', v_round.state,
-      'subtotal', v_round.subtotal,
-      'tax_total', v_round.tax_total,
-      'tax_lines', v_round.tax_lines
+      'subtotal', v_round.subtotal::text,
+      'tax_total', v_round.tax_total::text,
+      'tax_lines', v_round.tax_lines,
+      'created_at', v_round.created_at
     ),
-    'ticket', jsonb_build_object('id', v_ticket.id, 'state', v_ticket.state)
+    'ticket_id', v_ticket.id,
+    'items', (
+      select coalesce(jsonb_agg(
+        jsonb_build_object(
+          'id', ri.id,
+          'item_id', ri.item_id,
+          'quantity', ri.quantity,
+          'unit_price', ri.unit_price::text,
+          'extras', (
+            select coalesce(jsonb_agg(
+              jsonb_build_object('extra_id', rie.extra_id, 'price_adjustment', rie.price_adjustment::text)
+              order by rie.extra_id
+            ), '[]'::jsonb)
+            from public.round_item_extras rie
+            where rie.round_item_id = ri.id
+          )
+        ) order by ri.created_at, ri.id
+      ), '[]'::jsonb)
+      from public.round_items ri
+      where ri.round_id = v_round.id
+    )
   );
 end;
+
 $$;
 
 -- ── §5 grants ───────────────────────────────────────────────────────────────

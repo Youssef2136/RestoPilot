@@ -47,6 +47,16 @@ on conflict (id) do update set
   contact_phone = excluded.contact_phone,
   timezone = excluded.timezone;
 
+-- Phase 13 (spec 014): exactly one subscription row per restaurant —
+-- never_activated until the platform sets dates. The 014 migration seeds
+-- these for in-place upgrades (where restaurants already exist); the seed
+-- guarantees them on FRESH builds, where migrations run before any
+-- restaurant row exists. Every restaurant, always: get_platform_overview
+-- inner-joins subscriptions, so a missing row makes a tenant invisible.
+insert into public.subscriptions (restaurant_id)
+select r.id from public.restaurants r
+on conflict (restaurant_id) do nothing;
+
 insert into public.branches (id, restaurant_id, name) values
   ('00000000-0000-4000-8000-000000000101', '00000000-0000-4000-8000-000000000001', 'Downtown'),
   ('00000000-0000-4000-8000-000000000102', '00000000-0000-4000-8000-000000000001', 'Marina'),
