@@ -581,23 +581,45 @@ begin
     ));
   end loop;
 
-  -- ── 3. Tax capture via the engine (Phase 6) ──────────────────────────────
-  v_calc := public.calculate_order_total(v_session.branch_id, v_selections);
+  -- ── 3. Tax capture via the engine (Phase 6 — the deployed helper) ────────
+  v_calc := private.calculate_tax_totals(v_session.branch_id, v_selections);
 
-  -- ── 4. Persist round + items + ticket, all captured ──────────────────────
+  -- ── 4. The writes — the deployed 008/009 body, verbatim: captured money
+  -- (subtotal + total as numeric text → numeric), captured unit prices, one
+  -- ticket, one transaction; any failure aborts all ───────────────────────
   insert into public.rounds (restaurant_id, branch_id, session_id, state, subtotal, tax_total, tax_lines)
-  values (v_session.restaurant_id, v_session.branch_id, v_session.id, 'new',
-          (v_calc->>'subtotal'), (v_calc->>'tax_total'), (v_calc->'tax_lines'))
+  values (
+    v_session.restaurant_id,
+    v_session.branch_id,
+    v_session.id,
+    'new',
+    (v_calc ->> 'subtotal')::numeric(14, 2),
+    (v_calc ->> 'total')::numeric(14, 2),
+    v_calc -> 'lines'
+  )
   returning * into v_round;
 
-  for v_line in select * from jsonb_array_elements(v_calc->'lines') loop
+  for v_line in select * from jsonb_array_elements(v_selections) loop
+    v_item_id := (v_line ->> 'item_id')::uuid;
+    v_quantity := (v_line ->> 'quantity')::int;
+    v_line_extras := v_line -> 'extras';
+    select * into v_item from public.menu_items i where i.id = v_item_id;
     insert into public.round_items (restaurant_id, round_id, item_id, quantity, unit_price)
-    values (v_round.restaurant_id, v_round.id, (v_line->>'item_id')::uuid,
-            (v_line->>'quantity')::integer, (v_line->>'unit_price'));
+    values (v_session.restaurant_id, v_round.id, v_item_id, v_quantity, v_item.price)
+    returning * into v_round_item;
+    insert into public.round_item_extras (restaurant_id, round_item_id, extra_id, price_adjustment)
+    select
+      v_session.restaurant_id,
+      v_round_item.id,
+      case jsonb_typeof(t.x) when 'string' then (t.x #>> '{}')::uuid else (t.x ->> 'extra_id')::uuid end,
+      e.price_adjustment
+    from jsonb_array_elements(v_line_extras) as t(x)
+    join public.menu_item_extras e
+      on e.id = case jsonb_typeof(t.x) when 'string' then (t.x #>> '{}')::uuid else (t.x ->> 'extra_id')::uuid end;
   end loop;
 
   insert into public.kitchen_tickets (restaurant_id, branch_id, round_id, state)
-  values (v_round.restaurant_id, v_round.branch_id, v_round.id, 'queued')
+  values (v_round.restaurant_id, v_round.branch_id, v_round.id, 'new')
   returning * into v_ticket;
 
   return jsonb_build_object(
