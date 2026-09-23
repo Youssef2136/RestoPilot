@@ -77,7 +77,12 @@ touches shared files in sequence.
       refusal shows the distinct message → mismatch refusal shows the local
       message → successful change shows the both-facts confirmation → fresh
       sign-in with the old password rejected and the new accepted; restore
-      the used account's password via the same flow at the end. [US3] [Spec §FR-002, §FR-013, §US3 scenario 2]
+      the used account's password via the same flow at the end; assert
+      hygiene at the browser level — the page URL carries no query params and
+      localStorage/sessionStorage contain no password substring after the
+      flow (SC-003a); separately prove FR-014's availability: the platform
+      super admin sees the same nav link, reaches the same page, and gets the
+      same distinct wrong-current refusal (no password change performed). [US3] [Spec §FR-002, §FR-010, §FR-013, §FR-014, §SC-003a, §US3 scenario 2]
 - [ ] T009 Prove the hygiene edge cases in the unit file (extend T003's):
       duplicate submit prevented (in-flight disabled), refresh returns the
       form to neutral (no persisted operation state), session-expiry surfaces
