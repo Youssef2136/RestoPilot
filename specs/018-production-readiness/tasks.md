@@ -70,3 +70,22 @@
   surface is the guard suite + deploy script + reset guard.
 - Reviewer-owned checklist (`deploy-honesty-and-boundary-proof.md`) stays
   with the user at the implement gate.
+
+## Pre-implement analysis (2026-09-23)
+
+- Coverage: every FR-001…FR-006 maps to ≥1 task; every SC-001…SC-005 has a
+  gate task (SC-003 → T006's fifteen-row contract). All four user stories
+  have deliverables. No orphans, no contradictions.
+- Constitution: VIII (minimal complexity) — one script, one runbook, one
+  guard suite, one decision function; wrangler is deploy-time-only with a
+  lazy check. No MUST principle touched.
+- Refinement (non-blocking): D5's "declared development ref" resolves to the
+  EXISTING `SUPABASE_PROJECT_REF` in `.env` — the dev project ref is
+  already declared there, and the target ref is parsed from
+  `SUPABASE_DB_URL`'s host (`db.<ref>.supabase.co`). No new env var, no
+  `.env.example` change, no new drift surface. `resolveResetGuard()`
+  compares the two and refuses on mismatch without the override.
+- Scope check: T008 edits `scripts/db/reset.mjs` — tooling, not product
+  code; consistent with the spec's non-requirement ("only where a guard
+  requires it").
+- Verdict: no CRITICAL findings → proceed to implement.
