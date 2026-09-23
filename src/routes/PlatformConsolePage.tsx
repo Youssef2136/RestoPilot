@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { PlatformPayloadError } from '../features/platform/platformClient'
+import { OnboardingPanel } from '../features/platform/components/OnboardingPanel'
 import {
   usePlatformOverview,
   useSetPlatformDisabled,
@@ -12,7 +13,9 @@ import {
  * The platform console (spec 014 T007, FR-001–FR-005, FR-008): every
  * restaurant with its derived subscription state, dates, disable flag, and
  * usage counts; the super admin activates (sets dates), changes dates, and
- * disables with a mandatory reason. Route-gated by RequireSuperAdmin; the
+ * disables with a mandatory reason. Spec 019 adds the onboarding panel
+ * above the overview table: provision a new restaurant + first owner.
+ * Route-gated by RequireSuperAdmin; the
  * RPCs re-verify the flag on every call (Constitution IV).
  */
 const STATE_LABELS: Record<string, string> = {
@@ -88,6 +91,8 @@ export function PlatformConsolePage() {
     <section aria-labelledby="platform-console-heading">
       <h1 id="platform-console-heading">Platform console</h1>
       <p>Signed in as {profile.display_name} — the platform super admin.</p>
+
+      <OnboardingPanel />
 
       {refusal !== null && (
         <p role="alert">

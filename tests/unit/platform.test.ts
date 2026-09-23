@@ -23,12 +23,159 @@ const {
   PlatformPayloadError,
   getPlatformOverview,
   getMySubscription,
+  onboardRestaurant,
   setRestaurantPlatformDisabled,
   setSubscriptionDates,
 } = await import('../../src/features/platform/platformClient')
 
 afterEach(() => {
   harness.rpc.mockReset()
+})
+
+describe('onboardRestaurant (spec 019 T010)', () => {
+  const GOOD_PAYLOAD = {
+    restaurant_id: 'r-new',
+    name: 'Harbor Cafe',
+    slug: 'harbor-cafe',
+    owner: {
+      profile_id: 'p-new',
+      email: 'owner@harbor.test',
+      temporary_password: 'a'.repeat(24),
+      outcome: 'provisioned',
+    },
+  }
+
+  it('T010-K passes parameters through verbatim and returns the payload', async () => {
+    harness.rpc.mockResolvedValueOnce({ data: GOOD_PAYLOAD, error: null })
+    const result = await onboardRestaurant({
+      name: 'Harbor Cafe',
+      slug: 'harbor-cafe',
+      ownerEmail: 'owner@harbor.test',
+      ownerDisplayName: 'Harbor Owner',
+      brandDescription: null,
+      contactEmail: 'hello@harbor.test',
+      contactPhone: null,
+      timezone: null,
+    })
+    expect(harness.rpc).toHaveBeenCalledWith('onboard_restaurant', {
+      p_name: 'Harbor Cafe',
+      p_slug: 'harbor-cafe',
+      p_owner_email: 'owner@harbor.test',
+      p_owner_display_name: 'Harbor Owner',
+      p_brand_description: undefined,
+      p_contact_email: 'hello@harbor.test',
+      p_contact_phone: undefined,
+      p_timezone: undefined,
+    })
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        restaurantId: 'r-new',
+        name: 'Harbor Cafe',
+        slug: 'harbor-cafe',
+        owner: {
+          profileId: 'p-new',
+          email: 'owner@harbor.test',
+          temporaryPassword: 'a'.repeat(24),
+          outcome: 'provisioned',
+        },
+      },
+    })
+  })
+
+  it('T010-L passes a linked owner through with a null credential', async () => {
+    harness.rpc.mockResolvedValueOnce({
+      data: {
+        ...GOOD_PAYLOAD,
+        owner: { ...GOOD_PAYLOAD.owner, temporary_password: null, outcome: 'linked' },
+      },
+      error: null,
+    })
+    const result = await onboardRestaurant({
+      name: 'Harbor Cafe',
+      slug: 'harbor-cafe',
+      ownerEmail: 'owner@harbor.test',
+      ownerDisplayName: 'Harbor Owner',
+    })
+    expect(result).toMatchObject({
+      ok: true,
+      data: { owner: { temporaryPassword: null, outcome: 'linked' } },
+    })
+  })
+
+  it('T010-M maps a P0001 refusal to the server message verbatim', async () => {
+    harness.rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: 'P0001',
+        message: 'This public identifier is already in use by another restaurant.',
+      },
+    })
+    const result = await onboardRestaurant({
+      name: 'X',
+      slug: 'blue-olive',
+      ownerEmail: 'o@restopilot.dev',
+      ownerDisplayName: 'O',
+    })
+    expect(result).toEqual({
+      ok: false,
+      message: 'This public identifier is already in use by another restaurant.',
+    })
+  })
+
+  it('T010-N maps the 42501 console denial to the denial notice', async () => {
+    harness.rpc.mockResolvedValueOnce({
+      data: null,
+      error: {
+        code: '42501',
+        message: 'You do not have permission to view the platform console.',
+      },
+    })
+    const result = await onboardRestaurant({
+      name: 'X',
+      slug: 'x',
+      ownerEmail: 'o@restopilot.dev',
+      ownerDisplayName: 'O',
+    })
+    expect(result).toStrictEqual({
+      ok: false,
+      message: 'You do not have permission to view the platform console.',
+    })
+  })
+
+  it('T010-O fails closed on a malformed payload (owner keys missing)', async () => {
+    harness.rpc.mockResolvedValueOnce({
+      data: { restaurant_id: 'r', name: 'n', slug: 's' },
+      error: null,
+    })
+    const result = await onboardRestaurant({
+      name: 'X',
+      slug: 'x',
+      ownerEmail: 'o@restopilot.dev',
+      ownerDisplayName: 'O',
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      message: 'The request could not be completed. Please try again.',
+    })
+  })
+
+  it('T010-P maps unexpected codes to the retry message', async () => {
+    harness.rpc.mockResolvedValueOnce({
+      data: null,
+      error: { code: '23505', message: 'duplicate key' },
+    })
+    const result = await onboardRestaurant({
+      name: 'X',
+      slug: 'x',
+      ownerEmail: 'o@restopilot.dev',
+      ownerDisplayName: 'O',
+    })
+    expect(result).toMatchObject({
+      ok: false,
+      message: 'The request could not be completed. Please try again.',
+    })
+  })
 })
 
 const GOOD_ROW = {

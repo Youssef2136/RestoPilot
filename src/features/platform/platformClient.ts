@@ -51,6 +51,33 @@ export class PlatformPayloadError extends Error {
   }
 }
 
+/**
+ * The onboarding result (spec 019 T008; contract §5): `ok` carries the
+ * onboarded tenant's ids and the first owner's outcome — including the
+ * one-time temporary credential when one was issued. `!ok` carries the
+ * server's message verbatim (P0001 validation/refusals) or the console
+ * denial notice (42501) — never a raw database error.
+ */
+export type OnboardResult =
+  | {
+      ok: true
+      data: {
+        restaurantId: string
+        name: string
+        slug: string
+        owner: {
+          profileId: string
+          email: string
+          temporaryPassword: string | null
+          outcome: 'provisioned' | 'linked'
+        }
+      }
+    }
+  | { ok: false; message: string }
+
+export const PLATFORM_DENIED_MESSAGE = 'You do not have permission to view the platform console.'
+const ONBOARD_RETRY_MESSAGE = 'The request could not be completed. Please try again.'
+
 const STATES: ReadonlySet<string> = new Set([
   'never_activated',
   'active',
@@ -159,6 +186,79 @@ export async function setSubscriptionDates(input: {
     throw new PlatformPayloadError('malformed', 'The subscription payload was malformed.')
   }
   return { state: state as SubscriptionState }
+}
+
+/**
+ * One rulebook with the management module (contract §3/§5): P0001 messages
+ * are written by the server for humans and pass through verbatim; 42501 is
+ * the console denial notice; everything else is the retry message.
+ */
+export async function onboardRestaurant(input: {
+  name: string
+  slug: string
+  ownerEmail: string
+  ownerDisplayName: string
+  brandDescription?: string | null
+  contactEmail?: string | null
+  contactPhone?: string | null
+  timezone?: string | null
+}): Promise<OnboardResult> {
+  try {
+    const { data, error } = await getSupabaseClient().rpc('onboard_restaurant', {
+      p_name: input.name,
+      p_slug: input.slug,
+      p_owner_email: input.ownerEmail,
+      p_owner_display_name: input.ownerDisplayName,
+      p_brand_description: input.brandDescription ?? undefined,
+      p_contact_email: input.contactEmail ?? undefined,
+      p_contact_phone: input.contactPhone ?? undefined,
+      p_timezone: input.timezone ?? undefined,
+    })
+    if (error !== null) {
+      if (error.code === '42501') {
+        return { ok: false, message: PLATFORM_DENIED_MESSAGE }
+      }
+      if (error.code === 'P0001') {
+        return { ok: false, message: error.message }
+      }
+      return { ok: false, message: ONBOARD_RETRY_MESSAGE }
+    }
+    const r = data as Record<string, unknown> | null
+    const owner = r?.owner as Record<string, unknown> | undefined
+    if (
+      r === null ||
+      typeof r.restaurant_id !== 'string' ||
+      typeof r.name !== 'string' ||
+      typeof r.slug !== 'string' ||
+      owner === undefined ||
+      typeof owner.profile_id !== 'string' ||
+      typeof owner.email !== 'string' ||
+      (owner.temporary_password !== null && typeof owner.temporary_password !== 'string') ||
+      (owner.outcome !== 'provisioned' && owner.outcome !== 'linked')
+    ) {
+      throw new PlatformPayloadError('malformed', 'The onboarding payload was malformed.')
+    }
+    return {
+      ok: true,
+      data: {
+        restaurantId: r.restaurant_id,
+        name: r.name,
+        slug: r.slug,
+        owner: {
+          profileId: owner.profile_id,
+          email: owner.email,
+          temporaryPassword:
+            typeof owner.temporary_password === 'string' ? owner.temporary_password : null,
+          outcome: owner.outcome,
+        },
+      },
+    }
+  } catch (caught) {
+    // A payload-shape violation (thrown above) is a protocol anomaly; the
+    // retry message is the presentation either way.
+    void caught
+    return { ok: false, message: ONBOARD_RETRY_MESSAGE }
+  }
 }
 
 export async function setRestaurantPlatformDisabled(input: {

@@ -1443,6 +1443,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      onboard_restaurant: {
+        Args: {
+          p_brand_description?: string
+          p_contact_email?: string
+          p_contact_phone?: string
+          p_name: string
+          p_owner_display_name: string
+          p_owner_email: string
+          p_slug: string
+          p_timezone?: string
+        }
+        Returns: Json
+      }
       open_session_at_table: {
         Args: {
           p_branch_id: string

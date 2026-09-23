@@ -586,6 +586,22 @@ disablement is manual-only:
   over real ordering + the Important rule), `tests/unit/platform.test.ts`,
   `e2e/platform.surfaces.test.ts` (console journeys, banner states,
   non-super-admin denial).
+- Super-admin tenant onboarding (spec 019): `public.onboard_restaurant`
+  provisions a new restaurant and its first owner in ONE transaction —
+  the shared tenant rulebook `private.validate_tenant_inputs` (extracted
+  verbatim from `create_restaurant`, which now calls it; behavior
+  identical), then `private.provision_staff_identity` (the three
+  credential cases: new person → one-time temporary credential, unclaimed
+  stub → completion + re-issue, known email → linkage), the owner
+  membership, the `never_activated` subscription row (every restaurant
+  always has one — including console-onboarded tenants), and the
+  `platform.restaurant_onboarded` audit entry. The console's onboarding
+  form sits above the overview table. **Composition rule (FR-008b)**: the
+  flag gains no new standing reads — the RPC is the only new capability;
+  the reach matrix (`tests/database/platform.onboarding.test.ts`) proves
+  every non-super-admin refused, all-or-nothing refusals, and the
+  onboarded tenant living under the standing rulebook (owner-only audit,
+  ordering not blocked while never_activated).
 - Walkthrough: `node --env-file-if-exists=.env
 scripts/run-platform-walkthroughs.mjs` — real sign-ins; the console read,
   the derivation matrix, the doors over a live ordering run, and the

@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   getMySubscription,
   getPlatformOverview,
+  onboardRestaurant,
   setRestaurantPlatformDisabled,
   setSubscriptionDates,
 } from './platformClient'
@@ -53,6 +54,21 @@ export function useSetPlatformDisabled() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: platformOverviewKey() })
       void queryClient.invalidateQueries({ queryKey: mySubscriptionKey() })
+    },
+  })
+}
+
+/**
+ * Onboard a tenant + first owner (spec 019 T008, FR-009): on success the
+ * overview is invalidated, so the new restaurant appears in the console
+ * table immediately — US3's console coherence, server truth on next render.
+ */
+export function useOnboardRestaurant() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: onboardRestaurant,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: platformOverviewKey() })
     },
   })
 }

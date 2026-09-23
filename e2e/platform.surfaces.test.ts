@@ -130,3 +130,54 @@ test('non-super-admin identities cannot reach the console (FR-009)', async ({ pa
   await page.goto('/admin/platform')
   await expect(page.getByRole('heading', { level: 1, name: 'Not authorized' })).toBeVisible()
 })
+
+test('the super admin onboards a restaurant and its first owner through the console (spec 019, FR-001–FR-007, FR-009)', async ({
+  page,
+}) => {
+  const slug = `onboarded-e2e-${Date.now()}`
+  await signInAs(page, seedCredentials.platformAdmin)
+  await page.goto('/admin/platform')
+
+  // Refusal first: an in-use identifier → the server's message verbatim and
+  // the form preserved (the super admin can correct it).
+  await page.getByLabel('Restaurant name').fill('E2E Harbor Cafe')
+  await page.getByLabel('Public identifier').fill('blue-olive')
+  await page.getByLabel('First owner email').fill('e2e-harbor-owner@restopilot.dev')
+  await page.getByLabel('First owner display name').fill('Harbor Owner')
+  await page.getByRole('button', { name: 'Onboard restaurant' }).click()
+  await expect(
+    page.getByText('This public identifier is already in use by another restaurant.'),
+  ).toBeVisible()
+  await expect(page.getByLabel('Restaurant name')).toHaveValue('E2E Harbor Cafe')
+
+  // The happy path: a unique identifier → success status + the one-time
+  // credential (24 hex chars, shown once, with the copy affordance + note).
+  await page.getByLabel('Public identifier').fill(slug)
+  await page.getByRole('button', { name: 'Onboard restaurant' }).click()
+  await expect(
+    page.getByText(
+      'Onboarded "E2E Harbor Cafe" — a one-time credential was issued to the first owner.',
+    ),
+  ).toBeVisible()
+  const credential = page.getByRole('code')
+  await expect(credential).toHaveText(/^[0-9a-f]{24}$/)
+  await expect(page.getByRole('button', { name: 'Copy credential' })).toBeVisible()
+  await expect(page.getByText(/shown only once/i)).toBeVisible()
+
+  // Console coherence (FR-009): the overview shows the new tenant immediately
+  // with the derived never-activated state.
+  const table = page.getByTestId('platform-overview')
+  await expect(table).toContainText('E2E Harbor Cafe')
+  await expect(table).toContainText('Never activated')
+
+  // Credential discipline (FR-003): the NEXT action — here a refused
+  // onboarding — clears the credential block; the secret is never
+  // re-displayed afterwards.
+  await page.getByLabel('Restaurant name').fill('E2E Harbor Cafe')
+  await page.getByLabel('Public identifier').fill('blue-olive')
+  await page.getByRole('button', { name: 'Onboard restaurant' }).click()
+  await expect(
+    page.getByText('This public identifier is already in use by another restaurant.'),
+  ).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Copy credential' })).toHaveCount(0)
+})
