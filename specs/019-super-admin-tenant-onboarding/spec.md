@@ -31,6 +31,15 @@
   (Phase 4 FR-007: owner-only). The console provisions the FIRST owner only.
   Renaming, deletion, and subscription management already live in their
   existing homes (Phase 2/4 and the Phase 13 console respectively).
+- **Q: What ordering rules apply to an onboarded, not-yet-activated
+  tenant?** The 014 rules verbatim, no new posture: `never_activated` does
+  not block ordering (only the manual platform-disabled flag does), and the
+  onboarding flow adds nothing to that law. Recorded after the scan
+  corrected the draft's contrary implication.
+- **Q: Who can read the onboarding audit entry?** The new restaurant's
+  owner, through the standing tenant audit surface. The super admin is
+  refused the tenant audit read — the flag grants the console, not the
+  tenants' trails (014 Walkthrough D, unchanged).
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -90,20 +99,24 @@ single-sourced; a second, weaker onboarding path would erode the
 security posture the 015 phase attacked and the 017 journey proved.
 
 **Independent Test**: onboard a tenant, then run the standing reach suite
-against it (entry refusal while never_activated, owner-only reads, no
+against it (ordering succeeds while `never_activated`, owner-only reads, no
 cross-tenant reach) and the audit-read surface — all pass without new
 exceptions.
 
 **Acceptance Scenarios**:
 
 1. **Given** a newly onboarded restaurant with no subscription dates,
-   **When** a customer attempts entry, **Then** the entry is refused with
-   the established not-available refusal (the `never_activated` posture —
-   ordering is blocked exactly as for any un-activated tenant).
-2. **Given** the onboarding just completed, **When** the super admin (or an
-   owner) reads the audit trail through the existing surfaces, **Then** the
+   **When** a customer attempts entry and submits a round, **Then** both
+   succeed — an un-activated subscription NEVER blocks ordering (the 014
+   Important rule; "ordering is free" until the platform owner decides
+   otherwise) — and the tenant's staff dashboard reads its state as
+   `never_activated`.
+2. **Given** the onboarding just completed, **When** the new restaurant's
+   owner reads the audit trail through the tenant surface, **Then** the
    provisioning action appears with the acting super admin recorded as the
-   actor.
+   actor; the super admin themselves is refused the tenant audit read (the
+   flag grants the console, not the tenants' trails — the 014 posture
+   unchanged).
 3. **Given** the super admin's identity, **When** they attempt to read a
    tenant's operational data (rounds, sessions, staff list) through the
    standing paths, **Then** the reach is unchanged from today — the flag
@@ -189,6 +202,10 @@ includes it with correct state and zeroed usage — no other surface needed.
   the standing refusal rules, the reach rules of any existing role (the
   super-admin flag grants no additional tenant reads), or the owner-only
   rule for adding *additional* owners after the first.
+- **FR-008a**: The onboarding MUST create the tenant's subscription row
+  (the `never_activated` default) in the same indivisible action, so the
+  console's overview join sees the new tenant immediately — no row can be
+  left missing by a partially-composed creation path.
 - **FR-009**: The system MUST reflect an onboarded restaurant in the
   platform console overview immediately, with its derived subscription
   state and usage counters computed the same way as for every other
@@ -258,3 +275,10 @@ includes it with correct state and zeroed usage — no other surface needed.
       proofs pass against onboarded tenants
 - [ ] The console shows onboarded tenants immediately (SC-005's one
       rulebook + FR-009 verified together)
+
+## Clarifications
+
+### Session 2026-09-23
+
+- Q: Do the 014 ordering rules apply verbatim to an onboarded, not-yet-activated tenant? → A: Yes — `never_activated` never blocks ordering (only the manual flag does); the scan corrected the draft's contrary implication.
+- Q: Who reads the onboarding audit entry? → A: The new restaurant's owner through the tenant audit surface; the super admin is refused the tenant audit read (the flag grants the console, not the tenants' trails).
