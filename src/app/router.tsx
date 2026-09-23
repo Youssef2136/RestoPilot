@@ -6,6 +6,7 @@ import { PlatformConsolePage } from '../routes/PlatformConsolePage'
 import { AuditLogPage } from '../routes/AuditLogPage'
 import { ReportsPage } from '../routes/ReportsPage'
 import { VoidReportPage } from '../routes/VoidReportPage'
+import { ChangePasswordPage } from '../routes/ChangePasswordPage'
 import { BranchDetailPage } from '../routes/BranchDetailPage'
 import { BranchMenuPage } from '../routes/BranchMenuPage'
 import { BranchTaxPage } from '../routes/BranchTaxPage'
@@ -69,6 +70,15 @@ export function AppRouter() {
             unlinked identities their own recovery and conflate credential
             recovery with staff-area authorization. */}
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Account password (spec 020 FR-002): PUBLIC page, session-bearing —
+            deliberately NOT RequireStaff/RequireProfile-guarded, exactly like
+            /reset-password: changing one's OWN credential is authentication
+            work, not a staff-area visit. The staff guards would deny the
+            unlinked identity, the membership-free bootstrap profile (Fiona),
+            and the membership-less platform super admin — precisely the
+            identities FR-002 admits. The page itself renders its form only
+            for a signed-in session. */}
+        <Route path="/account/password" element={<ChangePasswordPage />} />
         {/* Staff area (RequireStaff) — except /dashboard, which admits the
             membership-less linked profile for the FR-001 bootstrap
             (RequireProfile; the only revision to feature 003's surface). */}

@@ -100,6 +100,152 @@ test('the platform super admin reaches /admin on a direct deep link (FR-012)', a
   await expect(page.getByText('platform super-admin capability')).toBeVisible()
 })
 
+test.describe('self-service password change (spec 020, FR-002/FR-006/FR-013/FR-014)', () => {
+  test('the nav link is absent for anonymous visitors and present for signed-in identities', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await expect(page.getByRole('link', { name: 'Account password' })).toHaveCount(0)
+
+    await signInAs(page, seedCredentials.carla)
+    await expect(page).toHaveURL(/\/dashboard$/)
+    await expect(page.getByRole('link', { name: 'Account password' })).toBeVisible()
+  })
+
+  test('the full walkthrough: refusals, both-facts confirmation, old password dead', async ({
+    page,
+  }) => {
+    await signInAs(page, seedCredentials.fiona)
+    await expect(page).toHaveURL(/\/dashboard$/)
+    await page.getByRole('link', { name: 'Account password' }).click()
+    await expect(page).toHaveURL(/\/account\/password$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Account password' })).toBeVisible()
+
+    // Hygiene: the flow's page carries no query parameters (SC-003a) and the
+    // form fields are password-typed.
+    expect(page.url()).not.toContain('?')
+    for (const id of [
+      'account-password-current',
+      'account-password-new',
+      'account-password-confirm',
+    ]) {
+      await expect(page.locator(`#${id}`)).toHaveAttribute('type', 'password')
+    }
+
+    // Wrong current password → the ONE distinct message; the account is
+    // unchanged (proven by the successful change below).
+    await page.getByLabel('Current password').fill('not-the-fiona-password')
+    await page.getByLabel('New password', { exact: true }).fill('dev-fiona-020-temp')
+    await page.getByLabel('Confirm new password').fill('dev-fiona-020-temp')
+    await page.getByRole('button', { name: 'Change password' }).click()
+    await expect(page.getByRole('alert')).toHaveText(
+      'The current password is incorrect. Check it and try again.',
+    )
+
+    // Confirmation mismatch → the LOCAL message before any platform call.
+    await page.getByLabel('Current password').fill(seedCredentials.fiona.password)
+    await page.getByLabel('New password', { exact: true }).fill('dev-fiona-020-temp')
+    await page.getByLabel('Confirm new password').fill('different-thing')
+    await page.getByRole('button', { name: 'Change password' }).click()
+    await expect(page.getByRole('alert')).toHaveText('The two passwords do not match.')
+
+    // The real change → the both-facts confirmation (FR-007, US3 scenario 2).
+    await page.getByLabel('Current password').fill(seedCredentials.fiona.password)
+    await page.getByLabel('Confirm new password').fill('dev-fiona-020-temp')
+    await page.getByRole('button', { name: 'Change password' }).click()
+    await expect(page.getByRole('status')).toHaveText(
+      'Your password has been changed. This device stays signed in; other signed-in devices have been signed out.',
+    )
+
+    // Fresh authentication: old dead, new accepted (FR-013) — sign out, then
+    // try the old password from the sign-in page (the generic sign-in
+    // failure) and the new one (success). /account/password is not a guarded
+    // route, so sign-out leaves its URL in place — the walk navigates home
+    // first, like the standing sign-out suite does.
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await page.getByRole('heading', { level: 1, name: 'Account password' }).waitFor()
+    await expect(page.getByText('Sign in first to change your account password')).toBeVisible()
+    await page.goto('/')
+    await expect(page).toHaveURL(/\/$/)
+    await page.goto('/signin')
+    await page.getByLabel('Email').fill(seedCredentials.fiona.email)
+    await page.getByLabel('Password').fill(seedCredentials.fiona.password)
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByRole('alert')).toHaveText(
+      'Sign-in failed. Check your email and password, then try again.',
+    )
+    await page.getByLabel('Password').fill('dev-fiona-020-temp')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page).toHaveURL(/\/dashboard$/)
+
+    // Storage hygiene after the whole flow: no password substring persisted
+    // anywhere client-side (SC-003a).
+    const storage = await page.evaluate(() => ({
+      local: JSON.stringify(localStorage),
+      session: JSON.stringify(sessionStorage),
+    }))
+    expect(storage.local).not.toContain('dev-fiona-020-temp')
+    expect(storage.local).not.toContain('not-the-fiona-password')
+    expect(storage.session).not.toContain('dev-fiona-020-temp')
+
+    // Restore fiona's fixture password through the SAME flow (no API-side
+    // credential writes in e2e — the surface under test is the only writer).
+    await page.getByRole('link', { name: 'Account password' }).click()
+    await expect(page).toHaveURL(/\/account\/password$/)
+    await page.getByLabel('Current password').fill('dev-fiona-020-temp')
+    await page.getByLabel('New password', { exact: true }).fill(seedCredentials.fiona.password)
+    await page.getByLabel('Confirm new password').fill(seedCredentials.fiona.password)
+    await page.getByRole('button', { name: 'Change password' }).click()
+    await expect(page.getByRole('status')).toBeVisible()
+  })
+
+  test('duplicate submits are prevented while the change is in flight (FR-011, Edge Cases)', async ({
+    page,
+  }) => {
+    await signInAs(page, seedCredentials.fiona)
+    await expect(page).toHaveURL(/\/dashboard$/)
+    await page.getByRole('link', { name: 'Account password' }).click()
+    await expect(page).toHaveURL(/\/account\/password$/)
+
+    // Hold the platform's verify response open so the in-flight state is
+    // observably stable, then attempt a second submission while held.
+    await page.getByLabel('Current password').fill('wrong-on-purpose')
+    await page.getByLabel('New password', { exact: true }).fill('unused-new-1')
+    await page.getByLabel('Confirm new password').fill('unused-new-1')
+    const verifyHeld = page.route('**/auth/v1/token**', () => new Promise(() => undefined))
+    await page.getByRole('button', { name: 'Change password' }).click()
+    await expect(page.getByRole('button', { name: 'Changing your password…' })).toBeDisabled()
+    await page.getByRole('button', { name: 'Changing your password…' }).click({ force: true })
+    // Still exactly one in-flight presentation — the disabled button absorbed
+    // the forced click and no second platform call was possible from the UI.
+    await expect(page.getByRole('button', { name: 'Changing your password…' })).toBeDisabled()
+    await verifyHeld
+    await page.unroute('**/auth/v1/token**')
+
+    // Refresh mid-operation: the form returns to neutral, nothing persisted
+    // (Edge Cases — refresh returns the form to its neutral state).
+    await page.reload()
+    await expect(page.getByRole('button', { name: 'Change password' })).toBeVisible()
+    await expect(page.getByLabel('Current password')).toHaveValue('')
+  })
+
+  test('the super admin gets the same surface and the same rules (FR-014) — no password changed', async ({
+    page,
+  }) => {
+    await signInAs(page, seedCredentials.platformAdmin)
+    await expect(page).toHaveURL(/\/admin$/)
+    await page.getByRole('link', { name: 'Account password' }).click()
+    await expect(page).toHaveURL(/\/account\/password$/)
+    await page.getByLabel('Current password').fill('deliberately-wrong')
+    await page.getByLabel('New password', { exact: true }).fill('whatever-new-1')
+    await page.getByLabel('Confirm new password').fill('whatever-new-1')
+    await page.getByRole('button', { name: 'Change password' }).click()
+    await expect(page.getByRole('alert')).toHaveText(
+      'The current password is incorrect. Check it and try again.',
+    )
+  })
+})
+
 test.describe('session persistence across a page reload (FR-016)', () => {
   test('a signed-in member stays signed in with the same identity and scope', async ({ page }) => {
     await signInAs(page, seedCredentials.carla)

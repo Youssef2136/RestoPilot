@@ -41,17 +41,25 @@ export function AppShell() {
             <Link to="/dashboard">Dashboard</Link>
             <Link to="/admin">Admin</Link>
           </nav>
-          {/* The sign-out control appears only when there is a session to
-              end — never for anonymous visitors of the public pages. */}
+          {/* The account-password link and the sign-out control appear only
+              when there is a session — never for anonymous visitors of the
+              public pages. The password link is role-neutral (spec 020
+              FR-002): every signed-in identity reaches their own credential
+              surface. */}
           {status === 'signed-in' && (
-            <button
-              type="button"
-              className={styles.signOut}
-              onClick={handleSignOut}
-              disabled={signingOut}
-            >
-              {signingOut ? 'Signing out…' : 'Sign out'}
-            </button>
+            <>
+              <Link to="/account/password" className={styles.signOut}>
+                Account password
+              </Link>
+              <button
+                type="button"
+                className={styles.signOut}
+                onClick={handleSignOut}
+                disabled={signingOut}
+              >
+                {signingOut ? 'Signing out…' : 'Sign out'}
+              </button>
+            </>
           )}
         </div>
       </header>

@@ -1,5 +1,5 @@
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js'
-import { getSupabaseClient } from '../../lib/supabase'
+import { getSupabaseClient, createEphemeralSupabaseClient } from '../../lib/supabase'
 
 /**
  * Auth client module (contracts/auth-client.md) — the typed wrapper that is
@@ -22,6 +22,19 @@ export const SIGN_IN_FAILURE_MESSAGE =
   'Sign-in failed. Check your email and password, then try again.'
 
 export const PASSWORD_RESET_FAILURE_MESSAGE = 'Password update failed. Please try again.'
+
+/**
+ * The change-password flow's ONE distinct failure message (spec 020 FR-006,
+ * clarify 2026-09-23): the incorrect current password is the only cause the
+ * flow distinguishes — the actor is the session-proven account holder
+ * verifying their own credential, so the honest hint carries no enumeration
+ * risk. Every other failure (policy rejection, expired session, network)
+ * shares the existing generic PASSWORD_RESET_FAILURE_MESSAGE.
+ */
+export const CURRENT_PASSWORD_FAILURE_MESSAGE =
+  'The current password is incorrect. Check it and try again.'
+
+export type ChangePasswordResult = { ok: true } | { ok: false; message: string }
 
 export const authClient = {
   /**
@@ -56,6 +69,54 @@ export const authClient = {
     await getSupabaseClient()
       .auth.resetPasswordForEmail(email, { redirectTo: '/reset-password' })
       .catch(() => undefined)
+  },
+
+  /**
+   * Self-service password change (spec 020, contracts/auth-client.md) — a
+   * distinct flow from recovery, sharing only platform primitives.
+   *
+   * Execution order (normative — the unit suite pins it):
+   * 1. VERIFY — a sign-in attempt with the current password on a THROWAWAY
+   *    client (`createEphemeralSupabaseClient()` — in-memory storage), never
+   *    the app's shared client and never the shared localStorage slot: the
+   *    attempt must not disturb the page's live session, fire app-visible
+   *    auth events, or leave dead tokens in persisted storage. The
+   *    platform's own sign-in operation is the verifier — no parallel
+   *    verification mechanism exists, and its rate limiting is inherited.
+   * 2. APPLY — `updateUser({ password })` on the page's own session. The
+   *    platform invalidates every other independently established session
+   *    and leaves the initiating session valid; the client performs no token
+   *    operations and emulates none of it. Failure ⇒ the generic
+   *    PASSWORD_RESET_FAILURE_MESSAGE.
+   *
+   * Self-targeted by construction: the input carries exactly
+   * { currentPassword, newPassword } — no user id or email anywhere
+   * (FR-003). Inputs are never logged (FR-010).
+   */
+  async changePassword(input: {
+    currentPassword: string
+    newPassword: string
+  }): Promise<ChangePasswordResult> {
+    // Step 1 — verify on an ephemeral (in-memory-storage) client that is
+    // discarded immediately: no shared state, no persisted tokens.
+    const { error: verifyError } = await createEphemeralSupabaseClient().auth.signInWithPassword({
+      // The email is taken from the live session's own subject — one more
+      // way this operation can only ever target the calling account.
+      email: (await getSupabaseClient().auth.getUser()).data.user?.email ?? '',
+      password: input.currentPassword,
+    })
+    if (verifyError) {
+      return { ok: false, message: CURRENT_PASSWORD_FAILURE_MESSAGE }
+    }
+
+    // Step 2 — apply on the page's own session.
+    const { error: updateError } = await getSupabaseClient().auth.updateUser({
+      password: input.newPassword,
+    })
+    if (updateError) {
+      return { ok: false, message: PASSWORD_RESET_FAILURE_MESSAGE }
+    }
+    return { ok: true }
   },
 
   /**

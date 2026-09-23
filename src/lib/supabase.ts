@@ -23,3 +23,32 @@ export function getSupabaseClient(): SupabaseClient<Database> {
   cachedClient ??= createSupabaseClient()
   return cachedClient
 }
+
+/**
+ * A client whose session persistence lives only in memory (spec 020, research
+ * R2): used by the change-password flow's verification attempt so the
+ * throwaway sign-in never writes the shared localStorage token slot —
+ * writing it would inject a second session into the app's persisted state
+ * and could leave dead tokens behind after the credential change.
+ */
+export function createEphemeralSupabaseClient(): SupabaseClient<Database> {
+  const store = new Map<string, string>()
+  const memoryStorage: Storage = {
+    get length() {
+      return store.size
+    },
+    clear: () => store.clear(),
+    getItem: (key) => store.get(key) ?? null,
+    key: (index) => [...store.keys()][index] ?? null,
+    removeItem: (key) => {
+      store.delete(key)
+    },
+    setItem: (key, value) => {
+      store.set(key, value)
+    },
+  }
+  const { supabaseUrl, supabasePublishableKey } = getClientEnv()
+  return createClient<Database>(supabaseUrl, supabasePublishableKey, {
+    auth: { storage: memoryStorage },
+  })
+}

@@ -165,6 +165,26 @@ live in the `auth` schema, which the reset leaves untouched (see the
 re-add/re-issue note in
 [specs/004-restaurant-and-branch-management/quickstart.md](../specs/004-restaurant-and-branch-management/quickstart.md)).
 
+**Self-service password change (spec 020)**: every signed-in identity can
+rotate their own credential from the header link "Account password"
+(`/account/password`) — owner, staff, unlinked identity, membership-free
+bootstrap profile, and the platform super admin alike. The flow is
+**verify-then-update**: the current password is verified through the
+platform's own sign-in operation on a throwaway in-memory client (inheriting
+its rate limiting — the flow adds no throttle of its own), then the
+credential update runs on the page's session. Message policy: one distinct
+message for an incorrect current password; one generic message for every
+other failure. Session semantics (platform-verified, adopted verbatim): the
+initiating device stays signed in; every other independently signed-in
+device is signed out; same-profile tabs share the surviving session. The
+recovery flow (email link) is unchanged and remains the path for anyone who
+cannot sign in — the two flows share only platform primitives. Changing a
+password touches nothing else: profile, roles, memberships, and scope are
+byte-identical around the change (proven by the integration suite).
+Provisioned staff can use this flow to rotate the one-time temporary
+credential immediately after their first sign-in — no recovery email
+required.
+
 ## Menu test suites (Phase 4)
 
 Phase 4 (menu management) extends every tier again and adds the project's
