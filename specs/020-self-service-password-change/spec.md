@@ -33,8 +33,9 @@ their own credential without an email round-trip.
    the user sees a clear success confirmation, and the account's sign-in password is the
    new password (the old one no longer authenticates).
 2. **Given** a signed-in user, **When** they submit with a current password that does
-   not match, **Then** the change is refused with one generic failure message, and the
-   password is unchanged.
+   not match, **Then** the change is refused with the flow's distinct
+   current-password message (clarity for the legitimate user — the session already
+   proves the actor), and the password is unchanged.
 3. **Given** a signed-in user, **When** they submit a new-password pair that does not
    match its confirmation, **Then** the submission is refused before any credential
    operation with a local "the two passwords do not match" message (confirmation is
@@ -57,9 +58,14 @@ The session behavior after a password change is the platform's documented and ob
 behavior, made explicit to the user — not an assumed behavior invented by this feature:
 
 - **The initiating session survives**: the user stays signed in on the device where they
-  made the change (the platform refreshes that session's tokens in place).
-- **Every other session of the same account is invalidated**: another device or tab that
-  was signed in before the change loses its access and is treated as signed out.
+  made the change (the session remains valid unchanged — no token rotation observed,
+  no re-authentication forced).
+- **Every other independently established session of the same account is
+  invalidated**: a session signed in separately (another device, another browser
+  profile) that existed before the change loses its access and is treated as signed
+  out. Tabs sharing the same device session are that one session — they survive with
+  it (verified during specification: invalidation is per platform session record,
+  not per tab; a same-profile tab even keeps its pre-change token copy working).
 - **Recovery keeps its own semantics**: the recovery flow (email link → set new
   password) is unchanged by this feature and is not reused as the in-app change path.
 
@@ -74,10 +80,10 @@ subsequently denied. Then verify the recovery flow still behaves as before.
 
 **Acceptance Scenarios**:
 
-1. **Given** one account signed in on two devices, **When** the password is changed from
-   device A, **Then** device A remains signed in (the user continues working without
-   re-authenticating) and device B, on its next authenticated action or session check,
-   is treated as signed out.
+1. **Given** one account signed in independently on two devices, **When** the password
+   is changed from device A, **Then** device A remains signed in (the user continues
+   working without re-authenticating) and device B, on its next authenticated action
+   or session check, is treated as signed out.
 2. **Given** a user who just changed their password in-app, **When** they open a fresh
    sign-in, **Then** the old password is rejected and the new password is accepted.
 3. **Given** the in-app change succeeded, **When** the account's profile, roles,
@@ -121,7 +127,8 @@ absence of password material.
 
 ### Edge Cases
 
-- Current password left empty or wrong → one generic refusal, no change.
+- Current password left empty or wrong → refused with the distinct current-password
+  message, no change.
 - New password failing the platform's password policy (too short, etc.) → generic
   refusal, current password stays active.
 - Confirmation mismatch → caught locally before any platform call.
@@ -134,10 +141,12 @@ absence of password material.
 - User refreshes the page mid-operation → no client-side persistence of the operation;
   the form returns to its neutral state; session state is restored by the existing
   provider.
-- Multiple open tabs of the same account: after the change, the initiating tab remains
-  signed in; other tabs of the *same* device that held pre-change sessions are treated
-  as signed out (they are "other sessions" from the platform's perspective — session
-  identity is per tab/storage isolate).
+- Multiple open tabs of the same account on one device: tabs share the device's
+  single stored session, and that session is the one that performed (or shares
+  identity with) the change — after the platform's cross-tab sync they all remain
+  authenticated (verified: even a tab holding the pre-change token copy keeps working;
+  the refresh token is not revoked for the surviving session). Only sessions
+  established independently (other devices/profiles) are signed out.
 - Old-password attempt after a successful change → rejected at sign-in; the temporary
   credential created by the onboarding invitation behaves the same way once replaced.
 - An authenticated identity whose profile is not linked (no restaurant membership) can
@@ -168,15 +177,18 @@ absence of password material.
 - **FR-005** — A mismatched new-password/confirmation pair SHALL be refused locally
   (presentational validation) before any credential operation; the platform-side
   password policy remains the security boundary for password strength.
-- **FR-006** — All failure modes (wrong current password, policy-violating new
-  password, expired session, network failure) SHALL surface as one generic,
-  user-presentable failure message, consistent with the auth module's existing
-  single-message discipline; no message may distinguish causes or echo any password
-  material.
+- **FR-006** — Failure messages SHALL be: one distinct, user-presentable message for
+  an incorrect current password (the only cause the flow distinguishes — the actor is
+  the authenticated account holder verifying their own credential), and one generic,
+  user-presentable failure message for every other cause (policy-violating new
+  password, expired session, network failure), consistent with the auth module's
+  single-message discipline; no message may distinguish those other causes or echo
+  any password material.
 - **FR-007** — After a successful change, the initiating session SHALL remain valid
-  (the user stays signed in on this device) and all other existing sessions of the
-  account SHALL be invalidated, per the platform's verified semantics; the success
-  confirmation SHALL state both facts.
+  exactly as it was (no forced re-authentication, no client-side token surgery), and
+  every other independently established session of the account SHALL be invalidated,
+  per the platform's verified semantics; the success confirmation SHALL state that
+  this device stays signed in and other signed-in devices were signed out.
 - **FR-008** — The change SHALL leave all authorization state untouched: profile,
   roles, restaurant membership, branch membership, permissions, and tenant access.
 - **FR-009** — The in-app change flow SHALL be a distinct code path from the recovery
@@ -214,9 +226,14 @@ absence of password material.
   current-password check is performed by an authentication attempt against the platform
   before applying the change (the platform's own sign-in operation is the verifier —
   no parallel verification mechanism is created).
-- Session identity is per browser storage isolate: on the same device, a second tab
-  that established its session before the change counts among the invalidated "other
-  sessions"; a tab opened after the change signs in with the new password.
+- The current-password verification reuses the platform's sign-in operation, so
+  repeated wrong-current-password attempts inherit the platform's sign-in rate
+  limiting — the feature adds no separate throttle and no separate limit of its own.
+- Session identity is the platform's session record, not a browser tab: one device
+  profile holds one stored session shared by its tabs; sessions created by separate
+  sign-ins (other devices, other browser profiles) are distinct records. The change
+  invalidates every distinct record except the one that performed the change
+  (verified during specification).
 - The application previously had no in-app self-service password change; users rotated
   credentials through recovery only. That recovery flow remains the recovery path and
   is untouched.
@@ -231,8 +248,9 @@ absence of password material.
   30 seconds, and the change is effective immediately (old password dead, new password
   works on the next fresh sign-in).
 - **SC-002** — In a two-session verification, the initiating session remains
-  authenticated after the change and every pre-existing other session is denied on its
-  next authenticated action — 100% of probed pre-existing sessions.
+  authenticated after the change and every pre-existing independently established
+  session is denied on its next authenticated action — 100% of probed independent
+  sessions (same-profile tab sharing is not an independent session and is excluded).
 - **SC-003** — Zero authorization drift: for every account that changes its password,
   the profile, role(s), memberships, and permissions are identical before and after
   (asserted by direct comparison in the verification suite).
@@ -250,10 +268,10 @@ absence of password material.
 - **Account (authentication identity)** — the sign-in subject; owns exactly one
   current password. Attribute relevant here: current password (never exposed, only
   verified/replaced).
-- **Session** — a device/tab-scoped grant of authentication. After a self-service
-  change: the initiating session persists with refreshed tokens; all other sessions
-  are invalidated. Unchanged: session persistence discipline, restore-on-mount
-  behavior.
+- **Session** — a sign-in-scoped grant of authentication (one record per independent
+  sign-in; a device profile's tabs share its stored record). After a self-service
+  change: the initiating session persists unchanged; all other records are
+  invalidated. Unchanged: session persistence discipline, restore-on-mount behavior.
 - **Password change (operation)** — a self-service, self-targeted credential
   replacement: {current password proof, new password}. Produces: new active password,
   surviving initiating session, invalidated other sessions, untouched authorization
@@ -275,7 +293,18 @@ absence of password material.
   adds the current-password proof (FR-004) verified via the platform's own sign-in
   operation — no parallel re-authentication mechanism is created.
 - Q: What happens to other sessions and refresh tokens after the change? → A: The
-  platform invalidates every other existing session (their refresh tokens stop
-  working; the next authenticated action from those sessions is denied) while the
-  initiating session is refreshed in place — verified live during specification and
-  adopted verbatim (FR-007).
+  platform invalidates every other independently established session (their refresh
+  tokens stop working; the next authenticated action from those sessions is denied)
+  while the initiating session remains valid as-is — verified live during
+  specification and adopted verbatim (FR-007).
+- Q: Do other tabs on the same device survive the change? → A: Yes — tabs share the
+  device's one stored session, which is the surviving session; even a tab holding the
+  pre-change token copy keeps working (access token accepted, refresh token not
+  revoked). Invalidation is per platform session record, not per tab — the spec's
+  earlier per-tab claim was corrected against this verified behavior.
+- Q: Does the platform rotate the initiating session's tokens on password change? → A:
+  No rotation was observed — the session stays valid unchanged; the feature makes no
+  token-rotation claim and performs no client-side token handling.
+- Q: How precise should the failure message be when the change fails? → A: A distinct
+  message only for an incorrect current password; every other failure (policy,
+  session, network) shares the one generic message (FR-006) — user decision, recorded.

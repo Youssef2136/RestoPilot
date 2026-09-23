@@ -31,6 +31,12 @@
 
 ## Notes
 
+- Clarify pass (2026-09-23): two platform-behavior claims in the draft were probed
+  live and corrected (same-profile tabs share the surviving session — invalidation is
+  per platform session record, not per tab; no token rotation on change); one user
+  decision encoded (distinct message only for incorrect current password, generic
+  for all other causes). Requirements remain testable and unambiguous; checklist
+  re-evaluated against the updated spec — all items still pass.
 - Session semantics (US2) and the re-authentication posture were verified live
   against the linked development project during specification — not assumed (the
   probe: two live sessions, an in-session credential change, per-session validity
