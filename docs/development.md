@@ -691,8 +691,8 @@ history — §27 scenario 2).
 ### The journey's two product findings (fixed, per FR-003)
 
 - **Staff dashboards vs UI-created owners** — `CashierRoundsPage` and
-  `KitchenDashboardPage` derived their branch selectors from *sibling
-  branch-scoped memberships*, so an owner who created branches through the
+  `KitchenDashboardPage` derived their branch selectors from _sibling
+  branch-scoped memberships_, so an owner who created branches through the
   UI (no branch membership rows exist for a restaurant-wide owner) saw an
   empty selector and no rounds. The shared `useStaffBranchOptions` hook now
   reads an owner's branches through the table policies (the same
@@ -721,3 +721,18 @@ while its next round after the change uses the new price, and a new session
 entered after the change pays the new price on its first round. Both drive
 the real customer chain (`open_session_at_table` → `submit_round` as anon)
 and the real owner mutation (`update_menu_item`).
+
+## Production
+
+The dev/production boundary in one paragraph: **this repository targets the
+development Supabase project only** — the seed is development-only fixture
+data (the reset script now refuses any project ref that is not the declared
+`SUPABASE_PROJECT_REF`), production is deployed by migrations alone
+(`supabase db push` against the target project, never dashboard edits and
+never the seed), and the frontend ships from `npm run build` via
+`scripts/deploy-frontend.mjs` (Cloudflare Pages; `--dry-run` rehearses
+without credentials). Everything operator-facing — the deployment contract,
+the environment matrix, and the §28 production checklist answered item by
+item — lives in the [production runbook](./production-runbook.md); the
+`tests/unit/production.guard.test.ts` suite keeps the boundary honest in
+every `npm run verify`.
