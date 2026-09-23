@@ -675,3 +675,49 @@ refetches on its first SUBSCRIBED and the removed binding stays dead. The
 three pre-existing scenarios (refresh, duplicate submit, double-click) are
 cited to their proving tests in
 [specs/016-performance-and-reliability/tasks.md](../specs/016-performance-and-reliability/tasks.md).
+
+## Performance and Reliability → End-to-End Validation (Phase 16)
+
+Phase 16 (spec 017) is the §27 dress rehearsal: one committed e2e journey
+(`e2e/full-journey.test.ts`) drives the master plan's complete happy path —
+owner creates restaurant → branch → tables → menu through the real UI forms →
+customer entry through the public route → round 1 → cashier accept → kitchen
+prepare/ready → customer sees the state → round 2 → second ticket → bill →
+close — against a freshly created tenant (Fiona, the fixture's
+membership-free creation-bootstrap identity). After the close, a fresh
+customer context re-enters the freed table and opens a NEW session (empty
+history — §27 scenario 2).
+
+### The journey's two product findings (fixed, per FR-003)
+
+- **Staff dashboards vs UI-created owners** — `CashierRoundsPage` and
+  `KitchenDashboardPage` derived their branch selectors from *sibling
+  branch-scoped memberships*, so an owner who created branches through the
+  UI (no branch membership rows exist for a restaurant-wide owner) saw an
+  empty selector and no rounds. The shared `useStaffBranchOptions` hook now
+  reads an owner's branches through the table policies (the same
+  FR-007 read path as the dashboard/ReportsPage), scoped per page: the
+  rounds page excludes kitchen (its gate refuses kitchen, 009 FR-005); the
+  kitchen page includes every staff role.
+- **The customer never saw round states** — the `get_session_rounds` payload
+  has always carried `state`, but `RoundsHistory` never rendered it, and
+  012's specified 10-second customer poll (research §3's resolution) was
+  never wired. `useSessionRounds` now polls at 10 s and each round renders
+  its customer-facing label (Sent to kitchen → Accepted → Being prepared →
+  Ready → Served).
+
+### Rerunnability
+
+The journey's teardown adds a second owner through the real staff panel,
+then removes Fiona's own membership — the FR-016 last-owner rule makes a
+direct self-removal impossible. The tenant itself persists (audit trail);
+on a rerun the create step adopts a fresh suffix if the identifier is taken.
+
+### The price-change timings
+
+`tests/database/e2e.pricechanges.test.ts` proves the two §27 timings at the
+data layer: an old session's existing rounds keep their captured unit_price
+while its next round after the change uses the new price, and a new session
+entered after the change pays the new price on its first round. Both drive
+the real customer chain (`open_session_at_table` → `submit_round` as anon)
+and the real owner mutation (`update_menu_item`).

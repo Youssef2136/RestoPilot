@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
@@ -8,6 +8,7 @@ import {
   kitchenQueueKey,
   useKitchenQueue,
   useRoundTransition,
+  useStaffBranchOptions,
 } from '../features/staffOps/useStaffOps'
 
 /**
@@ -20,35 +21,18 @@ import {
  * (Constitution IV).
  */
 export function KitchenDashboardPage() {
-  const { memberships, isPending, isError } = useAuthContext()
+  const { isPending, isError } = useAuthContext()
   const [searchParams] = useSearchParams()
   const requestedBranchId = searchParams.get('branch')
 
-  const branchOptions = useMemo(() => {
-    const seen = new Map<string, { id: string; label: string }>()
-    for (const membership of memberships) {
-      if (membership.role === 'owner') {
-        for (const sibling of memberships) {
-          if (
-            sibling.restaurant_id === membership.restaurant_id &&
-            sibling.branch_id !== null &&
-            !seen.has(sibling.branch_id)
-          ) {
-            seen.set(sibling.branch_id, {
-              id: sibling.branch_id,
-              label: `${membership.restaurant_name} — ${sibling.branch_name ?? sibling.branch_id}`,
-            })
-          }
-        }
-      } else if (membership.branch_id !== null && !seen.has(membership.branch_id)) {
-        seen.set(membership.branch_id, {
-          id: membership.branch_id,
-          label: `${membership.restaurant_name} — ${membership.branch_name ?? membership.branch_id}`,
-        })
-      }
-    }
-    return [...seen.values()]
-  }, [memberships])
+  // Same posture as the rounds dashboard: branch-scoped roles their
+  // memberships, owners every branch through the table policies (a UI-created
+  // owner holds no branch membership rows — spec 017 T003 discovery).
+  const {
+    options: branchOptions,
+    isPending: optionsPending,
+    isError: optionsError,
+  } = useStaffBranchOptions()
 
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
   const effectiveBranchId =
@@ -86,7 +70,7 @@ export function KitchenDashboardPage() {
     return null
   }
 
-  if (isPending) {
+  if (isPending || optionsPending) {
     return (
       <section>
         <h1>Kitchen</h1>
@@ -95,7 +79,7 @@ export function KitchenDashboardPage() {
     )
   }
 
-  if (isError) {
+  if (isError || optionsError) {
     return (
       <section>
         <h1>Kitchen</h1>

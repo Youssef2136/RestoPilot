@@ -13,6 +13,9 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { useAuthContext } from '../auth/useAuthContext'
+import { getSupabaseClient } from '../../lib/supabase'
 import {
   acceptRound,
   getBranchRounds,
@@ -36,6 +39,101 @@ export function kitchenQueueKey(branchId: string | null) {
 }
 export function sessionBillKey(sessionId: string | null) {
   return ['staffOps', 'sessionBill', sessionId]
+}
+
+export interface StaffBranchOption {
+  id: string
+  label: string
+}
+
+/**
+ * The branches the signed-in staff identity may run staff ops on (the two
+ * dashboards' selector). Branch-scoped roles list their own memberships;
+ * restaurant-wide roles (owners) read the restaurant's every branch through
+ * the table policies (FR-007) — the DashboardPage/ReportsPage read path —
+ * so a UI-created owner (one restaurant-wide membership, no branch rows)
+ * still reaches the branches they created through the UI.
+ */
+export function useStaffBranchOptions(
+  /** Branch-scoped roles to include. The cashier rounds page excludes
+   * kitchen (its gate refuses kitchen outright, 009 FR-005); the kitchen
+   * dashboard includes every staff role. Owners are always included. */
+  input: { roles?: readonly ('cashier' | 'branch_manager' | 'kitchen')[] } = {},
+): {
+  options: StaffBranchOption[]
+  isPending: boolean
+  isError: boolean
+} {
+  const { memberships, isPending: contextPending, isError: contextError } = useAuthContext()
+  const roles = input.roles ?? (['cashier', 'branch_manager', 'kitchen'] as const)
+
+  // Branch-scoped options resolve from the context payload synchronously.
+  const membershipOptions = useMemo<StaffBranchOption[]>(() => {
+    const seen = new Map<string, StaffBranchOption>()
+    for (const membership of memberships) {
+      if (
+        membership.branch_id !== null &&
+        (roles as readonly string[]).includes(membership.role) &&
+        !seen.has(membership.branch_id)
+      ) {
+        seen.set(membership.branch_id, {
+          id: membership.branch_id,
+          label: `${membership.restaurant_name} — ${membership.branch_name ?? membership.branch_id}`,
+        })
+      }
+    }
+    return [...seen.values()]
+  }, [memberships, roles])
+
+  const ownerRestaurantIds = useMemo(
+    () =>
+      memberships
+        .filter((m) => m.role === 'owner')
+        .map((m) => ({ restaurantId: m.restaurant_id, restaurantName: m.restaurant_name })),
+    [memberships],
+  )
+
+  // Owners read their restaurants' branches through the table policies.
+  const branchesQuery = useQuery({
+    queryKey: ['staffOps', 'ownerBranchOptions', ownerRestaurantIds.map((r) => r.restaurantId)],
+    queryFn: async () => {
+      const all: { restaurantId: string; restaurantName: string; id: string; name: string }[] = []
+      for (const { restaurantId, restaurantName } of ownerRestaurantIds) {
+        const { data, error } = await getSupabaseClient()
+          .from('branches')
+          .select('id, name')
+          .eq('restaurant_id', restaurantId)
+          .order('name')
+        if (error) {
+          throw error
+        }
+        for (const branch of data ?? []) {
+          all.push({ restaurantId, restaurantName, id: branch.id, name: branch.name })
+        }
+      }
+      return all
+    },
+    enabled: ownerRestaurantIds.length > 0,
+  })
+
+  const options = useMemo<StaffBranchOption[]>(() => {
+    const seen = new Map<string, StaffBranchOption>(membershipOptions.map((o) => [o.id, o]))
+    for (const branch of branchesQuery.data ?? []) {
+      if (!seen.has(branch.id)) {
+        seen.set(branch.id, {
+          id: branch.id,
+          label: `${branch.restaurantName} — ${branch.name}`,
+        })
+      }
+    }
+    return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label))
+  }, [membershipOptions, branchesQuery.data])
+
+  return {
+    options,
+    isPending: contextPending || (ownerRestaurantIds.length > 0 && branchesQuery.isPending),
+    isError: contextError || branchesQuery.isError,
+  }
 }
 
 /** The branch's rounds (cashier dataset, newest-first from the server). */

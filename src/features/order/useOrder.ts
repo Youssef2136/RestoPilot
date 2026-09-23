@@ -72,7 +72,13 @@ export function useSubmitRound() {
   })
 }
 
-/** The session's rounds history — recovered from the server on mount. */
+/**
+ * The session's rounds history — recovered from the server on mount, and
+ * live-adjacent afterwards: the 10s poll is 012 US3's research §3 resolution
+ * (customers have no profile, so no Postgres subscription; the poll through
+ * the unchanged read IS their live order status). Round states (new →
+ * accepted → preparing → ready) reach the customer through this cadence.
+ */
 export function useSessionRounds() {
   const token = sessionTokenScope()
   return useQuery({
@@ -86,5 +92,6 @@ export function useSessionRounds() {
     },
     enabled: token !== null,
     retry: false,
+    refetchInterval: 10_000,
   })
 }

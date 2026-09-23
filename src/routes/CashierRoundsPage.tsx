@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
@@ -11,6 +11,7 @@ import {
   useBranchRounds,
   useModifyRoundLine,
   useRoundTransition,
+  useStaffBranchOptions,
   useVoidRound,
 } from '../features/staffOps/useStaffOps'
 
@@ -27,45 +28,19 @@ import {
  */
 
 export function CashierRoundsPage() {
-  const { memberships, isPending, isError } = useAuthContext()
+  const { isPending, isError } = useAuthContext()
   const [searchParams] = useSearchParams()
   const requestedBranchId = searchParams.get('branch')
 
-  // One option per branch the identity reaches: owners carry the restaurant's
-  // every branch (branch_id null on the membership), branch staff their own.
-  const branchOptions = useMemo(() => {
-    const seen = new Map<string, { id: string; label: string }>()
-    for (const membership of memberships) {
-      const staffOpsCapable =
-        membership.role === 'owner' ||
-        membership.role === 'cashier' ||
-        membership.role === 'branch_manager'
-      if (!staffOpsCapable) {
-        continue
-      }
-      if (membership.role === 'owner') {
-        // Owner: every branch of the restaurant (resolved from siblings).
-        for (const sibling of memberships) {
-          if (
-            sibling.restaurant_id === membership.restaurant_id &&
-            sibling.branch_id !== null &&
-            !seen.has(sibling.branch_id)
-          ) {
-            seen.set(sibling.branch_id, {
-              id: sibling.branch_id,
-              label: `${membership.restaurant_name} — ${sibling.branch_name ?? sibling.branch_id}`,
-            })
-          }
-        }
-      } else if (membership.branch_id !== null && !seen.has(membership.branch_id)) {
-        seen.set(membership.branch_id, {
-          id: membership.branch_id,
-          label: `${membership.restaurant_name} — ${membership.branch_name ?? membership.branch_id}`,
-        })
-      }
-    }
-    return [...seen.values()]
-  }, [memberships])
+  // One option per branch the identity reaches: branch-scoped roles their
+  // memberships, restaurant-wide roles (owners) every branch through the
+  // table policies — including branches the owner created through the UI,
+  // which carry no membership row at all (spec 017 T003 discovery).
+  const {
+    options: branchOptions,
+    isPending: optionsPending,
+    isError: optionsError,
+  } = useStaffBranchOptions({ roles: ['cashier', 'branch_manager'] })
 
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null)
   const effectiveBranchId =
@@ -130,7 +105,7 @@ export function CashierRoundsPage() {
     return null
   }
 
-  if (isPending) {
+  if (isPending || optionsPending) {
     return (
       <section>
         <h1>Rounds</h1>
@@ -139,7 +114,7 @@ export function CashierRoundsPage() {
     )
   }
 
-  if (isError) {
+  if (isError || optionsError) {
     return (
       <section>
         <h1>Rounds</h1>

@@ -10,6 +10,20 @@ import { useSessionRounds } from '../useOrder'
  * Every money figure here comes from the round's own columns and rows —
  * the captured state, never a recomputation (Risk 6; Constitution II).
  */
+/**
+ * Customer-facing wording for a round's lifecycle state (the §8.2 machine,
+ * 009): the customer sees where their order stands, not the raw column.
+ * `new` is "Sent to kitchen" — the submission is the customer's last act;
+ * `lock` is "Served" — the cashier's close of service.
+ */
+const ROUND_STATE_LABEL: Record<string, string> = {
+  new: 'Sent to kitchen',
+  accepted: 'Accepted',
+  preparing: 'Being prepared',
+  ready: 'Ready',
+  lock: 'Served',
+}
+
 export function RoundsHistory() {
   const roundsQuery = useSessionRounds()
 
@@ -40,7 +54,8 @@ export function RoundsHistory() {
             <p>
               <strong>
                 Round {index + 1} — {new Date(round.created_at).toLocaleTimeString()}
-              </strong>
+              </strong>{' '}
+              — {ROUND_STATE_LABEL[round.state] ?? round.state}
             </p>
             <ul>
               {round.items.map((item) => (
