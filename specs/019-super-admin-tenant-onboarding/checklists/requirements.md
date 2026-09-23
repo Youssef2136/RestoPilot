@@ -48,4 +48,15 @@
   serves as the regression wall, and SC-005 names the standing suites that
   prove it.
 
+## Validation notes (clarify session, 2026-09-23)
+
+- Two draft contradictions were corrected against the deployed truth: the
+  014 Important rule (never_activated never blocks ordering) and the 014
+  audit-read posture (the super admin is refused the tenant trail). The
+  clarifications session records both.
+- FR-008b (composition-only reach) closes the largest potential scope
+  creep: the flag gains no standing reads. The 015 attack surface applies
+  unchanged.
+- Re-validated after all integrations: every item above still passes.
+
 **Status**: ✅ READY — proceed to planning
