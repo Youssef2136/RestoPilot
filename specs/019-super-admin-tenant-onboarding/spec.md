@@ -278,8 +278,8 @@ includes it with correct state and zeroed usage — no other surface needed.
 - [ ] All FR-001…FR-010 are covered by at least one standing proof
 - [ ] The 015 reach suites and the identifier-conflict / all-or-nothing
       proofs pass against onboarded tenants
-- [ ] The console shows onboarded tenants immediately (SC-005's one
-      rulebook + FR-009 verified together)
+- [ ] The console shows onboarded tenants immediately (FR-009 + US3
+      verified together)
 
 ## Clarifications
 

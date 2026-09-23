@@ -26,13 +26,16 @@
 
 - [ ] T004 Reach matrix: super admin onboards successfully; owner
       (alice), branch manager (bob), cashier (carla), kitchen (dan),
-      plain member (eve), and anon each refused with the console 42501
-      denial (FR-010)
+      plain member (eve), membership-free creation bootstrap (fiona),
+      and anon each refused with the console 42501 denial (FR-010)
 - [ ] T005 The three provisioning cases: new person (credential issued,
       person_created), unclaimed stub (credential re-issued, profile
-      created), known person (linked, `temporary_password` null); each
-      lands the owner membership + subscription row + audit row with the
-      right outcome reason (FR-002, FR-003, FR-007, FR-008a, FR-006)
+      created), known person (linked, `temporary_password` null); plus
+      the dual-role edge case — the first-owner email belonging to the
+      super admin themselves links that identity as owner (spec edge
+      case); each onboarding lands the owner membership + subscription
+      row + audit row with the right outcome reason (FR-002, FR-003,
+      FR-007, FR-008a, FR-006)
 - [ ] T006 All-or-nothing: slug conflict, malformed identifier, unknown
       timezone, and duplicate-email race each refuse verbatim AND leave
       zero restaurants/memberships/subscriptions/audit rows behind
