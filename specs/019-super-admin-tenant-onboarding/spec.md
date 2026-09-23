@@ -121,7 +121,7 @@ exceptions.
    tenant's operational data (rounds, sessions, staff list) through the
    standing paths, **Then** the reach is unchanged from today — the flag
    grants no additional tenant read beyond the console's own aggregates
-   (FR-021 posture preserved).
+   (FR-021 posture preserved, FR-008b).
 
 ### User Story 3 - The console keeps one coherent tenant picture (Priority: P2)
 
@@ -206,6 +206,11 @@ includes it with correct state and zeroed usage — no other surface needed.
   (the `never_activated` default) in the same indivisible action, so the
   console's overview join sees the new tenant immediately — no row can be
   left missing by a partially-composed creation path.
+- **FR-008b**: The onboarding MUST achieve its effect by composing existing
+  server-side provisioning primitives under one entry guard — it MUST NOT
+  grant the super-admin flag any new standing read (staff lists, tenant
+  operational data) on the onboarded tenant or any other; the flag's
+  reach after this phase is exactly its reach before it.
 - **FR-009**: The system MUST reflect an onboarded restaurant in the
   platform console overview immediately, with its derived subscription
   state and usage counters computed the same way as for every other
@@ -282,3 +287,4 @@ includes it with correct state and zeroed usage — no other surface needed.
 
 - Q: Do the 014 ordering rules apply verbatim to an onboarded, not-yet-activated tenant? → A: Yes — `never_activated` never blocks ordering (only the manual flag does); the scan corrected the draft's contrary implication.
 - Q: Who reads the onboarding audit entry? → A: The new restaurant's owner through the tenant audit surface; the super admin is refused the tenant audit read (the flag grants the console, not the tenants' trails).
+- Q: What standing data reach does the super-admin flag gain beyond the onboarding action itself? → A: Composition only — the onboarding composes existing server-side primitives; the flag's standing reach is unchanged (no staff-list read, no tenant read).
