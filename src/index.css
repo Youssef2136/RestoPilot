@@ -1,22 +1,12 @@
-:root {
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  line-height: 1.5;
-  color: #1f2328;
-  background-color: #f6f7f9;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
+/*
+ * index.css — page-typographic defaults (Phase 01 pipeline: imported third,
+ * after reset.css → base.css).
+ *
+ * Phase 01 moved the :root font/color block into src/styles/base.css and
+ * keeps only the h1/p typography the existing 25 pages render with.
+ * Consolidation with base.css into the Phase 02 token layer is the
+ * documented plan (spec FR-01's reserved import slot).
+ */
 
 h1 {
   font-size: 1.75rem;

@@ -19,7 +19,27 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'] },
+      // Everything except the viewport smoke — the tagged specs below own it.
+      testIgnore: '**/responsive.smoke.test.ts',
+    },
+    // Viewport projects (spec 021 FR-08): mobile 390×844, tablet 834×1112.
+    // They run ONLY the viewport smoke suite so the E2E time budget stays
+    // flat (the 13 existing suites remain chromium-only).
+    {
+      name: 'mobile-chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } },
+      testMatch: '**/responsive.smoke.test.ts',
+    },
+    {
+      name: 'tablet-chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 834, height: 1112 } },
+      testMatch: '**/responsive.smoke.test.ts',
+    },
+  ],
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:5173',

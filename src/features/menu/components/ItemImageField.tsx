@@ -123,7 +123,7 @@ export function ItemImageField({
   return (
     <section aria-label={`Image for item ${itemId}`}>
       <h4>Image</h4>
-      {resolved && path !== null && signedUrl !== null && <img src={signedUrl} alt="Item image" />}
+      {resolved && path !== null && signedUrl !== null && <img src={signedUrl} alt="" />}
       {path !== null && signedUrl === null && <p>An image is set but cannot be displayed.</p>}
       <div>
         <label htmlFor={`item-image-${itemId}`}>

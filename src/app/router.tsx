@@ -1,6 +1,26 @@
 import { Route, Routes } from 'react-router'
 import { AppShell } from '../components/AppShell'
+import { NotFoundView } from '../components/NotFoundView'
 import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../features/auth/guards'
+import { type RouteMeta } from './routes'
+import { RouteTitles } from './RouteTitles'
+import { DevGalleryPage } from '../routes/DevGalleryPage'
+
+/**
+ * The dev-only gallery's registry entry (spec 021 FR-09, Clarification Q3).
+ * Lives HERE, not in routes.ts: router.tsx is only ever imported inside
+ * Vite, so the `import.meta.env.DEV` member reads below are statically
+ * replaced in builds and both the route and this entry are
+ * dead-code-eliminated from production bundles. routes.ts must stay free of
+ * build-mode logic because E2E specs import it outside Vite.
+ */
+const DEV_GALLERY_PATH = '/dev/gallery'
+
+const devGalleryRouteMeta: RouteMeta = {
+  path: DEV_GALLERY_PATH,
+  title: 'Dev gallery',
+  description: 'Development-only gallery of the styles and structure available so far.',
+}
 import { AdminPage } from '../routes/AdminPage'
 import { PlatformConsolePage } from '../routes/PlatformConsolePage'
 import { AuditLogPage } from '../routes/AuditLogPage'
@@ -48,29 +68,45 @@ import { TaxPage } from '../routes/TaxPage'
  * unchanged.
  */
 export function AppRouter() {
+  // Direct member access (not a helper call): Vite replaces the expression
+  // statically in builds, so the gallery route below is dead-code-eliminated
+  // from production bundles. router.tsx is never imported outside Vite.
+  const dev = import.meta.env.DEV
+
   return (
-    <Routes>
-      <Route element={<AppShell />}>
-        {/* Public routes. The /r/:slug entry flow (spec 007 FR-001) supersedes
+    <>
+      {/* Route metadata (spec 021 FR-02): titles + meta descriptions applied
+          centrally on every navigation; pages never set them. A plain sibling
+          of <Routes> — NOT a layout route: a layout route must render an
+          <Outlet>, and this component renders null (it only touches the
+          document head). */}
+      <RouteTitles extraRoutes={dev ? [devGalleryRouteMeta] : []} />
+      <Routes>
+        <Route element={<AppShell />}>
+          {/* The unknown-route view (spec 021 FR-04, Clarification Q1): a
+            dedicated 404 — never a silent redirect. The catch-all renders
+            INSIDE the shell so the skip link and main landmark still exist. */}
+          <Route path="*" element={<NotFoundView />} />
+          {/* Public routes. The /r/:slug entry flow (spec 007 FR-001) supersedes
             the Phase 0 restaurant placeholder — same path, real surface. */}
-        <Route index element={<RootPage />} />
-        <Route path="/order/:branchId" element={<OrderPage />} />
-        <Route path="/signin" element={<SignInPage />} />
-        {/* Customer session routes (spec 007 FR-001/FR-021): the public
+          <Route index element={<RootPage />} />
+          <Route path="/order/:branchId" element={<OrderPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          {/* Customer session routes (spec 007 FR-001/FR-021): the public
             entry flow and the token-guarded customer menu. Both render
             WITHOUT dashboard chrome — the customer side has no auth context
             at all; every read verifies the token server-side. */}
-        <Route path="/r/:slug" element={<RestaurantPublicPage />} />
-        <Route path="/r/:slug/menu" element={<CustomerMenuPage />} />
-        {/* Password recovery (FR-018): PUBLIC and session-bearing — reached
+          <Route path="/r/:slug" element={<RestaurantPublicPage />} />
+          <Route path="/r/:slug/menu" element={<CustomerMenuPage />} />
+          {/* Password recovery (FR-018): PUBLIC and session-bearing — reached
             through the emailed recovery link, which establishes a session and
             fires PASSWORD_RECOVERY. Deliberately NOT RequireStaff-guarded: a
             recovery session is an authenticated identity changing its own
             credential, not a staff-area visit — the staff guard would deny
             unlinked identities their own recovery and conflate credential
             recovery with staff-area authorization. */}
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        {/* Account password (spec 020 FR-002): PUBLIC page, session-bearing —
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          {/* Account password (spec 020 FR-002): PUBLIC page, session-bearing —
             deliberately NOT RequireStaff/RequireProfile-guarded, exactly like
             /reset-password: changing one's OWN credential is authentication
             work, not a staff-area visit. The staff guards would deny the
@@ -78,196 +114,201 @@ export function AppRouter() {
             and the membership-less platform super admin — precisely the
             identities FR-002 admits. The page itself renders its form only
             for a signed-in session. */}
-        <Route path="/account/password" element={<ChangePasswordPage />} />
-        {/* Staff area (RequireStaff) — except /dashboard, which admits the
+          <Route path="/account/password" element={<ChangePasswordPage />} />
+          {/* Staff area (RequireStaff) — except /dashboard, which admits the
             membership-less linked profile for the FR-001 bootstrap
             (RequireProfile; the only revision to feature 003's surface). */}
-        <Route
-          path="/dashboard"
-          element={
-            <RequireProfile>
-              <DashboardPage />
-            </RequireProfile>
-          }
-        />
-        <Route
-          path="/dashboard/profile"
-          element={
-            <RequireStaff>
-              <ProfilePage />
-            </RequireStaff>
-          }
-        />
-        <Route
-          path="/dashboard/staff"
-          element={
-            <RequireStaff>
-              <StaffListPage />
-            </RequireStaff>
-          }
-        />
-        {/* Session oversight (spec 007 US2/US4, FR-017): the signed-in
+          <Route
+            path="/dashboard"
+            element={
+              <RequireProfile>
+                <DashboardPage />
+              </RequireProfile>
+            }
+          />
+          <Route
+            path="/dashboard/profile"
+            element={
+              <RequireStaff>
+                <ProfilePage />
+              </RequireStaff>
+            }
+          />
+          <Route
+            path="/dashboard/staff"
+            element={
+              <RequireStaff>
+                <StaffListPage />
+              </RequireStaff>
+            }
+          />
+          {/* Session oversight (spec 007 US2/US4, FR-017): the signed-in
             identity's readable branches with their open sessions and the
             close action. The page's own gate renders the denial for
             identities the session matrix excludes (kitchen and everyone
             else), and the RPC re-checks scope server-side. */}
-        <Route
-          path="/dashboard/sessions"
-          element={
-            <RequireStaff>
-              <StaffSessionsPage />
-            </RequireStaff>
-          }
-        />
-        {/* Round operations (spec 009 US2, `/dashboard/rounds`): the cashier
+          <Route
+            path="/dashboard/sessions"
+            element={
+              <RequireStaff>
+                <StaffSessionsPage />
+              </RequireStaff>
+            }
+          />
+          {/* Round operations (spec 009 US2, `/dashboard/rounds`): the cashier
             dashboard. The page's own role gate renders the denial for kitchen
             or outsiders; every action is re-authorized by its RPC. */}
-        <Route
-          path="/dashboard/rounds"
-          element={
-            <RequireStaff>
-              <CashierRoundsPage />
-            </RequireStaff>
-          }
-        />
-        {/* Kitchen display (spec 009 US3, `/dashboard/kitchen`): the queue
+          <Route
+            path="/dashboard/rounds"
+            element={
+              <RequireStaff>
+                <CashierRoundsPage />
+              </RequireStaff>
+            }
+          />
+          {/* Kitchen display (spec 009 US3, `/dashboard/kitchen`): the queue
             with start/ready controls. The page's own role gate renders the
             denial for identities without branch reach. */}
-        <Route
-          path="/dashboard/kitchen"
-          element={
-            <RequireStaff>
-              <KitchenDashboardPage />
-            </RequireStaff>
-          }
-        />
-        {/* The audit trail (spec 011 US3, `/dashboard/audit`): owner and
+          <Route
+            path="/dashboard/kitchen"
+            element={
+              <RequireStaff>
+                <KitchenDashboardPage />
+              </RequireStaff>
+            }
+          />
+          {/* The audit trail (spec 011 US3, `/dashboard/audit`): owner and
             branch_manager only at the presentation layer; the RPC re-enforces
             the reach for every caller regardless. */}
-        <Route
-          path="/dashboard/audit"
-          element={
-            <RequireStaff>
-              <AuditLogPage />
-            </RequireStaff>
-          }
-        />
-        {/* Branch reports (spec 013 US1/US2, `/dashboard/reports`): owner
+          <Route
+            path="/dashboard/audit"
+            element={
+              <RequireStaff>
+                <AuditLogPage />
+              </RequireStaff>
+            }
+          />
+          {/* Branch reports (spec 013 US1/US2, `/dashboard/reports`): owner
             and branch_manager in the navigation and the page's own gate; a
             cashier/kitchen deep link renders the denial, and both report
             RPCs re-enforce reach regardless (Constitution IV). */}
-        <Route
-          path="/dashboard/reports"
-          element={
-            <RequireStaff>
-              <ReportsPage />
-            </RequireStaff>
-          }
-        />
-        {/* The void log (spec 013 US3, `/dashboard/voids`): same gate
+          <Route
+            path="/dashboard/reports"
+            element={
+              <RequireStaff>
+                <ReportsPage />
+              </RequireStaff>
+            }
+          />
+          {/* The void log (spec 013 US3, `/dashboard/voids`): same gate
             posture as the audit trail. */}
-        <Route
-          path="/dashboard/voids"
-          element={
-            <RequireStaff>
-              <VoidReportPage />
-            </RequireStaff>
-          }
-        />
-        <Route
-          path="/dashboard/restaurant"
-          element={
-            <RequireStaff>
-              <ManageRestaurantPage />
-            </RequireStaff>
-          }
-        />
-        {/* Menu management (spec 005 US1/US2, FR-003): `RequireStaff` plus the
+          <Route
+            path="/dashboard/voids"
+            element={
+              <RequireStaff>
+                <VoidReportPage />
+              </RequireStaff>
+            }
+          />
+          <Route
+            path="/dashboard/restaurant"
+            element={
+              <RequireStaff>
+                <ManageRestaurantPage />
+              </RequireStaff>
+            }
+          />
+          {/* Menu management (spec 005 US1/US2, FR-003): `RequireStaff` plus the
             page's in-page owner gate — a non-owner deep link renders the
             denial view, and every write is authorized by its RPC regardless. */}
-        <Route
-          path="/dashboard/menu"
-          element={
-            <RequireStaff>
-              <MenuPage />
-            </RequireStaff>
-          }
-        />
-        {/* Tax configuration (spec 006 US1, FR-003): `RequireStaff` plus the
+          <Route
+            path="/dashboard/menu"
+            element={
+              <RequireStaff>
+                <MenuPage />
+              </RequireStaff>
+            }
+          />
+          {/* Tax configuration (spec 006 US1, FR-003): `RequireStaff` plus the
             page's in-page owner gate — a non-owner deep link renders the
             denial view, and every write is authorized by its RPC regardless. */}
-        <Route
-          path="/dashboard/tax"
-          element={
-            <RequireStaff>
-              <TaxPage />
-            </RequireStaff>
-          }
-        />
-        {/* Branch surfaces (spec 004 FR-007/FR-008/FR-017): `RequireStaff`
+          <Route
+            path="/dashboard/tax"
+            element={
+              <RequireStaff>
+                <TaxPage />
+              </RequireStaff>
+            }
+          />
+          {/* Branch surfaces (spec 004 FR-007/FR-008/FR-017): `RequireStaff`
             plus the pages' policy-scoped reads — an owner sees every branch
             of the restaurant, a branch-scoped member exactly their own; an
             out-of-scope branch id renders the denial state, never a name. */}
-        <Route
-          path="/dashboard/branches"
-          element={
-            <RequireStaff>
-              <BranchesPage />
-            </RequireStaff>
-          }
-        />
-        <Route
-          path="/dashboard/branches/:branchId"
-          element={
-            <RequireStaff>
-              <BranchDetailPage />
-            </RequireStaff>
-          }
-        />
-        {/* The branch menu view (spec 005 US2, FR-014/FR-015): the branch's
+          <Route
+            path="/dashboard/branches"
+            element={
+              <RequireStaff>
+                <BranchesPage />
+              </RequireStaff>
+            }
+          />
+          <Route
+            path="/dashboard/branches/:branchId"
+            element={
+              <RequireStaff>
+                <BranchDetailPage />
+              </RequireStaff>
+            }
+          />
+          {/* The branch menu view (spec 005 US2, FR-014/FR-015): the branch's
             customer-visible menu, the exit condition's artifact. The page
             renders the denial state for out-of-scope branches while the
             projection's own scope check decides server-side. */}
-        <Route
-          path="/dashboard/branches/:branchId/menu"
-          element={
-            <RequireStaff>
-              <BranchMenuPage />
-            </RequireStaff>
-          }
-        />
-        {/* The branch tax view (spec 006 US2, FR-020): the branch's effective
+          <Route
+            path="/dashboard/branches/:branchId/menu"
+            element={
+              <RequireStaff>
+                <BranchMenuPage />
+              </RequireStaff>
+            }
+          />
+          {/* The branch tax view (spec 006 US2, FR-020): the branch's effective
             tax configuration, the override controls gated in-page. The
             projection's own scope check decides server-side. */}
-        <Route
-          path="/dashboard/branches/:branchId/tax"
-          element={
-            <RequireStaff>
-              <BranchTaxPage />
-            </RequireStaff>
-          }
-        />
-        {/* Platform admin area (RequireSuperAdmin). */}
-        <Route
-          path="/admin"
-          element={
-            <RequireSuperAdmin>
-              <AdminPage />
-            </RequireSuperAdmin>
-          }
-        />
-        {/* The platform console (spec 014 FR-001–FR-005): the super admin's
+          <Route
+            path="/dashboard/branches/:branchId/tax"
+            element={
+              <RequireStaff>
+                <BranchTaxPage />
+              </RequireStaff>
+            }
+          />
+          {/* Platform admin area (RequireSuperAdmin). */}
+          <Route
+            path="/admin"
+            element={
+              <RequireSuperAdmin>
+                <AdminPage />
+              </RequireSuperAdmin>
+            }
+          />
+          {/* The platform console (spec 014 FR-001–FR-005): the super admin's
             restaurant/subscription management surface. Route gate only —
             every console RPC re-verifies the flag (Constitution IV). */}
-        <Route
-          path="/admin/platform"
-          element={
-            <RequireSuperAdmin>
-              <PlatformConsolePage />
-            </RequireSuperAdmin>
-          }
-        />
-      </Route>
-    </Routes>
+          <Route
+            path="/admin/platform"
+            element={
+              <RequireSuperAdmin>
+                <PlatformConsolePage />
+              </RequireSuperAdmin>
+            }
+          />
+          {/* The dev-only gallery (spec 021 FR-09, Clarification Q3): rendered
+            only in DEV builds — production bundles exclude the route and the
+            page entirely (the import is unreachable outside DEV). */}
+          {dev && <Route path={DEV_GALLERY_PATH} element={<DevGalleryPage />} />}
+        </Route>
+      </Routes>
+    </>
   )
 }

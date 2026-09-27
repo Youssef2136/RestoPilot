@@ -15,6 +15,7 @@ document wins (spec FR-002/FR-003).
 │   ├── hooks/        # shared hooks
 │   ├── lib/          # infrastructure clients and helpers (Supabase, env)
 │   ├── routes/       # route-level page components
+│   ├── styles/       # global styles pipeline: reset.css → base.css → (Phase 02 tokens) — imported once in main.tsx
 │   └── types/        # generated database types + shared app types
 ├── supabase/
 │   ├── migrations/   # version-controlled schema migrations (the only schema source)
@@ -44,6 +45,35 @@ document wins (spec FR-002/FR-003).
   `e2e/` matching its level
 - **Generated files** (`src/types/database.types.ts`) are committed but never
   hand-edited — regenerate with `npm run types:gen`
+
+### Route metadata (spec 021 FR-02)
+
+Every registered route's document title and meta description come from the
+registry in `src/app/routes.ts`, applied centrally by `src/app/RouteTitles.tsx`
+on navigation. **Pages never set `document.title` themselves.** Adding a route
+means adding its registry entry in the same change —
+`tests/unit/routeRegistry.test.ts` fails otherwise.
+
+### Error, not-found, and the styles pipeline (spec 021)
+
+- The top-level `ErrorBoundary` (`src/components/ErrorBoundary.tsx`) wraps the
+  router; its recovery view offers plain-anchor routes back and never renders
+  the error message. Unknown paths render `NotFoundView` (a dedicated 404 —
+  never a silent redirect).
+- `src/styles/` is the only home for global CSS: `reset.css` → `base.css` →
+  `index.css`, imported exactly once in `src/main.tsx` (order asserted by
+  `tests/unit/stylesPipeline.test.ts`). Component styles stay in CSS Modules
+  beside their component. Token values are Phase 02's deliverable — the base
+  layer deliberately contains none.
+
+### Presentation contracts (spec 021 FR-10)
+
+Before touching markup, read
+[frontend-presentation-contracts.md](./frontend-presentation-contracts.md) —
+the ledger of every E2E-asserted accessible name, `data-*` hook, `data-testid`,
+and the frozen localStorage keys, with each category's change discipline
+(preserve, or migrate deliberately in the same commit with the paired test
+update). After a UI change: re-run the ledger's regeneration recipes and diff.
 
 ### Naming conventions
 

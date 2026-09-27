@@ -1,0 +1,58 @@
+/*
+ * base.css — neutral base styles (Phase 01, spec FR-01 / US6).
+ *
+ * Contains ONLY deliberate neutral normalization:
+ *   1. The font stack, line height, and the two ink/surface colors moved
+ *      verbatim from index.css (:root) — pre-existing presentation, not a new
+ *      decision. Phase 02 replaces these literals with tokens.
+ *   2. The focus-visible policy: a visible focus indicator everywhere, never
+ *      suppressed.
+ *   3. The skip link (targets #main, rendered by <SkipLink/> in the shell).
+ *
+ * Documented absences (Phase 02 supplies the values): no type scale, no
+ * spacing scale, no radius/shadow/border tokens, no motion values, no
+ * semantic color roles. No component styling.
+ */
+
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  line-height: 1.5;
+  color: #1f2328;
+  background-color: #f6f7f9;
+}
+
+/* Focus policy: visible keyboard focus on every interactive element.
+   Uses the existing ink color until Phase 02 tokenizes it. */
+:focus-visible {
+  outline: 2px solid #1f2328;
+  outline-offset: 2px;
+}
+
+/* Skip link: visually hidden until focused, then the first thing on screen.
+   The shell's <main id="main"> is the target. */
+.skip-link {
+  position: absolute;
+  left: -10000px;
+  top: 0;
+  z-index: 100;
+  padding: 0.5rem 0.75rem;
+  background-color: #ffffff;
+  color: #1f2328;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* Keep skip-link landings from hiding the top of the content under fixed
+   chrome once shells gain headers (Phase 03). */
+#main {
+  scroll-margin-top: 1rem;
+}

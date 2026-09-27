@@ -66,6 +66,7 @@ clean machine using only this documentation (spec SC-001/SC-002).
 | `npm run test:integration`                | run auth integration tests — real Auth API sign-ins against the cloud project (same precondition)               |
 | `npm run test:e2e`                        | run end-to-end tests (Playwright; starts its own server)                                                        |
 | `npm run verify`                          | full local pipeline: format:check → lint → typecheck → test:unit → test:db → test:integration → build           |
+| `npm run lint` (a11y)                     | includes `eslint-plugin-jsx-a11y` over `src/**` (spec 021 FR-06) — an a11y error fails the run                  |
 | `npm run db:migrate`                      | apply pending migrations to the cloud development database                                                      |
 | `npm run db:seed`                         | apply `supabase/seed.sql` (idempotent)                                                                          |
 | `npm run db:reset`                        | ⚠️ destructive: rebuild the cloud development database from zero (migrations + seed) — development project only |
@@ -135,6 +136,45 @@ Expected outcomes per walkthrough, including the manual validation scripts
 (per-identity sign-in experience, session persistence, rate-limit-aware
 password recovery, sign-up posture):
 [specs/003-auth-and-rbac/quickstart.md](../specs/003-auth-and-rbac/quickstart.md).
+
+## Frontend foundation tooling (spec 021)
+
+The E2E tier carries a tooling floor every later phase must keep green:
+
+- **Route metadata** — document titles and meta descriptions come from the
+  registry in `src/app/routes.ts` (see conventions.md). The sweep is
+  `e2e/route.titles.test.ts`; the registry↔router sync is unit-pinned in
+  `tests/unit/routeRegistry.test.ts`.
+- **Error/404 posture** — the top-level `ErrorBoundary` and the dedicated 404
+  (`NotFoundView`) never white-screen; the dev-only gallery's error trigger
+  proves the boundary live (`e2e/gallery.error.test.ts`).
+- **Accessibility floor** — `e2e/a11y.baseline.test.ts` runs axe (WCAG 2.2 AA
+  automatable subset) over `/`, `/signin`, `/reset-password`, `/dashboard`
+  signed-out. Findings outside the committed baseline
+  (`e2e/helpers/a11y.ts`) fail the run; baseline entries need a justification
+  and an owning phase. The floor rides `npm run test:e2e` (Clarification Q4:
+  `verify` gains no separate a11y step).
+- **Viewport projects** — `mobile-chromium` (390×844) and `tablet-chromium`
+  (834×1112) run `e2e/responsive.smoke.test.ts` (no horizontal overflow).
+  Existing suites stay chromium-only by config (`testIgnore`/`testMatch`).
+- **Console cleanliness** — `e2e/helpers/console.ts` collects console errors,
+  page errors, and failed requests on route changes. Expected business
+  refusals are explicit entries with justifications (F-G14 semantics) — never
+  silently ignored. The sweep asserts cleanliness per route.
+- **Query policy** — the centralized client (`src/app/queryClient.ts`)
+  codifies existing behavior; defaults are pinned by
+  `tests/unit/queryClient.test.ts`. A deviation that would alter observable
+  behavior is a clarify question, never a silent default change.
+- **Presentation-contract ledger** —
+  [frontend-presentation-contracts.md](./frontend-presentation-contracts.md)
+  lists every E2E-asserted selector with its change discipline (conventions.md
+  → Presentation contracts).
+- **Dev gallery** — `/dev/gallery` exists only in dev builds (excluded from
+  production bundles and routing tests).
+
+Rate-limit discipline reminder: the new suites perform **zero sign-ins**, but
+never run `test:integration` twice within one 5-minute window (Auth API limit:
+30 sign-ins / 5 min / IP).
 
 ## Management test suites (Phase 3)
 

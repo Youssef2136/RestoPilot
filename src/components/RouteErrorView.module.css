@@ -1,0 +1,17 @@
+/*
+ * RouteErrorView.module.css (spec 021 FR-03): neutral recovery layout —
+ * spacing, width, and link affordances only. Colors inherit from base.css;
+ * no new visual decisions (tokens are Phase 02).
+ */
+
+.view {
+  padding: 3rem 1.5rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}

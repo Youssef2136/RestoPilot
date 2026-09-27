@@ -1,0 +1,15 @@
+/*
+ * NotFoundView.module.css (spec 021 FR-04): neutral layout only.
+ */
+
+.view {
+  padding: 3rem 1.5rem;
+  max-width: 60rem;
+  margin: 0 auto;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}

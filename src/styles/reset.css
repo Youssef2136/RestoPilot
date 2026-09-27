@@ -1,0 +1,23 @@
+/*
+ * reset.css — neutral normalization (Phase 01, spec FR-01).
+ *
+ * Structural resets only. The visually meaningful defaults this app already
+ * renders with (font stack, colors, h1/p typography) live in base.css and
+ * index.css exactly as they did before this pipeline existed — this phase
+ * makes no visual decision (documented absence: token values are Phase 02).
+ * Import order is fixed in src/main.tsx: reset → base → index.css.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}

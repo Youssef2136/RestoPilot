@@ -2,6 +2,7 @@ import { Link, Outlet } from 'react-router'
 import { useState } from 'react'
 import { authClient } from '../features/auth/authClient'
 import { useAuthSession } from '../features/auth/AuthProvider'
+import { SkipLink } from './SkipLink'
 import styles from './AppShell.module.css'
 
 /**
@@ -31,6 +32,9 @@ export function AppShell() {
 
   return (
     <div className={styles.shell}>
+      {/* Skip link (spec 021 US6): first tabbable element, targets the main
+          landmark below. */}
+      <SkipLink />
       <header className={styles.header}>
         <Link to="/" className={styles.brand}>
           RestoPilot
@@ -63,7 +67,7 @@ export function AppShell() {
           )}
         </div>
       </header>
-      <main className={styles.main}>
+      <main id="main" className={styles.main}>
         <Outlet />
       </main>
     </div>

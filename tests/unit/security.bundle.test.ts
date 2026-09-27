@@ -46,7 +46,11 @@ describe('security: no privileged secret reaches the client (FR-005)', () => {
   const ROOT = process.cwd()
 
   it('src reads only the public VITE_ env vars', () => {
-    const allowed = new Set(['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY'])
+    // `DEV` is Vite's compile-time boolean constant (statically replaced at
+    // build; carries no runtime value or secret) — allowlisted for the
+    // dev-gallery DEV gate (spec 021 FR-09). Every other entry must be one
+    // of the two public VITE_ variables.
+    const allowed = new Set(['VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY', 'DEV'])
     const seen = new Set<string>()
     let readers = 0
     for (const file of walk(join(ROOT, 'src'))) {
