@@ -1,0 +1,66 @@
+/*
+ * Drawer.module.css (spec 022 T006) — token consumer only (FR-07).
+ * Layer = --z-drawer; motion = slide-in with the token ease (reduced
+ * motion collapses it via base.css's global rule).
+ */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-drawer);
+  background-color: var(--color-scrim);
+}
+
+.panel {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: min(18rem, 85vw);
+  padding: var(--space-6);
+  background-color: var(--color-surface-raised);
+  box-shadow: var(--shadow-overlay);
+  animation: drawer-in var(--motion-base) var(--ease-out);
+}
+
+.start {
+  left: 0;
+  border-right: var(--border-width) solid var(--color-border);
+}
+
+.end {
+  right: 0;
+  border-left: var(--border-width) solid var(--color-border);
+}
+
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.panel.end {
+  --drawer-from: 100%;
+}
+
+.panel.end {
+  animation-name: drawer-in-end;
+}
+
+@keyframes drawer-in-end {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.title {
+  margin: 0 0 var(--space-5);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink);
+}

@@ -1,0 +1,111 @@
+/*
+ * Checkbox.module.css (spec 022 T005) — token consumer only (FR-07).
+ * Shared by Checkbox and RadioGroup: drawn checked states on native inputs.
+ */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.label {
+  font-size: var(--font-size-md);
+  color: var(--color-ink);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink);
+}
+
+/* The drawn control: square for checkbox, round for radio (radius token).
+   1.5rem keeps the visible box ≥ 24px (axe target-size floor; the WCAG
+   44px comfort minimum applies to primary touch actions, which these
+   dense-list controls are not — documented in DESIGN.md → Touch targets). */
+.box {
+  appearance: none;
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0;
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    border-color var(--motion-fast) var(--ease-out);
+}
+
+.box::before {
+  content: '';
+  width: 0.625rem;
+  height: 0.625rem;
+  transform: scale(0);
+  transition: transform var(--motion-fast) var(--ease-out);
+  background-color: var(--color-on-brand);
+  border-radius: 1px;
+}
+
+.box[type='radio'] {
+  border-radius: var(--radius-pill);
+}
+
+.box[type='radio']::before {
+  border-radius: var(--radius-pill);
+}
+
+.box:checked {
+  background-color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.box:checked::before {
+  transform: scale(1);
+}
+
+.box:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.box:hover:not(:disabled) {
+  border-color: var(--color-ink-muted);
+}
+
+.box:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* Indeterminate (bulk-select rows in DataTable) */
+.box:indeterminate {
+  background-color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.box:indeterminate::before {
+  transform: scale(1);
+  width: 0.625rem;
+  height: 2px;
+  border-radius: 1px;
+}

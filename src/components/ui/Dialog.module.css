@@ -1,0 +1,98 @@
+/*
+ * Dialog.module.css (spec 022 T006) — token consumer only (FR-07).
+ * Elevation = --shadow-overlay; layer = --z-dialog (native top layer is
+ * above everything, the token documents the layer).
+ */
+
+.dialog {
+  min-width: min(28rem, calc(100vw - 2 * var(--space-7)));
+  max-width: calc(100vw - 2 * var(--space-7));
+  padding: var(--space-7);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background-color: var(--color-surface-raised);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-overlay);
+}
+
+.dialog::backdrop {
+  background-color: var(--color-scrim);
+}
+
+.title {
+  margin: 0 0 var(--space-4);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--line-height-heading);
+}
+
+.body {
+  font-size: var(--font-size-md);
+  color: var(--color-ink);
+}
+
+.body :is(p, ul, ol) {
+  margin: 0 0 var(--space-3);
+}
+
+.error {
+  margin: var(--space-3) 0 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* The confirm variant's buttons (a dialog ships self-contained until
+   Phase 03 adopts Button in its composition). */
+.secondaryButton,
+.dangerButton {
+  min-height: var(--control-height);
+  min-width: var(--touch-target);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-sm);
+  border: var(--border-width) solid transparent;
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.secondaryButton {
+  background-color: var(--color-surface-raised);
+  border-color: var(--color-border-strong);
+  color: var(--color-ink);
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background-color: var(--color-surface-sunken);
+}
+
+.dangerButton {
+  background-color: var(--color-danger);
+  color: var(--color-on-danger);
+}
+
+.dangerButton:hover:not(:disabled) {
+  background-color: var(--color-danger-hover);
+}
+
+.secondaryButton:focus-visible,
+.dangerButton:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.secondaryButton:disabled,
+.dangerButton:disabled {
+  cursor: default;
+  opacity: 0.55;
+}

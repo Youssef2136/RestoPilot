@@ -1,0 +1,208 @@
+/*
+ * DataTable.module.css (spec 022 T008) — token consumer only (FR-07).
+ */
+
+/* Responsive fallback (documented): horizontal scroll under the table's
+   min width — no silent card rewrite (plan.md T008). */
+.wrapper {
+  overflow-x: auto;
+  background-color: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-md);
+}
+
+.caption {
+  text-align: start;
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}
+
+.table th {
+  text-align: start;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink-muted);
+  background-color: var(--color-surface-sunken);
+  border-bottom: var(--border-width) solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-width) solid var(--color-border);
+  color: var(--color-ink);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: var(--color-surface-sunken);
+}
+
+.numeric {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.minWidth {
+  white-space: nowrap;
+}
+
+.sortButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  color: inherit;
+  cursor: pointer;
+}
+
+.sortButton:hover {
+  color: var(--color-ink);
+}
+
+.sortButton:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius-sm);
+}
+
+.sortIcon {
+  display: inline-flex;
+  opacity: 0.6;
+}
+
+.stateCell {
+  padding: var(--space-6) var(--space-5);
+  text-align: center;
+}
+
+.emptyCell {
+  color: var(--color-ink-muted);
+}
+
+/* --- KeyValueList ----------------------------------------------------- */
+
+.keyValue {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.keyValueRow {
+  display: grid;
+  grid-template-columns: minmax(8rem, 30%) 1fr;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.keyValueRow:last-child {
+  border-bottom: none;
+}
+
+.keyValueKey {
+  font-size: var(--font-size-md);
+  color: var(--color-ink-muted);
+}
+
+.keyValueValue {
+  margin: 0;
+  font-size: var(--font-size-md);
+  color: var(--color-ink);
+}
+
+/* --- Pagination / LoadMore --------------------------------------------- */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-4) 0;
+}
+
+.pageStatus {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}
+
+.pageButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.pageButton:hover:not(:disabled) {
+  background-color: var(--color-surface-sunken);
+}
+
+.pageButton:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.pageButton:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.loadMore {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4) 0;
+}
+
+.loadMoreButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  min-width: var(--touch-target);
+  padding: 0 var(--space-5);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.loadMoreButton:hover:not(:disabled) {
+  background-color: var(--color-surface-sunken);
+}
+
+.loadMoreButton:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.loadMoreButton:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}

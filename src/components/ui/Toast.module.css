@@ -1,0 +1,117 @@
+/*
+ * Toast.module.css (spec 022 T009) — token consumer only (FR-07).
+ * Layer = --z-toast (above dialogs); entrance with the token ease.
+ */
+
+.region {
+  position: fixed;
+  bottom: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(26rem, calc(100vw - 2 * var(--space-5)));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  box-shadow: var(--shadow-2);
+  color: var(--color-ink);
+  font-size: var(--font-size-md);
+  animation: toast-in var(--motion-base) var(--ease-out);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message {
+  margin: 0;
+  flex: 1;
+}
+
+/* Severity reads from the status ink on the neutral raised surface — the
+   tinted-surface treatment stays on inline Alerts (toasts float). */
+.info .message::before,
+.success .message::before,
+.warning .message::before,
+.danger .message::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  margin-inline-end: var(--space-2);
+  background-color: var(--color-ink-muted);
+  vertical-align: 0.1em;
+}
+
+.info .message::before {
+  background-color: var(--color-info);
+}
+.success .message::before {
+  background-color: var(--color-positive);
+}
+.warning .message::before {
+  background-color: var(--color-warning);
+}
+.danger .message::before {
+  background-color: var(--color-danger);
+}
+
+.action {
+  flex: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-brand);
+  cursor: pointer;
+}
+
+.action:hover {
+  color: var(--color-brand-hover);
+}
+
+.action:focus-visible,
+.dismiss:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.dismiss {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--color-ink);
+}

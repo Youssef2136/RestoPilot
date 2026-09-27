@@ -1,0 +1,200 @@
+/*
+ * Feedback.module.css (spec 022 T009) — token consumer only (FR-07).
+ */
+
+/* --- StatusPill ------------------------------------------------------ */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem var(--space-3);
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  line-height: 1.4;
+}
+
+.neutral {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-ink);
+}
+
+.positive {
+  background-color: var(--color-positive-surface);
+  color: var(--color-positive);
+}
+
+.warning {
+  background-color: var(--color-warning-surface);
+  color: var(--color-warning);
+}
+
+.danger {
+  background-color: var(--color-danger-surface);
+  color: var(--color-danger);
+}
+
+.info {
+  background-color: var(--color-info-surface);
+  color: var(--color-info);
+}
+
+.brand {
+  background-color: var(--color-brand-surface);
+  color: var(--color-brand);
+}
+
+/* --- Spinner ---------------------------------------------------------- */
+
+.spinnerWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spinner {
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-brand);
+  border-radius: var(--radius-pill);
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- Skeleton --------------------------------------------------------- */
+
+.skeleton {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-sunken) 25%,
+    var(--color-surface-raised) 50%,
+    var(--color-surface-sunken) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* --- Shared state blocks (Empty/Error) -------------------------------- */
+
+.stateBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-9) var(--space-6);
+  text-align: center;
+  background-color: var(--color-surface-raised);
+  border: var(--border-width) dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+}
+
+.stateIcon {
+  display: inline-flex;
+  color: var(--color-ink-muted);
+}
+
+.stateIconDanger {
+  color: var(--color-danger);
+}
+
+.stateTitle {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink);
+}
+
+.stateBody {
+  font-size: var(--font-size-md);
+  color: var(--color-ink-muted);
+  max-width: 42ch;
+}
+
+.stateAction {
+  margin-top: var(--space-2);
+}
+
+.retry {
+  min-height: var(--control-height);
+  min-width: var(--touch-target);
+  padding: 0 var(--space-5);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.retry:hover {
+  background-color: var(--color-surface-sunken);
+}
+
+.retry:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* --- ProgressBar ------------------------------------------------------- */
+
+.progress {
+  width: 100%;
+  height: 0.5rem;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-surface-sunken);
+  overflow: hidden;
+}
+
+.progressFill {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-brand);
+  transform-origin: left center;
+  /* scaleX, not width: compositor-only, no layout thrash (detector rule
+     layout-transition); the component sets scaleX(value/max). */
+  transition: transform var(--motion-slow) var(--ease-out);
+}
+
+/* --- Shared ------------------------------------------------------------ */
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .skeleton {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}

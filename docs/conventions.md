@@ -60,11 +60,54 @@ means adding its registry entry in the same change —
   router; its recovery view offers plain-anchor routes back and never renders
   the error message. Unknown paths render `NotFoundView` (a dedicated 404 —
   never a silent redirect).
-- `src/styles/` is the only home for global CSS: `reset.css` → `base.css` →
-  `index.css`, imported exactly once in `src/main.tsx` (order asserted by
-  `tests/unit/stylesPipeline.test.ts`). Component styles stay in CSS Modules
-  beside their component. Token values are Phase 02's deliverable — the base
-  layer deliberately contains none.
+- `src/styles/` is the only home for global CSS: `reset.css` → `tokens.css` →
+  `base.css` → `index.css`, imported exactly once in `src/main.tsx` (order
+  asserted by `tests/unit/stylesPipeline.test.ts`). Component styles stay in
+  CSS Modules beside their component.
+
+### The design system (spec 022)
+
+The visual world is ONE system, consumed — never reinvented per surface
+(Master Plan FA-5).
+
+- **Tokens** (`src/styles/tokens.css`) are the ONLY raw color/spacing/motion
+  home. They are semantic roles (`--color-danger`, not `--red-500`). Surfaces
+  never write hex values, magic spacing, or bespoke animations —
+  `tests/unit/design.literals.test.ts` fails the build on raw values outside
+  the token file (the two justified incumbent exemptions expire with Phase 03).
+- **Primitives** live in `src/components/ui/` and are imported from the
+  barrel (`import { Button } from '../components/ui'`) — never from deep
+  paths. Each implements its full state matrix (default/hover/focus-visible/
+  active/disabled/loading/invalid/read-only) with a11y wired by construction:
+  `Field` associates labels and announces errors (`role="alert"`); `Dialog`
+  and `Drawer` manage focus; `Toast`/`Spinner` announce politely. Contracts
+  are pinned by `tests/unit/ui/*` and axed floor by `e2e/design.system.test.ts`.
+- **Money and status render once**: `MoneyText` wraps the exact formatters
+  (`features/menu/money.ts`, `features/tax/taxMoney.ts`); `StateChip` maps
+  every domain status to the palette; `TotalsPanel` renders totals lines as
+  data (all math stays server-side, FA-1).
+- **The dev gallery** (`/dev/gallery`, DEV-only) renders every primitive in
+  every state — review new work against it; screenshot evidence comes from
+  it. It is excluded from production bundles (spec 021 D3).
+- **Density**: staff data surfaces opt in with `data-density="compact"` on a
+  surface root; customer surfaces stay comfortable (the default).
+
+#### Amending the design system
+
+A missing primitive or token is an explicit system amendment, never a local
+one-off (FA-5, gate F-G10). The amendment path: (1) identify the reuse case
+(two+ surfaces, or a named Phase 03+ consumer), (2) amend the system in the
+surface phase's spec explicitly, (3) add the primitive/token once in
+`src/components/ui/` / `tokens.css` with its states and gallery entry, (4)
+update `DESIGN.md` and this section, (5) reuse it rather than creating a
+local duplicate.
+
+#### Surface briefs (spec 022 FR-08)
+
+Every surface phase (03+) starts from the brief template
+[templates/surface-brief.md](../templates/surface-brief.md) — copy it into
+`specs/<feature>/` and fill all six direction-contract blocks before
+implementation. Later edits of the surface re-read the brief first.
 
 ### Presentation contracts (spec 021 FR-10)
 

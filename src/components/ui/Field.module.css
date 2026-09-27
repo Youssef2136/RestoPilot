@@ -1,0 +1,82 @@
+/*
+ * Field.module.css (spec 022 T005) — token consumer only (FR-07).
+ * Label/hint/error hierarchy + the shared control look used by Input,
+ * Textarea, Select, and NumberInput via fieldControlClass().
+ */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink);
+}
+
+.required {
+  color: var(--color-danger);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}
+
+.error {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-danger);
+}
+
+/* Shared control look (consumed through fieldControlClass()). */
+.control {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-raised);
+  color: var(--color-ink);
+  font-family: inherit;
+  font-size: var(--font-size-md);
+  transition:
+    border-color var(--motion-fast) var(--ease-out),
+    box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.control::placeholder {
+  color: var(--color-ink-muted);
+  opacity: 1;
+}
+
+.control:hover:not(:disabled) {
+  border-color: var(--color-ink-muted);
+}
+
+.control:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.control:disabled {
+  cursor: default;
+  opacity: 0.55;
+  background-color: var(--color-surface-sunken);
+}
+
+.control[readonly] {
+  background-color: var(--color-surface-sunken);
+}
+
+.controlInvalid {
+  border-color: var(--color-danger);
+}
+
+.controlInvalid:hover:not(:disabled) {
+  border-color: var(--color-danger);
+}

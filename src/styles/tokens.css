@@ -1,0 +1,150 @@
+/*
+ * tokens.css — the semantic design-token layer (spec 022 FR-03).
+ *
+ * The ONLY place raw color/spacing/motion values may live (FR-07 drift rule).
+ * Tokens are SEMANTIC roles, not palette literals: components consume
+ * `var(--color-danger)` — never `#b42318`. New tokens are a design-system
+ * amendment (docs/conventions.md §Amending the system), not a local choice.
+ *
+ * Provenance: the neutral ink/surface/border/muted values are absorbed
+ * verbatim from the Phase 01 incumbent (#1f2328, #f6f7f9, #ffffff, #e1e4e8,
+ * #59626e — Master Plan §2.1) so existing screens keep their look; the brand,
+ * status, and support roles are the Phase 02 decisions (research.md R6–R9).
+ *
+ * Custom properties CANNOT be read by CSS media queries; the breakpoint
+ * tokens below document the values that `@media` blocks must match literally
+ * (see DESIGN.md → Breakpoints).
+ */
+
+:root {
+  /* ---- Color: surfaces & structure ---------------------------------- */
+  --color-surface: #f6f7f9; /* page ground (absorbed Phase 01 value) */
+  --color-surface-raised: #ffffff; /* cards, panels, headers (absorbed) */
+  --color-surface-sunken: #eef0f3; /* inset wells, table head rows */
+  --color-border: #e1e4e8; /* structural hairlines (absorbed) */
+  --color-border-strong: #767e89; /* control boundaries that must meet the
+     WCAG 1.4.11 3:1 non-text floor (input outlines, checked states) —
+     decorative hairlines stay on --color-border */
+
+  /* ---- Color: ink (text) -------------------------------------------- */
+  --color-ink: #1f2328; /* primary text (absorbed; ≥12:1 on surfaces) */
+  --color-ink-muted: #59626e; /* secondary text (≥4.5:1 on raised) */
+
+  /* ---- Color: brand (primary actions, selection, active indicators) - */
+  /* One committed accent (R6, Restrained strategy). Verified pairs:
+     on-brand #ffffff ≥4.5:1; brand-on-surface ≥4.5:1 for text use. */
+  --color-brand: #0f766e;
+  --color-brand-hover: #0c5f58;
+  --color-brand-active: #0a4f4a;
+  --color-brand-surface: #e6f4f2; /* selection/highlight tint */
+  --color-on-brand: #ffffff;
+
+  /* ---- Color: status vocabulary (StateChip, Alert, Toast, Badge) ---- */
+  /* Each status: strong text/ink color (≥4.5:1 on its soft surface) plus
+     the soft surface tint. These four pairs ARE the product's status
+     vocabulary (rounds, tickets, subscription, availability). */
+  --color-positive: #15803d;
+  --color-positive-surface: #e8f7ee;
+  --color-warning: #92400e;
+  --color-warning-surface: #fdf3e1;
+  --color-danger: #b42318;
+  --color-danger-surface: #fdecea;
+  --color-info: #1d4ed8;
+  --color-info-surface: #e9effd;
+  --color-on-danger: #ffffff; /* solid destructive buttons */
+  --color-scrim: rgb(31 35 40 / 0.45); /* dialog backdrop / drawer scrim */
+  --color-danger-hover: #9b1d14; /* darkened shades of the danger hue for
+     solid control states (Button danger hover/active) */
+  --color-danger-active: #861912;
+
+  /* ---- Color: focus -------------------------------------------------- */
+  --focus-ring-color: #0f766e;
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ---- Typography ----------------------------------------------------- */
+  --font-family-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 0.75rem; /* 12px captions/badges */
+  --font-size-sm: 0.8125rem; /* 13px dense UI */
+  --font-size-md: 0.875rem; /* 14px controls */
+  --font-size-base: 1rem; /* 16px body */
+  --font-size-lg: 1.125rem; /* 18px emphasized body */
+  --font-size-xl: 1.25rem; /* 20px section headings */
+  --font-size-2xl: 1.5rem; /* 24px page headings */
+  --font-size-3xl: 1.875rem; /* 30px display */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --line-height-body: 1.5;
+  --line-height-heading: 1.25;
+  --tracking-tight: -0.02em; /* headings only */
+
+  /* ---- Spacing scale (4-based) --------------------------------------- */
+  --space-0: 0; /* 0 */
+  --space-1: 0.125rem; /* 2px  */
+  --space-2: 0.25rem; /* 4px  */
+  --space-3: 0.5rem; /* 8px  */
+  --space-4: 0.75rem; /* 12px */
+  --space-5: 1rem; /* 16px */
+  --space-6: 1.25rem; /* 20px */
+  --space-7: 1.5rem; /* 24px */
+  --space-8: 2rem; /* 32px */
+  --space-9: 2.5rem; /* 40px */
+  --space-10: 3rem; /* 48px */
+  --space-12: 4rem; /* 64px */
+
+  /* ---- Radii ---------------------------------------------------------- */
+  --radius-sm: 6px; /* small controls, inputs */
+  --radius-md: 10px; /* cards */
+  --radius-lg: 14px; /* large surfaces */
+  --radius-pill: 999px; /* status pills, small controls only */
+
+  /* ---- Elevation (offset + blur; no zero-offset halos) ---------------- */
+  --shadow-1: 0 1px 2px rgb(31 35 40 / 0.06), 0 1px 3px rgb(31 35 40 / 0.1);
+  --shadow-2: 0 4px 12px rgb(31 35 40 / 0.12);
+  --shadow-overlay: 0 12px 40px rgb(31 35 40 / 0.22);
+
+  /* ---- Borders -------------------------------------------------------- */
+  --border-width: 1px;
+  --border-width-strong: 2px;
+
+  /* ---- Z-index layers -------------------------------------------------- */
+  --z-nav: 100;
+  --z-dropdown: 200;
+  --z-drawer: 300;
+  --z-dialog: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* ---- Motion (state-conveying only; Q8 grammar) ---------------------- */
+  --motion-fast: 150ms;
+  --motion-base: 200ms;
+  --motion-slow: 250ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ---- Breakpoints (documentation tokens; @media uses literal px) ----- */
+  --breakpoint-mobile-max: 640px; /* @media (max-width: 640px) */
+  --breakpoint-tablet-max: 1024px; /* @media (max-width: 1024px) */
+  --breakpoint-desktop-max: 1440px; /* @media (max-width: 1440px) */
+
+  /* ---- Touch & density ------------------------------------------------- */
+  --touch-target: 44px; /* minimum interactive size (Q6) */
+  --control-height: 2.5rem; /* comfortable controls (customer/default) */
+  --control-height-compact: 2rem; /* dense staff data rows (still ≥28px,
+                                     non-primary controls; touch-critical
+                                     actions keep --touch-target) */
+
+  /* Reduced-motion: non-essential animation collapses globally in
+     base.css; tokens here carry no motion values of their own. */
+}
+
+/* ---- Density mode (Q3): compact staff surfaces ----------------------- */
+/* A surface root opts in with data-density="compact"; children consuming
+   --control-height / spacing shrink accordingly. Comfortable is the
+   default (no attribute needed). */
+[data-density='compact'] {
+  --control-height: var(--control-height-compact);
+  --space-7: 1.25rem; /* section padding tightens */
+  --space-8: 1.5rem;
+}

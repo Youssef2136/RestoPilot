@@ -1,0 +1,86 @@
+/*
+ * TotalsPanel.module.css (spec 022 T010) — token consumer only (FR-07).
+ */
+
+.money {
+  font-variant-numeric: tabular-nums;
+}
+
+.panel {
+  background-color: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-5);
+}
+
+.group + .group {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--color-border);
+}
+
+.groupHeading {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink);
+}
+
+.lines {
+  margin: 0;
+}
+
+.line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) 0;
+}
+
+.lineLabel {
+  font-size: var(--font-size-md);
+  color: var(--color-ink-muted);
+}
+
+.lineValue {
+  margin: 0;
+  font-size: var(--font-size-md);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+.lineEmphasis .lineLabel,
+.lineEmphasis .lineValue {
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink);
+}
+
+.lineVoided .lineLabel,
+.lineVoided .lineValue {
+  text-decoration: line-through;
+  color: var(--color-ink-muted);
+}
+
+.grandTotalGroup {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--border-width-strong) solid var(--color-border-strong);
+}
+
+.grandTotal {
+  padding: var(--space-1) 0;
+}
+
+.grandTotal .lineLabel,
+.grandTotal .lineValue {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-ink);
+}
+
+.footer {
+  margin-top: var(--space-4);
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}

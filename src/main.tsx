@@ -1,10 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/App'
-// Styles pipeline (spec FR-01): reset → base → page defaults. The order is
-// fixed and asserted by tests/unit/stylesPipeline.test.ts; the Phase 02
-// token layer imports between base and index.css when it lands.
+// Styles pipeline (spec 021 FR-01; tokenized spec 022 FR-03): reset →
+// tokens → base → page defaults. The order is fixed and asserted by
+// tests/unit/stylesPipeline.test.ts.
 import './styles/reset.css'
+import './styles/tokens.css'
 import './styles/base.css'
 import './index.css'
 

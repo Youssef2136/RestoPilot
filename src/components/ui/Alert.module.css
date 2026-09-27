@@ -1,0 +1,92 @@
+/*
+ * Alert.module.css (spec 022 T009) — token consumer only (FR-07).
+ * Severity surfaces = the status vocabulary pairs (verified contrast).
+ */
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+}
+
+.info {
+  background-color: var(--color-info-surface);
+  color: var(--color-info);
+}
+
+.success {
+  background-color: var(--color-positive-surface);
+  color: var(--color-positive);
+}
+
+.warning {
+  background-color: var(--color-warning-surface);
+  color: var(--color-warning);
+}
+
+.danger {
+  background-color: var(--color-danger-surface);
+  color: var(--color-danger);
+}
+
+/* Craft-floor: no colored border-left accents above 1px; the surface tint
+   carries severity, ink stays readable. */
+.body {
+  flex: 1;
+  color: var(--color-ink);
+}
+
+.title {
+  margin: 0 0 var(--space-1);
+  font-weight: var(--font-weight-semibold);
+  color: inherit;
+}
+
+.content {
+  color: var(--color-ink);
+}
+
+.content :is(p, ul, ol) {
+  margin: 0;
+}
+
+.list {
+  margin: var(--space-1) 0 0;
+  padding-inline-start: var(--space-5);
+}
+
+.action {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dismiss {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: var(--font-size-lg);
+  line-height: 1;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.dismiss:hover {
+  color: var(--color-ink);
+}
+
+.dismiss:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}

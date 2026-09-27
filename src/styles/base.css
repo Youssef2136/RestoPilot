@@ -1,36 +1,33 @@
 /*
- * base.css — neutral base styles (Phase 01, spec FR-01 / US6).
+ * base.css — global element defaults (spec 021 FR-01; tokenized Phase 02).
  *
- * Contains ONLY deliberate neutral normalization:
- *   1. The font stack, line height, and the two ink/surface colors moved
- *      verbatim from index.css (:root) — pre-existing presentation, not a new
- *      decision. Phase 02 replaces these literals with tokens.
- *   2. The focus-visible policy: a visible focus indicator everywhere, never
- *      suppressed.
+ * Contains ONLY global, element-level policy:
+ *   1. Typographic/color defaults consuming tokens (the incumbent neutral
+ *      values are now var(--color-ink)/var(--color-surface) — see tokens.css).
+ *   2. The focus-visible policy: a visible focus indicator everywhere,
+ *      never suppressed (tokenized ring).
  *   3. The skip link (targets #main, rendered by <SkipLink/> in the shell).
+ *   4. Browser-surface theming (craft-floor): selection, caret accent,
+ *      reduced-motion neutralization.
  *
- * Documented absences (Phase 02 supplies the values): no type scale, no
- * spacing scale, no radius/shadow/border tokens, no motion values, no
- * semantic color roles. No component styling.
+ * No component styling (enforced by tests/unit/stylesPipeline.test.ts).
+ * Component styles = CSS Modules consuming tokens (docs/conventions.md).
  */
 
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  line-height: 1.5;
-  color: #1f2328;
-  background-color: #f6f7f9;
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-body);
+  color: var(--color-ink);
+  background-color: var(--color-surface);
+  /* Inherits into inputs/textareas: the caret carries the brand. */
+  caret-color: var(--color-brand);
 }
 
-/* Focus policy: visible keyboard focus on every interactive element.
-   Uses the existing ink color until Phase 02 tokenizes it. */
+/* Focus policy: visible keyboard focus on every interactive element. */
 :focus-visible {
-  outline: 2px solid #1f2328;
-  outline-offset: 2px;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
 
 /* Skip link: visually hidden until focused, then the first thing on screen.
@@ -40,10 +37,10 @@ body {
   left: -10000px;
   top: 0;
   z-index: 100;
-  padding: 0.5rem 0.75rem;
-  background-color: #ffffff;
-  color: #1f2328;
-  font-weight: 600;
+  padding: var(--space-3) var(--space-5);
+  background-color: var(--color-surface-raised);
+  color: var(--color-ink);
+  font-weight: var(--font-weight-semibold);
   text-decoration: none;
 }
 
@@ -54,5 +51,26 @@ body {
 /* Keep skip-link landings from hiding the top of the content under fixed
    chrome once shells gain headers (Phase 03). */
 #main {
-  scroll-margin-top: 1rem;
+  scroll-margin-top: var(--space-3);
+}
+
+/* Browser surfaces ship with the design (craft-floor "browser surfaces"):
+   text selection carries the brand accent (the caret via body above). */
+::selection {
+  background-color: var(--color-brand-surface);
+  color: var(--color-ink);
+}
+
+/* Motion grammar (Q8): state-conveying transitions only, 150–250 ms,
+   exponential ease-out (components consume the tokens). Users who prefer
+   reduced motion get near-instant, opacity-safe transitions globally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

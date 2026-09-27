@@ -1,0 +1,129 @@
+/*
+ * DevGalleryPage.module.css (spec 022 T011) — DEV-ONLY review surface.
+ * Token consumer (FR-07 applies — the drift scan includes this file; the
+ * values themselves come from vars).
+ */
+
+.page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-7);
+}
+
+.header {
+  margin-bottom: var(--space-8);
+}
+
+.lede {
+  max-width: 65ch;
+  color: var(--color-ink-muted);
+}
+
+.section {
+  margin-block: var(--space-9);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-5);
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--line-height-heading);
+  color: var(--color-ink);
+}
+
+.stateRow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) 1fr;
+  gap: var(--space-5);
+  align-items: start;
+  padding: var(--space-3) 0;
+  border-bottom: var(--border-width) solid var(--color-border);
+}
+
+.stateRow:last-child {
+  border-bottom: none;
+}
+
+.stateLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink-muted);
+  padding-top: var(--space-2);
+}
+
+.stateDemo {
+  min-width: 0;
+}
+
+.rowButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rowChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.iconRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.iconCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-ink);
+}
+
+.skeletonRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 24rem;
+}
+
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+.spacerSm {
+  height: var(--space-3);
+}
+
+.muted {
+  color: var(--color-ink-muted);
+}
+
+.totalsWidth {
+  max-width: 26rem;
+}
+
+.dividerVertical {
+  align-self: stretch;
+  height: auto;
+  margin: 0;
+  border-top: none;
+  border-left: var(--border-width) solid var(--color-border);
+}
+
+.compactDemo {
+  max-width: 26rem;
+}
+
+@media (max-width: 640px) {
+  .stateRow {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+}

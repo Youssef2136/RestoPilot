@@ -23,21 +23,24 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      // Everything except the viewport smoke — the tagged specs below own it.
-      testIgnore: '**/responsive.smoke.test.ts',
+      // Everything except the viewport-only specs — those own the viewport
+      // projects below (spec 021 FR-08; spec 022 adds the gallery viewport
+      // smoke to the same scoped set).
+      testIgnore: /\**(responsive\.smoke|design\.system)\.test\.ts$/,
     },
     // Viewport projects (spec 021 FR-08): mobile 390×844, tablet 834×1112.
-    // They run ONLY the viewport smoke suite so the E2E time budget stays
-    // flat (the 13 existing suites remain chromium-only).
+    // They run the viewport smoke suite plus the design-system gallery
+    // smoke (spec 022 T014) — the system must hold at the shipped
+    // viewports. Time budget grows by one small suite, not the 13.
     {
       name: 'mobile-chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 } },
-      testMatch: '**/responsive.smoke.test.ts',
+      testMatch: /\**(responsive\.smoke|design\.system)\.test\.ts$/,
     },
     {
       name: 'tablet-chromium',
       use: { ...devices['Desktop Chrome'], viewport: { width: 834, height: 1112 } },
-      testMatch: '**/responsive.smoke.test.ts',
+      testMatch: /\**(responsive\.smoke|design\.system)\.test\.ts$/,
     },
   ],
   webServer: {
