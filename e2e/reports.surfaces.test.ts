@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
 
 /**
  * Reports surfaces E2E (spec 013 T011; US1–US4). The house pattern: all
@@ -22,14 +23,6 @@ const SLUG = 'blue-olive'
 test.describe.configure({ mode: 'serial' })
 
 /** Signs a seeded identity in through the /signin form (the house pattern). */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/dashboard$/)
-}
-
 /**
  * Submit one round as a real customer: enter through the public flow at the
  * given table and add the named item (the kitchen.cashier journey pattern).
@@ -65,7 +58,11 @@ test('US1: alice sees the day report aggregates, channels, best-sellers, and com
   // the seeded sessions opened 2026-09-19; the customer round lands today —
   // both appear in their own day buckets, so the aggregates grid always has
   // the seeded day's figures under the day period of 2026-09-19).
-  await submitCustomerRound(browser, 'T3', 'Hummus')
+  // T2, not T3: the parallel suite (fullyParallel) runs every spec file
+  // concurrently on the shared seeded database — T3 is the shared high-traffic
+  // table (kitchen.cashier, bill.void.audit, session, realtime); T2 keeps this
+  // spec's customer rounds out of the cross-file pileups.
+  await submitCustomerRound(browser, 'T2', 'Hummus')
 
   await signInAs(page, seedCredentials.alice)
   await page.goto('/dashboard/reports')
@@ -123,7 +120,8 @@ test('US2: bob sees Downtown-only reports — no picker, no cross-branch', async
 test("US3: a cashier void surfaces in the manager's void log", async ({ page, browser }) => {
   // A fresh customer round, then carla drives it to the void boundary and
   // voids it with a reason through the REAL cashier surface.
-  await submitCustomerRound(browser, 'T3', 'Hummus')
+  // T2 for the same cross-file isolation reason as US1 above.
+  await submitCustomerRound(browser, 'T2', 'Hummus')
 
   const cashier = await browser.newPage()
   await signInAs(cashier, seedCredentials.carla)
@@ -142,10 +140,18 @@ test("US3: a cashier void surfaces in the manager's void log", async ({ page, br
   await ready.getByRole('button', { name: 'Lock round' }).click()
   const locked = cashier.locator('[data-round-state="lock"]').first()
   await expect(locked).toBeVisible()
-  await locked.getByRole('button', { name: 'Void round' }).click()
-  await cashier.getByLabel('Void reason').fill('E2E: wrong order')
-  await cashier.getByRole('button', { name: 'Confirm void' }).click()
-  await expect(cashier.locator('[data-voided="true"]').first()).toBeVisible()
+  // Scope every later interaction to THIS run's round by id (the
+  // bill.void.audit pattern): concurrent specs' rounds render sibling cards
+  // and ".first()" would drift to a stranger's card between lookups.
+  const roundId = await locked.getAttribute('data-round-id')
+  expect(roundId).toBeTruthy()
+  const myCard = cashier.locator(`article[data-round-id="${roundId}"]`)
+  await myCard.getByRole('button', { name: 'Void round' }).click()
+  await myCard.getByLabel('Void reason').fill('E2E: wrong order')
+  await myCard.getByRole('button', { name: 'Confirm void' }).click()
+  await expect(
+    cashier.locator(`article[data-round-id="${roundId}"][data-voided="true"]`),
+  ).toBeVisible()
   await cashier.close()
 
   // The void log lists it with the reason verbatim (US3).

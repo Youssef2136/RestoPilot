@@ -36,6 +36,8 @@ export interface RealtimeInvalidationInput {
   invalidate: (queryClient: QueryClient) => Promise<unknown>
   /** One immediate invalidate when the channel (re)subscribes. Default true. */
   refetchOnSubscribe?: boolean
+  /** Optional status consumer (spec 023 FR-07; default: none — unchanged). */
+  onStatus?: (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => void
 }
 
 /** The coalescing window: events inside 200ms trigger ONE invalidate. */
@@ -64,6 +66,10 @@ export function bindRealtimeInvalidation(
     filterColumn?: string
     invalidate: () => Promise<unknown>
     refetchOnSubscribe?: boolean
+    /** Optional status consumer (spec 023 FR-07): the shell's offline
+        banner reports into the realtime-status registry. Default off —
+        the binding's own semantics are untouched without it (FA-2). */
+    onStatus?: (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => void
   },
 ): { channelName: string; unmount: () => void } {
   const {
@@ -72,6 +78,7 @@ export function bindRealtimeInvalidation(
     filterColumn = 'branch_id',
     invalidate,
     refetchOnSubscribe = true,
+    onStatus,
   } = input
   const channelName = realtimeChannelName(table, scopeValue)
   const channel = client.channel(channelName)
@@ -100,6 +107,7 @@ export function bindRealtimeInvalidation(
   )
 
   channel.subscribe((status) => {
+    onStatus?.(status)
     if (status === 'SUBSCRIBED' && refetchOnSubscribe) {
       // The recovery refetch: on first subscribe AND every reconnect, one
       // authoritative read reconciles anything missed while offline.
@@ -127,7 +135,13 @@ export function useRealtimeInvalidation(input: RealtimeInvalidationInput): void 
   const invalidateRef = useRef(input.invalidate)
   invalidateRef.current = input.invalidate
 
-  const { scopeValue, table, filterColumn = 'branch_id', refetchOnSubscribe = true } = input
+  const {
+    scopeValue,
+    table,
+    filterColumn = 'branch_id',
+    refetchOnSubscribe = true,
+    onStatus,
+  } = input
 
   useEffect(() => {
     if (scopeValue === null) {
@@ -139,7 +153,8 @@ export function useRealtimeInvalidation(input: RealtimeInvalidationInput): void 
       filterColumn,
       refetchOnSubscribe,
       invalidate: () => invalidateRef.current(queryClient),
+      onStatus,
     })
     return binding.unmount
-  }, [queryClient, scopeValue, table, filterColumn, refetchOnSubscribe])
+  }, [queryClient, scopeValue, table, filterColumn, refetchOnSubscribe, onStatus])
 }

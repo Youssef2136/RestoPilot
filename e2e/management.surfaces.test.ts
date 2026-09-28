@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs, signInAsFiona } from './helpers/signInAs'
 
 /**
  * Management surfaces E2E matrix (spec 004 US1/US2; FR-001, FR-004, FR-005,
@@ -26,17 +27,14 @@ import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
  */
 
 /** Signs a seeded identity in through the /signin form. */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-}
-
 test("Fiona's /dashboard renders the creation panel and no other tenant's data (FR-001)", async ({
   page,
 }) => {
-  await signInAs(page, seedCredentials.fiona)
+  // Fiona sign-ins queue on the shared-fixture lock (the full-journey holds
+  // it for its ~60s span; the auth.routes walkthrough for its poisoned
+  // window) — budget for the wait, not just the walk.
+  test.setTimeout(240_000)
+  await signInAsFiona(page, seedCredentials.fiona)
   await expect(page).toHaveURL(/\/dashboard$/)
   await expect(page.getByRole('heading', { level: 1, name: 'Staff Dashboard' })).toBeVisible()
 

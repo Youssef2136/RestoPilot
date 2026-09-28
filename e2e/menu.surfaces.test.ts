@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
 
 /**
  * Menu surfaces E2E matrix (spec 005 US1: FR-001, FR-003, FR-009, SC-002;
@@ -19,13 +20,6 @@ import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
  */
 
 /** Signs a seeded identity in through the /signin form. */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-}
-
 test('the owner reaches /dashboard/menu from the staff navigation and sees the seeded menu (FR-009, SC-007)', async ({
   page,
 }) => {

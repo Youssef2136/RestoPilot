@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
+import { acquireFionaLock } from './helpers/fionaLock'
 
 /**
  * Full-journey E2E — the §27 dress rehearsal (spec 017 T003/T004;
@@ -21,6 +23,25 @@ import { seedCredentials } from '../tests/database/helpers/fixtures'
 
 test.describe.configure({ mode: 'serial' })
 
+// The journey makes Fiona a real owner for its span (creation panel → staff
+// teardown). Under fullyParallel that ownership poisons two concurrent
+// suites: management.surfaces asserts her creation panel (the ownership
+// hides it), and every Fiona sign-in races the password walkthrough. Hold
+// the cross-file fixture lock for the whole file — the same lock those
+// suites' Fiona calls queue on. afterAll runs even when a serial test
+// fails, so the lock cannot leak past the file.
+let releaseFionaLock: (() => Promise<void>) | null = null
+test.beforeAll(async () => {
+  // (Inside a hook, setTimeout extends the HOOK's budget — the acquire can
+  // legitimately queue behind the auth.routes walkthrough under contention.)
+  test.setTimeout(240_000)
+  releaseFionaLock = await acquireFionaLock()
+})
+test.afterAll(async () => {
+  await releaseFionaLock?.()
+  releaseFionaLock = null
+})
+
 const RESTAURANT_NAME = 'Dress Rehearsal'
 let SLUG = `dress-rehearsal-${new Date().toISOString().slice(0, 10).replaceAll('-', '')}`
 const BRANCH = 'Harbor'
@@ -31,13 +52,6 @@ const ITEM = 'Journey Kebab'
 const PRICE = '12.50'
 const GUEST = 'Dress Rehearsal Guest'
 const GUEST_PHONE = '+15559100001'
-
-async function signInAs(page: Page, creds: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(creds.email)
-  await page.getByLabel('Password').fill(creds.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-}
 
 /**
  * Drive the public entry form to `tableLabel`: pick the branch whose table
@@ -276,7 +290,11 @@ test('the bill shows the captured money and the close frees the table; a fresh e
   const row = page.getByRole('listitem').filter({ hasText: TABLE_1 })
   await row.getByRole('button', { name: new RegExp(`Close session for ${TABLE_1}`) }).click()
   await page.getByRole('button', { name: `Confirm closing ${TABLE_1}` }).click()
-  await expect(page.getByText(new RegExp(`${TABLE_1}.s session was closed`))).toBeVisible()
+  // The panel's inline status carries the closure notice; the toast host is
+  // role="region" (never "status") so this lookup stays strict-safe.
+  await expect(page.getByRole('status')).toContainText(
+    new RegExp(`${TABLE_1}.s session was closed`),
+  )
   await staff.close()
 
   // §27 scenario 2: the freed table re-enters as a NEW session — empty

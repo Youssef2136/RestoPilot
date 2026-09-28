@@ -200,7 +200,9 @@ describe('unauthenticated visitors are redirected with return-to (FR-013)', () =
         </RequireStaff>,
         path,
       )
-      expect(harness.redirects).toEqual([{ to: '/signin', replace: true, state: { from: path } }])
+      expect(harness.redirects).toEqual([
+        { to: '/signin', replace: true, state: { from: path, expired: true } },
+      ])
       expect(html).not.toContain(PROTECTED_MARKER)
       expect(html).not.toContain('Not authorized')
     })
@@ -214,7 +216,9 @@ describe('unauthenticated visitors are redirected with return-to (FR-013)', () =
       </RequireSuperAdmin>,
       '/admin',
     )
-    expect(harness.redirects).toEqual([{ to: '/signin', replace: true, state: { from: '/admin' } }])
+    expect(harness.redirects).toEqual([
+      { to: '/signin', replace: true, state: { from: '/admin', expired: true } },
+    ])
     expect(html).not.toContain(PROTECTED_MARKER)
   })
 
@@ -227,7 +231,11 @@ describe('unauthenticated visitors are redirected with return-to (FR-013)', () =
       '/dashboard?restaurant=blue-olive',
     )
     expect(harness.redirects).toEqual([
-      { to: '/signin', replace: true, state: { from: '/dashboard?restaurant=blue-olive' } },
+      {
+        to: '/signin',
+        replace: true,
+        state: { from: '/dashboard?restaurant=blue-olive', expired: true },
+      },
     ])
   })
 
@@ -583,7 +591,7 @@ describe('RequireProfile (spec 004 FR-001/FR-017): the linked profile is the ent
       '/dashboard',
     )
     expect(harness.redirects).toEqual([
-      { to: '/signin', replace: true, state: { from: '/dashboard' } },
+      { to: '/signin', replace: true, state: { from: '/dashboard', expired: true } },
     ])
   })
 

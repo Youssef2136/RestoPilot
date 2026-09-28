@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { ConfirmDialog } from '../../../components/ui'
 import { AUTH_CONTEXT_QUERY_KEY } from '../../auth/useAuthContext'
 import type { StaffRole } from '../managementClient'
 import { managementClient } from '../managementClient'
@@ -400,22 +401,28 @@ export function StaffManagementPanel({
                   )}
                 </form>
               ) : pendingRemovalId === member.membershipId ? (
-                <div>
+                // Spec 023 FR-06 (Q4): the two-step removal runs through the
+                // ConfirmDialog primitive — names preserved verbatim: the
+                // opener is the same "Remove …" button below, the confirm
+                // keeps "Confirm removal for …", the cancel keeps "Cancel
+                // removal for …" (E2E contract names).
+                <ConfirmDialog
+                  open
+                  onCancel={() => setPendingRemovalId(null)}
+                  onConfirm={() => void confirmRemoval(member)}
+                  title={`Remove ${memberLabel(member)}`}
+                  confirmLabel={
+                    removing ? 'Removing…' : `Confirm removal for ${memberLabel(member)}`
+                  }
+                  cancelLabel={`Cancel removal for ${memberLabel(member)}`}
+                  busy={removing}
+                  error={removeFeedback?.tone === 'error' ? removeFeedback.message : undefined}
+                >
                   <p>
                     Remove {memberLabel(member)}&apos;s access to this restaurant? Their profile and
                     sign-in identity remain.
                   </p>
-                  <button
-                    type="button"
-                    disabled={removing}
-                    onClick={() => void confirmRemoval(member)}
-                  >
-                    {removing ? 'Removing…' : `Confirm removal for ${memberLabel(member)}`}
-                  </button>
-                  <button type="button" onClick={() => setPendingRemovalId(null)}>
-                    {`Cancel removal for ${memberLabel(member)}`}
-                  </button>
-                </div>
+                </ConfirmDialog>
               ) : (
                 <div>
                   <button type="button" onClick={() => startEdit(member)}>

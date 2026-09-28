@@ -16,17 +16,13 @@ import { describe, expect, it } from 'vitest'
  */
 
 /** Justified raw-value exemptions. Empty is the goal; entries expire when
- *  their absorbing phase lands. */
+ *  their absorbing phase lands. (Phase 03 removed the AppShell exemption by
+ *  replacing the placeholder shell with token-consuming shells.) */
 const ALLOWLIST: { file: string; justification: string }[] = [
-  {
-    file: 'src/components/AppShell.module.css',
-    justification:
-      'Incumbent placeholder shell (Master Plan §2.1): Phase 03 replaces the shell entirely; tokens consumed there, not patched here.',
-  },
   {
     file: 'src/index.css',
     justification:
-      'Incumbent page-typographic defaults (muted-ink paragraph color): Phase 03 surface restyling absorbs it into tokens; not a component file.',
+      'Incumbent page-typographic defaults (muted-ink paragraph color): a surface phase absorbs it into tokens; not a component file.',
   },
 ]
 
@@ -57,7 +53,7 @@ describe('raw-value drift rule (spec 022 FR-07, T013)', () => {
   })
 
   it('allowlist entries stay minimal and justified', () => {
-    expect(ALLOWLIST.length, 'exemptions must not grow casually').toBeLessThanOrEqual(2)
+    expect(ALLOWLIST.length, 'exemptions must not grow casually').toBeLessThanOrEqual(1)
     for (const entry of ALLOWLIST) {
       expect(entry.justification.length, `${entry.file} justification`).toBeGreaterThan(40)
     }

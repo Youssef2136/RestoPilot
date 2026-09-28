@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ConfirmDialog } from '../components/ui'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { PlatformPayloadError } from '../features/platform/platformClient'
@@ -208,15 +209,32 @@ export function PlatformConsolePage() {
         </form>
       )}
 
-      {disabling !== null && (
+      {/* Spec 023 FR-06 (Q4): the disable flow runs through the
+          ConfirmDialog primitive — names preserved verbatim: "Disable"
+          opens, "Confirm disable" confirms, "Cancel" cancels (E2E
+          contract names). The required-reason input keeps its guard. */}
+      <ConfirmDialog
+        open={disabling !== null}
+        onCancel={() => {
+          setDisabling(null)
+          setReason('')
+        }}
+        onConfirm={() => {
+          if (disabling === null || reason.trim() === '') return
+          void handleDisable(disabling, true)
+        }}
+        title="Disable restaurant"
+        confirmLabel="Confirm disable"
+        cancelLabel="Cancel"
+        busy={disableMutation.isPending}
+      >
         <form
           onSubmit={(event) => {
             event.preventDefault()
-            if (reason.trim() === '') return
+            if (disabling === null || reason.trim() === '') return
             void handleDisable(disabling, true)
           }}
         >
-          <h2>Disable restaurant</h2>
           <label>
             Reason (required){' '}
             <input
@@ -227,20 +245,8 @@ export function PlatformConsolePage() {
               placeholder="Why is this restaurant being disabled?"
             />
           </label>
-          <button type="submit" disabled={disableMutation.isPending || reason.trim() === ''}>
-            Confirm disable
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setDisabling(null)
-              setReason('')
-            }}
-          >
-            Cancel
-          </button>
         </form>
-      )}
+      </ConfirmDialog>
     </section>
   )
 }

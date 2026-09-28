@@ -67,9 +67,9 @@ export function Dialog({ open, onClose, title, children, actions, busy, error }:
       {actions && <div className={styles.actions}>{actions}</div>}
     </dialog>
   )
-}
-
-/** Convenience composition for the confirm pattern (Phase 03 adoption). */
+} /** Convenience composition for the confirm pattern (Phase 03 adoption).
+    `confirmDisabled` lets a caller gate the confirm on its own validity
+    (e.g. a required reason — the E2E flow asserts the disabled state). */
 export function ConfirmDialog({
   open,
   onConfirm,
@@ -79,6 +79,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   busy,
+  confirmDisabled = false,
   error,
 }: {
   open: boolean
@@ -89,6 +90,7 @@ export function ConfirmDialog({
   confirmLabel?: string
   cancelLabel?: string
   busy?: boolean
+  confirmDisabled?: boolean
   error?: string
 }) {
   return (
@@ -108,7 +110,12 @@ export function ConfirmDialog({
           >
             {cancelLabel}
           </button>
-          <button type="button" className={styles.dangerButton} onClick={onConfirm} disabled={busy}>
+          <button
+            type="button"
+            className={styles.dangerButton}
+            onClick={onConfirm}
+            disabled={busy || confirmDisabled}
+          >
             {confirmLabel}
           </button>
         </>

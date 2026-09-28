@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
 
 /**
  * Kitchen & cashier surfaces E2E (spec 009 T016/T017; SC-004, SC-005;
@@ -28,14 +29,6 @@ const SLUG = 'blue-olive'
 test.describe.configure({ mode: 'serial' })
 
 /** Signs a seeded identity in through the /signin form (auth.routes pattern). */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/dashboard$/)
-}
-
 /**
  * Submit one round as a real customer: enter through the public flow at the
  * given table and add the named item from the menu surface.

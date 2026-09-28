@@ -35,6 +35,16 @@ function readReturnTo(state: unknown): string | null {
   return null
 }
 
+/** True when the redirect came from a signed-out resolution (FR-08 note). */
+function readExpired(state: unknown): boolean {
+  return (
+    state !== null &&
+    typeof state === 'object' &&
+    'expired' in state &&
+    (state as { expired: unknown }).expired === true
+  )
+}
+
 /** The page's two modes: the sign-in form and the recovery request form. */
 type Mode = 'signin' | 'recover'
 
@@ -150,6 +160,12 @@ export function SignInPage() {
   return (
     <section aria-labelledby="signin-heading">
       <h1 id="signin-heading">Staff sign-in</h1>
+      {/* Spec 023 FR-08: a friendly note when the visitor was redirected from
+          a guarded route by a signed-out resolution (session end/expiry) —
+          presentation only; the redirect flow itself is unchanged. */}
+      {readExpired(location.state) && failureMessage === null && (
+        <p role="status">Your session has ended. Sign in again to continue.</p>
+      )}
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="signin-email">Email</label>

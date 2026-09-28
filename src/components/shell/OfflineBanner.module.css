@@ -1,0 +1,64 @@
+/*
+ * OfflineBanner.module.css (spec 023 T008) — token consumer only (FR-07).
+ * Sticky at the shell top; the warning tint carries the state (no border
+ * accents — craft-floor).
+ */
+
+.banner {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-nav);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.offline {
+  background-color: var(--color-danger-surface);
+  color: var(--color-danger);
+}
+
+.reconnecting {
+  background-color: var(--color-warning-surface);
+  color: var(--color-warning);
+}
+
+.recovered {
+  background-color: var(--color-positive-surface);
+  color: var(--color-positive);
+}
+
+.icon {
+  flex: none;
+}
+
+.message {
+  margin: 0;
+  flex: 1;
+}
+
+.retry {
+  flex: none;
+  border: var(--border-width) solid currentcolor;
+  border-radius: var(--radius-sm);
+  background: none;
+  padding: var(--space-1) var(--space-4);
+  min-height: 2rem;
+  font: inherit;
+  font-weight: var(--font-weight-semibold);
+  color: inherit;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) var(--ease-out);
+}
+
+.retry:hover {
+  background-color: var(--color-surface-raised);
+}
+
+.retry:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}

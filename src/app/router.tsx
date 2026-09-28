@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router'
-import { AppShell } from '../components/AppShell'
+import { CustomerShell } from '../components/shell/CustomerShell'
+import { StaffShell } from '../components/shell/StaffShell'
 import { NotFoundView } from '../components/NotFoundView'
 import { RequireProfile, RequireStaff, RequireSuperAdmin } from '../features/auth/guards'
 import { type RouteMeta } from './routes'
@@ -82,39 +83,34 @@ export function AppRouter() {
           document head). */}
       <RouteTitles extraRoutes={dev ? [devGalleryRouteMeta] : []} />
       <Routes>
-        <Route element={<AppShell />}>
-          {/* The unknown-route view (spec 021 FR-04, Clarification Q1): a
-            dedicated 404 — never a silent redirect. The catch-all renders
-            INSIDE the shell so the skip link and main landmark still exist. */}
-          <Route path="*" element={<NotFoundView />} />
+        {/* Shell selection (spec 023 FR-01): route groups pick the shell at
+            THIS one declaration point. Staff/platform routes render the
+            StaffShell (the guards below stay on the routes — decisions
+            unchanged); public/customer + credential routes render the
+            CustomerShell. The 404 catch-all renders inside the StaffShell so
+            the skip link and main landmark still exist for unknown paths
+            (spec 021 posture preserved). No surface renders both shells. */}
+        <Route element={<CustomerShell />}>
           {/* Public routes. The /r/:slug entry flow (spec 007 FR-001) supersedes
             the Phase 0 restaurant placeholder — same path, real surface. */}
           <Route index element={<RootPage />} />
           <Route path="/order/:branchId" element={<OrderPage />} />
-          <Route path="/signin" element={<SignInPage />} />
-          {/* Customer session routes (spec 007 FR-001/FR-021): the public
-            entry flow and the token-guarded customer menu. Both render
-            WITHOUT dashboard chrome — the customer side has no auth context
-            at all; every read verifies the token server-side. */}
           <Route path="/r/:slug" element={<RestaurantPublicPage />} />
           <Route path="/r/:slug/menu" element={<CustomerMenuPage />} />
-          {/* Password recovery (FR-018): PUBLIC and session-bearing — reached
-            through the emailed recovery link, which establishes a session and
-            fires PASSWORD_RECOVERY. Deliberately NOT RequireStaff-guarded: a
-            recovery session is an authenticated identity changing its own
-            credential, not a staff-area visit — the staff guard would deny
-            unlinked identities their own recovery and conflate credential
-            recovery with staff-area authorization. */}
+          {/* Credential surfaces render the customer shell with no nav
+            links (FR-01) — their guards/flows are Phase 04's concern. */}
+          <Route path="/signin" element={<SignInPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
-          {/* Account password (spec 020 FR-002): PUBLIC page, session-bearing —
-            deliberately NOT RequireStaff/RequireProfile-guarded, exactly like
-            /reset-password: changing one's OWN credential is authentication
-            work, not a staff-area visit. The staff guards would deny the
-            unlinked identity, the membership-free bootstrap profile (Fiona),
-            and the membership-less platform super admin — precisely the
-            identities FR-002 admits. The page itself renders its form only
-            for a signed-in session. */}
           <Route path="/account/password" element={<ChangePasswordPage />} />
+          {/* The dev-only gallery (spec 021 FR-09): rendered only in DEV —
+            production bundles exclude the route entirely. */}
+          {dev && <Route path={DEV_GALLERY_PATH} element={<DevGalleryPage />} />}
+        </Route>
+        <Route element={<StaffShell />}>
+          {/* The unknown-route view (spec 021 FR-04, Clarification Q1): a
+            dedicated 404 — never a silent redirect. The catch-all renders
+            INSIDE the shell so the skip link and main landmark still exist. */}
+          <Route path="*" element={<NotFoundView />} />
           {/* Staff area (RequireStaff) — except /dashboard, which admits the
             membership-less linked profile for the FR-001 bootstrap
             (RequireProfile; the only revision to feature 003's surface). */}
@@ -303,10 +299,6 @@ export function AppRouter() {
               </RequireSuperAdmin>
             }
           />
-          {/* The dev-only gallery (spec 021 FR-09, Clarification Q3): rendered
-            only in DEV builds — production bundles exclude the route and the
-            page entirely (the import is unreachable outside DEV). */}
-          {dev && <Route path={DEV_GALLERY_PATH} element={<DevGalleryPage />} />}
         </Route>
       </Routes>
     </>

@@ -1,5 +1,7 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
+import { withFionaLock } from './helpers/fionaLock'
 
 /**
  * E2E route matrix (spec FR-012/FR-013/FR-014/FR-016/FR-017, SC-004/SC-006;
@@ -20,14 +22,6 @@ import { seedCredentials } from '../tests/database/helpers/fixtures'
  * (~10) stay well under the Auth API rate limit of 30 per 5 minutes
  * (research.md §12).
  */
-
-/** Signs a seeded identity in through the /signin form. */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-}
 
 test.describe('unauthenticated protected routes redirect with return-to (FR-013)', () => {
   test('/dashboard redirects to /signin and lands back after a valid seeded sign-in', async ({
@@ -101,6 +95,14 @@ test('the platform super admin reaches /admin on a direct deep link (FR-012)', a
 })
 
 test.describe('self-service password change (spec 020, FR-002/FR-006/FR-013/FR-014)', () => {
+  // Serial within the file (a playwright.describe annotation, not a global
+  // worker cap): the walkthrough changes Fiona's password and restores it in
+  // its teardown, and fullyParallel runs this file's tests concurrently —
+  // a parallel sign-in as Fiona during that window would auth against the
+  // poisoned credential. Other FILES still run fully in parallel; the shared
+  // resilient signInAs absorbs their unrelated rate-limit bursts.
+  test.describe.configure({ mode: 'serial' })
+
   test('the nav link is absent for anonymous visitors and present for signed-in identities', async ({
     page,
   }) => {
@@ -115,88 +117,96 @@ test.describe('self-service password change (spec 020, FR-002/FR-006/FR-013/FR-0
   test('the full walkthrough: refusals, both-facts confirmation, old password dead', async ({
     page,
   }) => {
-    await signInAs(page, seedCredentials.fiona)
-    await expect(page).toHaveURL(/\/dashboard$/)
-    await page.getByRole('link', { name: 'Account password' }).click()
-    await expect(page).toHaveURL(/\/account\/password$/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Account password' })).toBeVisible()
+    // The walkthrough POISONS fiona@restopilot.dev for its span (temp
+    // password, restored in its own teardown). The cross-file fixture lock
+    // keeps every parallel Fiona sign-in out of that window — this is the
+    // same lock the other files' signInAsFiona calls queue on. The wait can
+    // be long (the journey's whole span) — budget for it.
+    test.setTimeout(240_000)
+    await withFionaLock(async () => {
+      await signInAs(page, seedCredentials.fiona)
+      await expect(page).toHaveURL(/\/dashboard$/)
+      await page.getByRole('link', { name: 'Account password' }).click()
+      await expect(page).toHaveURL(/\/account\/password$/)
+      await expect(page.getByRole('heading', { level: 1, name: 'Account password' })).toBeVisible()
 
-    // Hygiene: the flow's page carries no query parameters (SC-003a) and the
-    // form fields are password-typed.
-    expect(page.url()).not.toContain('?')
-    for (const id of [
-      'account-password-current',
-      'account-password-new',
-      'account-password-confirm',
-    ]) {
-      await expect(page.locator(`#${id}`)).toHaveAttribute('type', 'password')
-    }
+      // Hygiene: the flow's page carries no query parameters (SC-003a) and the
+      // form fields are password-typed.
+      expect(page.url()).not.toContain('?')
+      for (const id of [
+        'account-password-current',
+        'account-password-new',
+        'account-password-confirm',
+      ]) {
+        await expect(page.locator(`#${id}`)).toHaveAttribute('type', 'password')
+      }
 
-    // Wrong current password → the ONE distinct message; the account is
-    // unchanged (proven by the successful change below).
-    await page.getByLabel('Current password').fill('not-the-fiona-password')
-    await page.getByLabel('New password', { exact: true }).fill('dev-fiona-020-temp')
-    await page.getByLabel('Confirm new password').fill('dev-fiona-020-temp')
-    await page.getByRole('button', { name: 'Change password' }).click()
-    await expect(page.getByRole('alert')).toHaveText(
-      'The current password is incorrect. Check it and try again.',
-    )
+      // Wrong current password → the ONE distinct message; the account is
+      // unchanged (proven by the successful change below).
+      await page.getByLabel('Current password').fill('not-the-fiona-password')
+      await page.getByLabel('New password', { exact: true }).fill('dev-fiona-020-temp')
+      await page.getByLabel('Confirm new password').fill('dev-fiona-020-temp')
+      await page.getByRole('button', { name: 'Change password' }).click()
+      await expect(page.getByRole('alert')).toHaveText(
+        'The current password is incorrect. Check it and try again.',
+      )
 
-    // Confirmation mismatch → the LOCAL message before any platform call.
-    await page.getByLabel('Current password').fill(seedCredentials.fiona.password)
-    await page.getByLabel('New password', { exact: true }).fill('dev-fiona-020-temp')
-    await page.getByLabel('Confirm new password').fill('different-thing')
-    await page.getByRole('button', { name: 'Change password' }).click()
-    await expect(page.getByRole('alert')).toHaveText('The two passwords do not match.')
+      // Confirmation mismatch → the LOCAL message before any platform call.
+      await page.getByLabel('Current password').fill(seedCredentials.fiona.password)
+      await page.getByLabel('New password', { exact: true }).fill('dev-fiona-020-temp')
+      await page.getByLabel('Confirm new password').fill('different-thing')
+      await page.getByRole('button', { name: 'Change password' }).click()
+      await expect(page.getByRole('alert')).toHaveText('The two passwords do not match.')
 
-    // The real change → the both-facts confirmation (FR-007, US3 scenario 2).
-    await page.getByLabel('Current password').fill(seedCredentials.fiona.password)
-    await page.getByLabel('Confirm new password').fill('dev-fiona-020-temp')
-    await page.getByRole('button', { name: 'Change password' }).click()
-    await expect(page.getByRole('status')).toHaveText(
-      'Your password has been changed. This device stays signed in; other signed-in devices have been signed out.',
-    )
+      // The real change → the both-facts confirmation (FR-007, US3 scenario 2).
+      await page.getByLabel('Current password').fill(seedCredentials.fiona.password)
+      await page.getByLabel('Confirm new password').fill('dev-fiona-020-temp')
+      await page.getByRole('button', { name: 'Change password' }).click()
+      await expect(page.getByRole('status')).toHaveText(
+        'Your password has been changed. This device stays signed in; other signed-in devices have been signed out.',
+      )
 
-    // Fresh authentication: old dead, new accepted (FR-013) — sign out, then
-    // try the old password from the sign-in page (the generic sign-in
-    // failure) and the new one (success). /account/password is not a guarded
-    // route, so sign-out leaves its URL in place — the walk navigates home
-    // first, like the standing sign-out suite does.
-    await page.getByRole('button', { name: 'Sign out' }).click()
-    await page.getByRole('heading', { level: 1, name: 'Account password' }).waitFor()
-    await expect(page.getByText('Sign in first to change your account password')).toBeVisible()
-    await page.goto('/')
-    await expect(page).toHaveURL(/\/$/)
-    await page.goto('/signin')
-    await page.getByLabel('Email').fill(seedCredentials.fiona.email)
-    await page.getByLabel('Password').fill(seedCredentials.fiona.password)
-    await page.getByRole('button', { name: 'Sign in' }).click()
-    await expect(page.getByRole('alert')).toHaveText(
-      'Sign-in failed. Check your email and password, then try again.',
-    )
-    await page.getByLabel('Password').fill('dev-fiona-020-temp')
-    await page.getByRole('button', { name: 'Sign in' }).click()
-    await expect(page).toHaveURL(/\/dashboard$/)
+      // Fresh authentication: old dead, new accepted (FR-013) — sign out, then
+      // try the old password from the sign-in page (the generic sign-in
+      // failure) and the new one (success). /account/password is not a guarded
+      // route, so sign-out leaves its URL in place — the walk navigates home
+      // first, like the standing sign-out suite does.
+      await page.getByRole('button', { name: 'Sign out' }).click()
+      await page.getByRole('heading', { level: 1, name: 'Account password' }).waitFor()
+      await expect(page.getByText('Sign in first to change your account password')).toBeVisible()
+      await page.goto('/')
+      await expect(page).toHaveURL(/\/$/)
+      await page.goto('/signin')
+      await page.getByLabel('Email').fill(seedCredentials.fiona.email)
+      await page.getByLabel('Password').fill(seedCredentials.fiona.password)
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await expect(page.getByRole('alert')).toHaveText(
+        'Sign-in failed. Check your email and password, then try again.',
+      )
+      await page.getByLabel('Password').fill('dev-fiona-020-temp')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      await expect(page).toHaveURL(/\/dashboard$/)
 
-    // Storage hygiene after the whole flow: no password substring persisted
-    // anywhere client-side (SC-003a).
-    const storage = await page.evaluate(() => ({
-      local: JSON.stringify(localStorage),
-      session: JSON.stringify(sessionStorage),
-    }))
-    expect(storage.local).not.toContain('dev-fiona-020-temp')
-    expect(storage.local).not.toContain('not-the-fiona-password')
-    expect(storage.session).not.toContain('dev-fiona-020-temp')
+      // Storage hygiene after the whole flow: no password substring persisted
+      // anywhere client-side (SC-003a).
+      const storage = await page.evaluate(() => ({
+        local: JSON.stringify(localStorage),
+        session: JSON.stringify(sessionStorage),
+      }))
+      expect(storage.local).not.toContain('dev-fiona-020-temp')
+      expect(storage.local).not.toContain('not-the-fiona-password')
+      expect(storage.session).not.toContain('dev-fiona-020-temp')
 
-    // Restore fiona's fixture password through the SAME flow (no API-side
-    // credential writes in e2e — the surface under test is the only writer).
-    await page.getByRole('link', { name: 'Account password' }).click()
-    await expect(page).toHaveURL(/\/account\/password$/)
-    await page.getByLabel('Current password').fill('dev-fiona-020-temp')
-    await page.getByLabel('New password', { exact: true }).fill(seedCredentials.fiona.password)
-    await page.getByLabel('Confirm new password').fill(seedCredentials.fiona.password)
-    await page.getByRole('button', { name: 'Change password' }).click()
-    await expect(page.getByRole('status')).toBeVisible()
+      // Restore fiona's fixture password through the SAME flow (no API-side
+      // credential writes in e2e — the surface under test is the only writer).
+      await page.getByRole('link', { name: 'Account password' }).click()
+      await expect(page).toHaveURL(/\/account\/password$/)
+      await page.getByLabel('Current password').fill('dev-fiona-020-temp')
+      await page.getByLabel('New password', { exact: true }).fill(seedCredentials.fiona.password)
+      await page.getByLabel('Confirm new password').fill(seedCredentials.fiona.password)
+      await page.getByRole('button', { name: 'Change password' }).click()
+      await expect(page.getByRole('status')).toBeVisible()
+    }) // withFionaLock — the poisoned-password window is closed.
   })
 
   test('duplicate submits are prevented while the change is in flight (FR-011, Edge Cases)', async ({

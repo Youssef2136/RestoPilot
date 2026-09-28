@@ -45,7 +45,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className={styles.region} role="status" aria-label="Notifications">
+      {/* role="region" + aria-live (NOT role="status"): an always-present
+          status role would collide with surfaces' asserted getByRole('status')
+          strict-mode lookups (spec 023 T006 finding). The live region still
+          announces queued toasts politely; empty it is inert. */}
+      <div className={styles.region} role="region" aria-label="Notifications" aria-live="polite">
         {toasts.map((toast) => (
           <div key={toast.id} className={`${styles.toast} ${styles[toast.severity]}`}>
             <p className={styles.message}>{toast.message}</p>

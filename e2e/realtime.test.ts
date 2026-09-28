@@ -1,5 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
 
 /**
  * Realtime E2E (spec 012 T011; SC-001…SC-004): a staff surface stays open
@@ -19,14 +20,6 @@ const SLUG = 'blue-olive'
 test.describe.configure({ mode: 'serial' })
 
 /** Signs a seeded identity in through the /signin form. */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/dashboard$/)
-}
-
 /**
  * One real customer submission through the public surface from a fresh
  * browser context: enter at the branch's table, add the named item, send.

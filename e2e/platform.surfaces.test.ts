@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
 
 /**
  * Platform surfaces E2E (spec 014 T011; FR-001–FR-010). The house pattern:
@@ -16,14 +17,6 @@ import { seedCredentials } from '../tests/database/helpers/fixtures'
 const SLUG = 'blue-olive'
 
 test.describe.configure({ mode: 'serial' })
-
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible()
-}
 
 test('the platform console lists every restaurant for the super admin (FR-001, FR-008)', async ({
   page,
@@ -135,6 +128,12 @@ test('the super admin onboards a restaurant and its first owner through the cons
   page,
 }) => {
   const slug = `onboarded-e2e-${Date.now()}`
+  // A FRESH owner email per run: the onboarding RPC links an auth identity
+  // that already exists ("no credential issued") instead of minting the
+  // one-time credential — a rerun against yesterday's owner would deadlock
+  // the credential assertions. Unique per run keeps the happy path on the
+  // credential branch (the linked-identity branch is proven elsewhere).
+  const ownerEmail = `e2e-harbor-owner-${Date.now()}@restopilot.dev`
   await signInAs(page, seedCredentials.platformAdmin)
   await page.goto('/admin/platform')
 
@@ -142,7 +141,7 @@ test('the super admin onboards a restaurant and its first owner through the cons
   // the form preserved (the super admin can correct it).
   await page.getByLabel('Restaurant name').fill('E2E Harbor Cafe')
   await page.getByLabel('Public identifier').fill('blue-olive')
-  await page.getByLabel('First owner email').fill('e2e-harbor-owner@restopilot.dev')
+  await page.getByLabel('First owner email').fill(ownerEmail)
   await page.getByLabel('First owner display name').fill('Harbor Owner')
   await page.getByRole('button', { name: 'Onboard restaurant' }).click()
   await expect(

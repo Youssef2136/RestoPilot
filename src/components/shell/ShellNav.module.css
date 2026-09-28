@@ -1,0 +1,68 @@
+/*
+ * ShellNav.module.css (spec 023 T003) — token consumer only (FR-07).
+ * The active marker: brand tint + a 3px left rail (aria-current is set by
+ * NavLink; the visual answers "where am I" — UX requirement).
+ */
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.groupLabel {
+  margin: 0;
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-ink-muted);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid transparent;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-ink-muted);
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
+}
+
+.link:hover {
+  background-color: var(--color-surface-sunken);
+  color: var(--color-ink);
+}
+
+.link.active {
+  background-color: var(--color-brand-surface);
+  border-left-color: var(--color-brand);
+  color: var(--color-brand);
+  font-weight: var(--font-weight-semibold);
+}
+
+.link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-width));
+}

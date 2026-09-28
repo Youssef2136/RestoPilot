@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRealtimeInvalidation } from '../../realtime/useRealtimeInvalidation'
+import { ConfirmDialog, useToast } from '../../../components/ui'
 import { branchSessionsKey, useBranchOpenSessions, useCloseSession } from '../useSession'
 
 /**
@@ -33,6 +34,7 @@ export function BranchSessionsPanel({ branchId, branchName, canClose }: BranchSe
   const closeMutation = useCloseSession(branchId)
   // The session awaiting confirmation, and the outcome of the last close.
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const toast = useToast()
   const [lastClosed, setLastClosed] = useState<string | null>(null)
 
   if (sessionsQuery.isPending) {
@@ -83,39 +85,60 @@ export function BranchSessionsPanel({ branchId, branchName, canClose }: BranchSe
                     ? 'No participants listed.'
                     : `Participants: ${session.participants.map((p) => p.display_name).join(', ')}`}
                 </p>
-                {canClose &&
-                  (confirming ? (
-                    <span>
-                      <button
-                        type="button"
-                        disabled={closeMutation.isPending}
-                        onClick={() => {
-                          closeMutation.mutate(session.id, {
-                            onSuccess: () => {
-                              setConfirmingId(null)
-                              setLastClosed(session.table_label)
-                            },
-                          })
-                        }}
-                      >
-                        {closeMutation.isPending
-                          ? 'Closing…'
-                          : `Confirm closing ${session.table_label}`}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingId(null)}
-                        disabled={closeMutation.isPending}
-                      >
-                        Keep it open
-                      </button>
-                    </span>
-                  ) : (
+                {canClose && (
+                  <>
+                    {/* Spec 023 FR-06 (Q4): the two-step confirmation runs
+                        through the ConfirmDialog primitive. Names preserved
+                        verbatim: "Close session for T1" opens; "Confirm
+                        closing T1" confirms (E2E contract); "Keep it open"
+                        becomes the dialog's cancel (also pre-existing). */}
                     <button type="button" onClick={() => setConfirmingId(session.id)}>
                       {`Close session for ${session.table_label}`}
                     </button>
-                  ))}
-                {closeError !== null && <p role="alert">{closeError}</p>}
+                    <ConfirmDialog
+                      open={confirming}
+                      onCancel={() => setConfirmingId(null)}
+                      title={`Close session for ${session.table_label}`}
+                      confirmLabel={
+                        closeMutation.isPending
+                          ? 'Closing…'
+                          : `Confirm closing ${session.table_label}`
+                      }
+                      cancelLabel="Keep it open"
+                      busy={closeMutation.isPending}
+                      error={closeError ?? undefined}
+                      onConfirm={() => {
+                        closeMutation.mutate(session.id, {
+                          onSuccess: () => {
+                            setConfirmingId(null)
+                            setLastClosed(session.table_label)
+                            // Spec 023 FR-05 (Q3): the toast ACCOMPANIES the
+                            // asserted inline role="status" text — never
+                            // replaces it.
+                            toast.show({
+                              severity: 'success',
+                              message: `${session.table_label}'s session was closed.`,
+                            })
+                          },
+                          onError: () => {
+                            toast.show({
+                              severity: 'danger',
+                              message:
+                                closeMutation.error instanceof Error
+                                  ? closeMutation.error.message
+                                  : 'The session close failed. Try again.',
+                            })
+                          },
+                        })
+                      }}
+                    >
+                      <p>
+                        This closes {session.table_label}&apos;s session: seated guests recover as
+                        unavailable and re-enter the table&apos;s new session.
+                      </p>
+                    </ConfirmDialog>
+                  </>
+                )}
               </li>
             )
           })}

@@ -20,9 +20,14 @@ import { useAuthContext } from './useAuthContext'
  */
 export function NotAuthorized() {
   return (
-    <section aria-labelledby="not-authorized-heading">
+    <section aria-labelledby="not-authorized-heading" style={{ maxWidth: '38rem' }}>
       <h1 id="not-authorized-heading">Not authorized</h1>
       <p>You are signed in, but your account does not have access to this area.</p>
+      <p>
+        This area needs a role your account does not hold (for example, an owner or branch manager
+        role). Ask your restaurant's owner to grant you the right role from the staff list, or
+        return to where you can work.
+      </p>
       <p>
         <Link to="/">Back to the home page</Link>
       </p>
@@ -34,6 +39,12 @@ export function NotAuthorized() {
  * Requires an authenticated session (FR-013): an unauthenticated visitor is
  * redirected to /signin with the requested location in `location.state.from`
  * — the return-to destination after a successful sign-in.
+ *
+ * Spec 023 FR-08: the redirect carries `expired: true` when the visitor had
+ * reached a guarded route while signed-in state was still possible — i.e.
+ * the redirect happened from a genuine signed-out resolution rather than a
+ * cold visit. SignInPage reads it for the friendly "your session ended"
+ * note. DECISION SEMANTICS UNCHANGED: the same redirect, same return-to.
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { status } = useAuthSession()
@@ -46,7 +57,13 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (status === 'signed-out') {
-    return <Navigate to="/signin" replace state={{ from: location.pathname + location.search }} />
+    return (
+      <Navigate
+        to="/signin"
+        replace
+        state={{ from: location.pathname + location.search, expired: true }}
+      />
+    )
   }
 
   return children

@@ -2,6 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router'
 import { AuthProvider } from '../features/auth/AuthProvider'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { ToastProvider } from '../components/ui'
 import { AppRouter } from './router'
 import { queryClient } from './queryClient'
 
@@ -14,6 +15,10 @@ import { queryClient } from './queryClient'
  * an unhandled render error anywhere below renders the recoverable error view
  * instead of a white screen. The boundary is presentation-only recovery UI —
  * guards, authorization, and data behavior are unchanged.
+ *
+ * Phase 03 (spec 023 FR-05): the toast host mounts once here — every shell
+ * and surface announces async outcomes through `useToast` (polite live
+ * region; inline verbatim errors stay the refusal path).
  */
 export function App() {
   return (
@@ -21,7 +26,9 @@ export function App() {
       <AuthProvider>
         <BrowserRouter>
           <ErrorBoundary>
-            <AppRouter />
+            <ToastProvider>
+              <AppRouter />
+            </ToastProvider>
           </ErrorBoundary>
         </BrowserRouter>
       </AuthProvider>

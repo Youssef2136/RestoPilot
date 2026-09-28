@@ -16,7 +16,7 @@
     "typecheck": "tsc -b",
     "test:unit": "vitest run tests/unit",
     "test:db": "vitest run tests/database",
-    "test:integration": "vitest run tests/integration",
+    "test:integration": "vitest run tests/integration --no-file-parallelism",
     "test:e2e": "playwright test",
     "verify": "npm run format:check && npm run lint && npm run typecheck && npm run test:unit && npm run test:db && npm run test:integration && npm run build",
     "db:migrate": "supabase db push",

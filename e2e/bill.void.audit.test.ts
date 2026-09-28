@@ -1,5 +1,6 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
 
 /**
  * Bill, void & audit E2E (spec 011 T011/T012; US1/US2/US3, FR-001..FR-005,
@@ -23,14 +24,6 @@ const SLUG = 'blue-olive'
 test.describe.configure({ mode: 'serial' })
 
 /** Signs a seeded identity in through the /signin form (auth.routes pattern). */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/dashboard$/)
-}
-
 /** Submit one dine-in round as a real customer (the 009 e2e journey). */
 async function submitCustomerRound(
   browser: import('@playwright/test').Browser,

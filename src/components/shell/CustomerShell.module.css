@@ -1,0 +1,35 @@
+/*
+ * CustomerShell.module.css (spec 023 T003) — token consumer only (FR-07).
+ * Mobile-first airy column; comfortable density (the default — no compact
+ * attribute here).
+ */
+
+.shell {
+  min-height: 100vh;
+  background-color: var(--color-surface);
+}
+
+/* The signed-in session bar (spec 023 FR-01 note): not navigation — only
+ * the account sign-out action for visitors on credential routes. Pushed
+ * right, quiet, out of the content column's way. */
+.sessionBar {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 34rem;
+  margin: 0 auto;
+  width: 100%;
+  padding: var(--space-3) var(--space-5) 0;
+}
+
+.main {
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-5) var(--space-10);
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: var(--space-5) var(--space-4) var(--space-10);
+  }
+}

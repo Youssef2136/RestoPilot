@@ -11,6 +11,8 @@ import {
   type AuthContextMembership,
 } from '../features/auth/useAuthContext'
 import { managementClient } from '../features/management/managementClient'
+import { visibleNavItems, STAFF_NAV_ITEMS } from '../app/navigation'
+import { Card, Grid, SectionHeader, Stack, StatusPill } from '../components/ui'
 
 /**
  * The unified staff area (FR-015): one dashboard across ALL memberships — a
@@ -69,6 +71,19 @@ async function fetchBranchOptions(restaurantId: string | null) {
     throw error
   }
   return data ?? []
+}
+
+/**
+ * Shortcut tiles' accessible names (T012 migration): descriptions that share
+ * NO word with the nav item's own label (getByRole name matching is a
+ * case-insensitive substring — a "Rounds" tile would collide with the
+ * sidebar's Rounds link). Keyed by path.
+ */
+const SHORTCUT_ARIA: Record<string, string> = {
+  '/dashboard': 'Your staff home',
+  '/dashboard/sessions': 'Table oversight across branches',
+  '/dashboard/rounds': 'The order operations queue',
+  '/dashboard/kitchen': 'The preparation ticket board',
 }
 
 /**
@@ -202,8 +217,7 @@ function CreateRestaurantPanel() {
 }
 
 export function DashboardPage() {
-  const { profile, memberships, isPending, isError, canReadStaffList, canManageRestaurant } =
-    useAuthContext()
+  const { profile, memberships, isPending, isError } = useAuthContext()
 
   const restaurants = useMemo(() => groupByRestaurant(memberships), [memberships])
 
@@ -240,38 +254,19 @@ export function DashboardPage() {
     return branches
   }, [branchesQuery.data, selectedRestaurant])
 
-  // Session oversight entry (spec 007 FR-017): owners see it for their
-  // restaurant; branch-scoped manager/cashier memberships see it for their
-  // branch; kitchen and everyone else do not. Presentation only.
-  const canViewSessionsSomewhere = (restaurantId: string) =>
-    memberships.some(
-      (m) =>
-        m.restaurant_id === restaurantId &&
-        (m.role === 'owner' || m.role === 'branch_manager' || m.role === 'cashier'),
-    )
-
-  // Round operations entry (spec 009 FR-005): cashier/manager/owner reach the
-  // cashier dashboard; kitchen reaches the kitchen display instead.
-  const canViewRoundsSomewhere = (restaurantId: string) =>
-    memberships.some(
-      (m) =>
-        m.restaurant_id === restaurantId &&
-        (m.role === 'owner' || m.role === 'branch_manager' || m.role === 'cashier'),
-    )
-  const canViewKitchenSomewhere = (restaurantId: string) =>
-    memberships.some(
-      (m) =>
-        m.restaurant_id === restaurantId &&
-        (m.role === 'owner' ||
-          m.role === 'branch_manager' ||
-          m.role === 'cashier' ||
-          m.role === 'kitchen'),
-    )
-
   const effectiveBranchId =
     selectedBranchId !== null && branchOptions.some((option) => option.id === selectedBranchId)
       ? selectedBranchId
       : (branchOptions[0]?.id ?? '')
+
+  // The operational shortcuts (spec 023 FR-04): the SAME nav model the shell
+  // renders (FR-02 — never a second list), labeled as shortcuts on the home.
+  const shortcuts =
+    selectedRestaurant !== null
+      ? visibleNavItems(STAFF_NAV_ITEMS, memberships, selectedRestaurant.restaurantId).filter(
+          (item) => item.group === 'operations',
+        )
+      : []
 
   return (
     <section>
@@ -289,13 +284,16 @@ export function DashboardPage() {
         <NotAuthorized />
       ) : selectedRestaurant === null ? (
         // A linked profile with no memberships (the derivation above yields a
-        // null selection exactly then): the FR-001 creation bootstrap.
+        // null selection exactly then): the FR-001 creation bootstrap (Q6:
+        // this panel stays ON the dashboard — E2E contract).
         <CreateRestaurantPanel />
       ) : (
-        <>
+        <Stack gap="7">
           <p>Signed in as {profile.display_name}.</p>
 
-          {/* In-dashboard restaurant/branch context selection (FR-015). */}
+          {/* In-dashboard restaurant/branch context selection (FR-015).
+              The shell's ContextSwitcher is the global affordance; these
+              page-level selects remain the E2E contract (Q2). */}
           <div>
             <label htmlFor="dashboard-restaurant">Restaurant</label>
             <select
@@ -328,99 +326,59 @@ export function DashboardPage() {
             </select>
           </div>
 
-          {/* Only the entries the effective roles and scope permit —
-              presentation only (master plan §38). The management entry is
-              owner-only (FR-006/FR-017); the data layer stays the boundary. */}
-          <nav aria-label="Staff area">
-            <ul>
-              <li>
-                <Link to="/dashboard">Dashboard</Link>
-              </li>
-              <li>
-                <Link to="/dashboard/profile">Profile</Link>
-              </li>
-              {canReadStaffList(selectedRestaurant.restaurantId) && (
-                <li>
-                  <Link to="/dashboard/staff">Staff list</Link>
-                </li>
-              )}
-              {canManageRestaurant(selectedRestaurant.restaurantId) && (
-                <li>
-                  <Link to="/dashboard/restaurant">Restaurant</Link>
-                </li>
-              )}
-              {canManageRestaurant(selectedRestaurant.restaurantId) && (
-                <li>
-                  <Link to="/dashboard/menu">Menu</Link>
-                </li>
-              )}
-              {canManageRestaurant(selectedRestaurant.restaurantId) && (
-                <li>
-                  <Link to="/dashboard/tax">Tax</Link>
-                </li>
-              )}
-              {canViewSessionsSomewhere(selectedRestaurant.restaurantId) && (
-                <li>
-                  <Link to="/dashboard/sessions">Sessions</Link>
-                </li>
-              )}
-              {canViewRoundsSomewhere(selectedRestaurant.restaurantId) && (
-                <li>
-                  <Link to="/dashboard/rounds">Rounds</Link>
-                </li>
-              )}
-              {canViewKitchenSomewhere(selectedRestaurant.restaurantId) && (
-                <li>
-                  <Link to="/dashboard/kitchen">Kitchen</Link>
-                </li>
-              )}
-              {(canManageRestaurant(selectedRestaurant.restaurantId) ||
-                memberships.some(
-                  (m) =>
-                    m.restaurant_id === selectedRestaurant.restaurantId &&
-                    m.role === 'branch_manager',
-                )) && (
-                <li>
-                  <Link to="/dashboard/audit">Audit trail</Link>
-                </li>
-              )}
-              {/* Reports + void log (spec 013 US1–US3): owner/manager only
-                  in the navigation (FR-007 absence); the pages and RPCs
-                  re-enforce the reach for every caller regardless. */}
-              {(canManageRestaurant(selectedRestaurant.restaurantId) ||
-                memberships.some(
-                  (m) =>
-                    m.restaurant_id === selectedRestaurant.restaurantId &&
-                    m.role === 'branch_manager',
-                )) && (
-                <li>
-                  <Link to="/dashboard/reports">Reports</Link>
-                </li>
-              )}
-              {(canManageRestaurant(selectedRestaurant.restaurantId) ||
-                memberships.some(
-                  (m) =>
-                    m.restaurant_id === selectedRestaurant.restaurantId &&
-                    m.role === 'branch_manager',
-                )) && (
-                <li>
-                  <Link to="/dashboard/voids">Void log</Link>
-                </li>
-              )}
-            </ul>
-          </nav>
+          {/* Operational shortcuts (FR-04): the nav model's operations group
+              as tiles — the same predicate matrix as the sidebar (FR-02).
+              Each tile's accessible name is its DESCRIPTION ONLY: the item's
+              own label ("Rounds", "Sessions"…) appears once on the page — in
+              the sidebar — because getByRole name matching is a case-
+              insensitive substring (T012 migration; a duplicated label in a
+              tile would break `getByRole('link', { name: 'Rounds' })`). */}
+          <section aria-label="Operational shortcuts">
+            <Grid min="12rem" gap="4">
+              {shortcuts.map((item) => (
+                <Card key={item.path}>
+                  <Link
+                    to={item.path}
+                    aria-label={SHORTCUT_ARIA[item.path] ?? item.label}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.25rem',
+                      textDecoration: 'none',
+                      color: 'inherit',
+                      padding: '0.25rem',
+                    }}
+                  >
+                    <strong aria-hidden="true">{item.label}</strong>
+                    <span
+                      aria-hidden="true"
+                      style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-ink-muted)' }}
+                    >
+                      {item.path === '/dashboard/sessions' && 'Oversight across your branches.'}
+                      {item.path === '/dashboard/rounds' && 'The operations queue.'}
+                      {item.path === '/dashboard/kitchen' && 'The ticket board.'}
+                      {item.path === '/dashboard' && 'Your staff home.'}
+                    </span>
+                  </Link>
+                </Card>
+              ))}
+            </Grid>
+          </section>
 
-          <h2>Your scope</h2>
-          <ul>
-            {memberships.map((membership) => (
-              <li
-                key={`${membership.restaurant_id}:${membership.role}:${membership.branch_id ?? 'all'}`}
-              >
-                {membership.restaurant_name} — {membership.role} —{' '}
-                {membership.branch_name ?? 'all branches'}
-              </li>
-            ))}
-          </ul>
+          <section>
+            <SectionHeader title="Your scope" />
+            <ul>
+              {memberships.map((membership) => (
+                <li
+                  key={`${membership.restaurant_id}:${membership.role}:${membership.branch_id ?? 'all'}`}
+                >
+                  {membership.restaurant_name} — {membership.role} —{' '}
+                  {membership.branch_name ?? 'all branches'}{' '}
+                  {membership.role === 'owner' && <StatusPill tone="brand">owner</StatusPill>}
+                </li>
+              ))}
+            </ul>
+          </section>
 
           {/* Branch links, per scope (FR-017): the policy-scoped read above
               yields exactly the caller's readable branches — every branch for
@@ -438,7 +396,7 @@ export function DashboardPage() {
               </ul>
             </nav>
           )}
-        </>
+        </Stack>
       )}
     </section>
   )

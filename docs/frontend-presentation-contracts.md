@@ -76,8 +76,23 @@ Live regions: **54 × `role="alert"`** and **13 × `role="status"`** (+ 1 `role=
 | -------------------------- | ------------------------------------------ | ----------------------------------- |
 | `restopilot.session-token` | customer session token (customer identity) | asserted across auth/session suites |
 | `restopilot.cart`          | customer cart lines                        | asserted by order/cart suites       |
+| `restopilot.dashboard-context` | ContextSwitcher selection `{restaurantId, branchId}` (sessionStorage) | asserted by `e2e/shell.test.ts` (phase 023) — persistence across routes |
 
-**Change discipline:** frozen for the entire frontend plan. No phase may rename or repurpose them; a rename is a cross-cutting contract change requiring an owner-approved spec amendment (Master Plan §3.7).
+**Change discipline:** the first two rows are frozen for the entire frontend plan. No phase may rename or repurpose them; a rename is a cross-cutting contract change requiring an owner-approved spec amendment (Master Plan §3.7). The dashboard-context row is phase-023-added: same discipline from its introduction.
+
+## Phase 023 presentation migrations (F-G09/FA-8: names preserved, role/region changed)
+
+Recorded per the phase-023 spec's migration-list requirement — every row preserves the assertion's TEXT while moving its ROLE or surface:
+
+| Surface | Before (phase ≤ 022) | After (023) | Migrated suites |
+| --- | --- | --- | --- |
+| Global navigation | AppShell `navigation` landmark on every route | Removed: StaffShell sidebar + mobile Drawer carry the model; `/` renders CustomerShell with NO nav (smoke contract: `main` visible, `navigation` count 0) | smoke, responsive.smoke, route.titles consumers |
+| Dashboard shortcut tiles | visible-text links (names collided with nav labels under substring matching) | same routes behind `aria-label`s from the `SHORTCUT_ARIA` map ('Your staff home', 'Table oversight across branches', 'The order operations queue', 'The preparation ticket board'); visible text `aria-hidden` | navigation tests, session/management suites |
+| Shell context labels | page-level "Restaurant"/"Branch" selects doubled in the header | switcher labeled "Viewing — Where" / "Viewing — Scope" (ids `context-restaurant`/`context-branch`; NO shell label may contain "Restaurant"/"Branch" — accessible-name matching is case-insensitive SUBSTRING) | session.surfaces, shell |
+| Toast host | none (silent/inline-only outcomes) | `role="region" aria-label="Notifications" aria-live="polite"` — deliberately NOT `role="status"` (an always-present status collides with surfaces' strict `getByRole('status')` lookups) | ui structure pin; inline statuses unchanged (Q3: accompany, never replace) |
+| Session close / void / membership removal / subscription disable | two-step INLINE buttons (step 2 name e.g. "Confirm closing T1") | `ConfirmDialog` wraps the same two steps; step-1 button name kept, dialog confirm keeps step-2's name verbatim; void gains required-reason gating via `confirmDisabled` | session.surfaces, full-journey, bill.void.audit (2/2), management, platform |
+| Expiry redirect | bare `/signin` redirect | `state.expired: true` carried; SignInPage renders "Your session has ended. Sign in again to continue." (`role="status"`) | auth.guards pin, auth.routes |
+| `signOut` reachability | AppShell header (every route) | StaffShell header + CustomerShell session bar (credential routes keep a signed-out affordance — NOT a nav link; FR-01 zero-nav intact) | auth.routes walkthrough, shell |
 
 ## Hooks this phase introduced (new ledger entries)
 
@@ -87,5 +102,9 @@ Live regions: **54 × `role="alert"`** and **13 × `role="status"`** (+ 1 `role=
 | `document.title` per route           | route-metadata registry (`src/app/routes.ts`) — swept by `e2e/route.titles.test.ts` | 021   |
 | `meta[name="description"]` per route | same registry, same sweep                                                           | 021   |
 | `.skip-link` class                   | base styling contract (`src/styles/base.css`)                                       | 021   |
+| `aria-label` on nav `<nav>`           | "Staff area" / "Platform area" — the nav-matrix selector (`e2e/shell.test.ts`)       | 023   |
+| `data-round-state` / `data-round-id` / `data-voided` on the round card | the ops-suites' card scoping (bill.void.audit, reports, full-journey) | 023 (formalized) |
+| ConfirmDialog role=`dialog` two-step names | destructive confirmations keep step-2 button names verbatim | 023 |
+| Offline banner `role="status"` + "Retry now" | the shell's connectivity surface (`e2e/shell.test.ts`) | 023 |
 
 New suites introduced by Phase 021: `e2e/route.titles.test.ts`, `e2e/a11y.baseline.test.ts`, `e2e/responsive.smoke.test.ts`, `e2e/gallery.error.test.ts` — their assertions join this ledger.

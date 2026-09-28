@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
+import { signInAs } from './helpers/signInAs'
 
 /**
  * Session surfaces E2E — US1 block (spec 007 T015; SC-001; FR-001…FR-005;
@@ -99,16 +100,6 @@ test('a joined session survives a reload through the stored token (US3 preview, 
 
 /* ── US2: the staff oversight surface (T019; SC-003, SC-005, FR-009, FR-017) ── */
 
-/** Signs a seeded identity in through the /signin form (auth.routes pattern). */
-async function signInAs(page: Page, credentials: { email: string; password: string }) {
-  await page.goto('/signin')
-  await page.getByLabel('Email').fill(credentials.email)
-  await page.getByLabel('Password').fill(credentials.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  // The sign-in completes asynchronously — never navigate before it lands.
-  await expect(page).toHaveURL(/\/dashboard$/)
-}
-
 test('a second window joins the open table: one session, two participants (SC-003, FR-006)', async ({
   browser,
 }) => {
@@ -197,7 +188,9 @@ test('the owner closes a session through the confirmed action (SC-005, FR-009)',
 
   await t1row.getByRole('button', { name: 'Close session for T1' }).click()
   await page.getByRole('button', { name: 'Confirm closing T1' }).click()
-  await expect(page.getByText(/T1.s session was closed/)).toBeVisible()
+  // Inline status carries the closure notice; the toast host is role="region"
+  // so the strict role="status" lookup stays single-element.
+  await expect(page.getByRole('status')).toContainText(/T1.s session was closed/)
   // The refetch is the state: the closed session left the list.
   await expect(page.getByRole('listitem').filter({ hasText: 'T1' })).toHaveCount(0)
 })
@@ -242,7 +235,9 @@ test('a closed session refuses recovery and returns to entry (SC-004, FR-014)', 
   await expect(t1row).toContainText('Recovery Guest')
   await t1row.getByRole('button', { name: 'Close session for T1' }).click()
   await page.getByRole('button', { name: 'Confirm closing T1' }).click()
-  await expect(page.getByText(/T1.s session was closed/)).toBeVisible()
+  // Inline status carries the closure notice; the toast host is role="region"
+  // so the strict role="status" lookup stays single-element.
+  await expect(page.getByRole('status')).toContainText(/T1.s session was closed/)
 
   // Back on the customer route: the refused recovery returns to entry —
   // the reassociation rule surfaced, token cleared.

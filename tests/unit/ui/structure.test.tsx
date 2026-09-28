@@ -97,7 +97,11 @@ describe('Toast contract (spec 022 T012)', () => {
         <ToastProbe />
       </ToastProvider>,
     )
-    expect(html).toMatch(/role="status"/)
+    // The host is a polite live REGION (not role="status"): an always-present
+    // status element collides with surfaces' asserted getByRole('status')
+    // strict-mode lookups (spec 023 T006 migration note).
+    expect(html).toMatch(/role="region"/)
+    expect(html).toContain('aria-live="polite"')
     expect(html).toContain('aria-label="Notifications"')
   })
 })

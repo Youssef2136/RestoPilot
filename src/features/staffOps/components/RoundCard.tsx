@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ConfirmDialog } from '../../../components/ui'
 import { formatPrice } from '../../menu/money'
 import { channelLabel } from '../../session/sessionClient'
 import type { BranchRound, RoundActionResult } from '../staffOpsClient'
@@ -179,43 +180,53 @@ export function RoundCard({
 
         {/* The void control (spec 011 FR-004): boundary states only, the
             reason prompt with the non-empty check as client-side feedback —
-            the server re-validates in its documented order regardless. */}
-        {!round.voided && VOIDABLE(round) && !voiding && (
+            the server re-validates in its documented order regardless.
+            Spec 023 FR-06 (Q4): the two-step void runs through the
+            ConfirmDialog primitive — "Void round" opens, "Confirm void"
+            confirms, "Cancel" cancels (E2E contract names). */}
+        {!round.voided && VOIDABLE(round) && (
           <button type="button" disabled={busy} onClick={() => setVoiding(true)}>
             Void round
           </button>
         )}
-        {!round.voided && VOIDABLE(round) && voiding && (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault()
+        {!round.voided && VOIDABLE(round) && (
+          <ConfirmDialog
+            open={voiding}
+            onCancel={() => {
+              setVoiding(false)
+              setVoidReason('')
+            }}
+            onConfirm={() => {
               if (!reasonOk || busy) return
               onVoid(voidReason.trim())
               setVoiding(false)
               setVoidReason('')
             }}
+            title={`Void ${round.table_label ?? 'round'}`.trim()}
+            confirmLabel="Confirm void"
+            cancelLabel="Cancel"
+            confirmDisabled={!reasonOk}
+            busy={busy}
           >
-            <label htmlFor={`void-reason-${round.round_id}`}>Void reason</label>
-            <input
-              id={`void-reason-${round.round_id}`}
-              value={voidReason}
-              onChange={(event) => setVoidReason(event.target.value)}
-              maxLength={500}
-              placeholder="Why is this round being voided?"
-            />
-            <button type="submit" disabled={!reasonOk || busy}>
-              Confirm void
-            </button>
-            <button
-              type="button"
-              onClick={() => {
+            <form
+              onSubmit={(event) => {
+                event.preventDefault()
+                if (!reasonOk || busy) return
+                onVoid(voidReason.trim())
                 setVoiding(false)
                 setVoidReason('')
               }}
             >
-              Cancel
-            </button>
-          </form>
+              <label htmlFor={`void-reason-${round.round_id}`}>Void reason</label>
+              <input
+                id={`void-reason-${round.round_id}`}
+                value={voidReason}
+                onChange={(event) => setVoidReason(event.target.value)}
+                maxLength={500}
+                placeholder="Why is this round being voided?"
+              />
+            </form>
+          </ConfirmDialog>
         )}
         <label>
           <input
