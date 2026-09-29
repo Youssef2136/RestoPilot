@@ -1,0 +1,45 @@
+/* Spec 025 — /r/:slug/menu composition. Phase-02 tokens only. */
+
+.page {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  margin: 0;
+  font-size: var(--font-size-xl);
+}
+
+.menuLayout {
+  display: grid;
+  gap: var(--space-4);
+}
+
+/* Mobile: the cart is a bottom sheet — sticky to the viewport bottom with
+   internal scroll (always reachable with one thumb; no navigation away). */
+.cartColumn {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  max-height: 45dvh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-2);
+}
+
+/* Desktop: the cart becomes a side panel next to the menu. */
+@media (min-width: 1024px) {
+  .menuLayout {
+    grid-template-columns: minmax(0, 1fr) 22rem;
+    align-items: start;
+  }
+
+  .cartColumn {
+    position: sticky;
+    top: 4rem;
+    max-height: none;
+    box-shadow: none;
+  }
+}

@@ -1,31 +1,65 @@
-import { formatPrice } from '../../menu/money'
-import { useSessionRounds } from '../useOrder'
+import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useSessionRounds, sessionRoundsKey } from '../useOrder'
+import { roundStateLabel } from '../roundStateLabels'
+import { sessionTokenScope } from '../../session/useSession'
+import { TotalsPanel } from '../../../components/money/TotalsPanel'
+import styles from './order.surfaces.module.css'
 
 /**
- * The rounds history (spec 008 T019; contracts/order-client.md §4; US3,
- * FR-011): the session's rounds with items, extras, the CAPTURED prices,
- * and the captured tax lines — read from the server on mount (the reload
- * proof, SC-005's server half) and invalidated by a new submission.
+ * The rounds history (spec 025 T006/T007; FR-06/FR-09): the session's rounds
+ * with items, extras, and the CAPTURED money — read from the server on mount
+ * and invalidated by a new submission, on the unchanged 10 s poll (the
+ * customer has no realtime subscription; the poll IS their live status).
  *
- * Every money figure here comes from the round's own columns and rows —
- * the captured state, never a recomputation (Risk 6; Constitution II).
+ * Every money figure renders through TotalsPanel/MoneyText from the round's
+ * own columns and rows — the captured state, never a recomputation.
+ *
+ * Freshness (Q3): an "Updated Xs ago" line ticks each second, and the manual
+ * refresh button invalidates the rounds read immediately. While a fetch is
+ * in flight the button marks itself `data-stale` (FR-09's honest degradation
+ * — the last good data stays on screen).
  */
-/**
- * Customer-facing wording for a round's lifecycle state (the §8.2 machine,
- * 009): the customer sees where their order stands, not the raw column.
- * `new` is "Sent to kitchen" — the submission is the customer's last act;
- * `lock` is "Served" — the cashier's close of service.
- */
-const ROUND_STATE_LABEL: Record<string, string> = {
-  new: 'Sent to kitchen',
-  accepted: 'Accepted',
-  preparing: 'Being prepared',
-  ready: 'Ready',
-  lock: 'Served',
+
+function RefreshAffordance({
+  updatedAt,
+  isFetching,
+  onRefresh,
+}: {
+  updatedAt: number
+  isFetching: boolean
+  onRefresh: () => void
+}) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const seconds = Math.max(0, Math.floor((now - updatedAt) / 1000))
+
+  return (
+    <p className={styles.refreshMeta}>
+      Updated {seconds}s ago{' '}
+      <button
+        type="button"
+        className={styles.smallButton}
+        data-stale={isFetching || undefined}
+        onClick={onRefresh}
+      >
+        Refresh
+      </button>
+    </p>
+  )
 }
 
 export function RoundsHistory() {
   const roundsQuery = useSessionRounds()
+  const queryClient = useQueryClient()
+  const token = sessionTokenScope()
+  const refetchRounds = () =>
+    void queryClient.invalidateQueries({ queryKey: sessionRoundsKey(token) })
 
   if (roundsQuery.isPending) {
     return null
@@ -46,46 +80,48 @@ export function RoundsHistory() {
 
   return (
     <section aria-label="Your rounds">
-      <h2>Your rounds</h2>
+      <div className={styles.historyHeader}>
+        <h2>Your rounds</h2>
+        <RefreshAffordance
+          updatedAt={roundsQuery.dataUpdatedAt}
+          isFetching={roundsQuery.isFetching}
+          onRefresh={refetchRounds}
+        />
+      </div>
       {rounds.length === 0 && <p>No rounds yet.</p>}
-      <ul>
+      <ul className={styles.roundList}>
         {rounds.map((round, index) => (
-          <li key={round.id}>
-            <p>
+          <li key={round.id} className={styles.roundCard}>
+            <p className={styles.roundHeading}>
               <strong>
                 Round {index + 1} — {new Date(round.created_at).toLocaleTimeString()}
               </strong>{' '}
-              — {ROUND_STATE_LABEL[round.state] ?? round.state}
+              <span className={styles.stateChip}>{roundStateLabel(round.state)}</span>
             </p>
-            <ul>
+            <ul className={styles.itemListCompact}>
               {round.items.map((item) => (
                 <li key={item.id}>
-                  {item.name} × {item.quantity} — {formatPrice(item.unit_price)}
+                  {item.name} × {item.quantity}
                   {item.extras.length > 0 && (
                     <ul>
                       {item.extras.map((extra) => (
-                        <li key={extra.extra_id}>
-                          {extra.name} — {formatPrice(extra.price_adjustment)}
-                        </li>
+                        <li key={extra.extra_id}>{extra.name}</li>
                       ))}
                     </ul>
                   )}
                 </li>
               ))}
             </ul>
-            <p>
-              Subtotal {formatPrice(round.subtotal)}
-              {round.tax_lines.length > 0 && (
-                <>
-                  {' '}
-                  {round.tax_lines.map((line) => {
-                    const taxLine = line as { name?: string; amount?: string }
-                    return `${taxLine.name ?? 'Tax'} ${taxLine.amount ?? ''}`.trim()
-                  })}
-                </>
-              )}{' '}
-              — Total {formatPrice(round.tax_total)}
-            </p>
+            <TotalsPanel
+              totals={{
+                subtotal: round.subtotal,
+                taxLines: round.tax_lines.map((line) => {
+                  const taxLine = line as { name?: string; amount?: string }
+                  return { name: taxLine.name ?? 'Tax', amount: taxLine.amount ?? '' }
+                }),
+                total: round.tax_total,
+              }}
+            />
           </li>
         ))}
       </ul>

@@ -1,0 +1,35 @@
+.panel {
+  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.row dt {
+  color: var(--color-text-muted);
+}
+
+.row dd {
+  margin: 0;
+}
+
+.total {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-1);
+}
+
+.total dt {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.advisoryRow {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}

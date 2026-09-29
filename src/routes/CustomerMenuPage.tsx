@@ -1,23 +1,34 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
-import { CartPanel } from '../features/order/components/CartPanel'
+import { CartRegion } from '../features/order/components/CartRegion'
+import { CategoryNav } from '../features/order/components/CategoryNav'
+import { MenuSections } from '../features/order/components/MenuSections'
 import { RoundsHistory } from '../features/order/components/RoundsHistory'
 import { SessionIndicator } from '../features/session/components/SessionIndicator'
 import { SESSION_UNAVAILABLE_MESSAGE } from '../features/session/sessionClient'
-import { forgetSession, sessionTokenScope, useSessionMenu } from '../features/session/useSession'
+import {
+  forgetSession,
+  sessionTokenScope,
+  useSessionContext,
+  useSessionMenu,
+} from '../features/session/useSession'
+import { useCart } from '../features/order/useOrder'
+import styles from './CustomerMenuPage.module.css'
 
 /**
- * The customer menu page (spec 007 FR-021; contracts/session-client.md §3):
- * `/r/:slug/menu` — the session's branch menu, as the database assembles it
- * for the token's session (feature 005's payload), under the session
- * indicator. No dashboard chrome.
+ * The customer menu page (spec 025; contracts/session-client.md §3):
+ * `/r/:slug/menu` — the session indicator, the branch-named menu with its
+ * category bar, the cart as a moving sheet/panel (Q1), and the rounds
+ * history with the freshness affordance. No dashboard chrome.
  *
- * The recovery rule (FR-013, FR-014): the route mount attempts the reads
- * from the stored token; a refused recovery — the single indistinguishable
- * refusal, or no token at all — clears the device and returns the customer
- * to the entry route. The client clears the token on the refusal; the
- * forget keeps the cache in step and the redirect completes the rule.
+ * The recovery rule (FR-013, FR-014 — frozen): the route mount attempts the
+ * reads from the stored token; a refused recovery — the single
+ * indistinguishable refusal, or no token at all — clears the device and
+ * returns the customer to the entry route. Unchanged from its 007/024 shape.
+ *
+ * The channel (for the CutoffNotice state) rides the same session-context
+ * read the indicator uses — no new customer read.
  */
 export function CustomerMenuPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -25,6 +36,8 @@ export function CustomerMenuPage() {
   const queryClient = useQueryClient()
   const token = sessionTokenScope()
   const menuQuery = useSessionMenu()
+  const contextQuery = useSessionContext()
+  const { addLine } = useCart()
 
   const backToEntry = () => navigate(slug ? `/r/${slug}` : '/', { replace: true })
 
@@ -49,7 +62,7 @@ export function CustomerMenuPage() {
 
   if (menuQuery.isPending) {
     return (
-      <section>
+      <section className={styles.page}>
         <SessionIndicator />
         <p>Loading the menu…</p>
       </section>
@@ -58,7 +71,7 @@ export function CustomerMenuPage() {
 
   if (menuQuery.isError || !menuQuery.data) {
     return (
-      <section>
+      <section className={styles.page}>
         <SessionIndicator />
         <p role="alert">{menuQuery.error?.message ?? 'The menu could not be loaded.'}</p>
         <p>
@@ -69,12 +82,21 @@ export function CustomerMenuPage() {
   }
 
   const menu = menuQuery.data
+  const channel = contextQuery.data?.session.type ?? 'dine-in'
 
   return (
-    <section>
+    <section className={styles.page}>
       <SessionIndicator />
-      <h1>{menu.branch.name}</h1>
-      <CartPanel menu={menu} />
+      <h1 className={styles.pageTitle}>{menu.branch.name}</h1>
+      <CategoryNav categories={menu.categories} />
+      <div className={styles.menuLayout}>
+        <div>
+          <MenuSections menu={menu} onAdd={addLine} />
+        </div>
+        <div className={styles.cartColumn}>
+          <CartRegion menu={menu} channel={channel} />
+        </div>
+      </div>
       <RoundsHistory />
     </section>
   )
