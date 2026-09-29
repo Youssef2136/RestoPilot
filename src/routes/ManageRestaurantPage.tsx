@@ -6,6 +6,8 @@ import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext, type AuthContextMembership } from '../features/auth/useAuthContext'
 import { managementClient, type RestaurantRow } from '../features/management/managementClient'
 import { RestaurantQrPanel } from '../features/management/components/RestaurantQrPanel'
+import { ManagementLayout } from '../components/management/ManagementLayout'
+import { SectionCard } from '../components/management/SectionCard'
 
 /**
  * Restaurant management page (contracts/management-client.md §2/§4.1): the
@@ -142,8 +144,7 @@ function RestaurantProfileForm({ restaurant }: { restaurant: RestaurantRow }) {
   }
 
   return (
-    <section aria-labelledby="restaurant-profile-heading">
-      <h2 id="restaurant-profile-heading">Profile</h2>
+    <SectionCard id="profile" title="Profile">
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="restaurant-name">Display name</label>
@@ -221,7 +222,7 @@ function RestaurantProfileForm({ restaurant }: { restaurant: RestaurantRow }) {
           New public entry URL: <code>{entryUrl}</code>
         </p>
       )}
-    </section>
+    </SectionCard>
   )
 }
 
@@ -264,8 +265,7 @@ function RestaurantSettingsForm({ restaurant }: { restaurant: RestaurantRow }) {
   }
 
   return (
-    <section aria-labelledby="restaurant-settings-heading">
-      <h2 id="restaurant-settings-heading">Settings</h2>
+    <SectionCard id="settings" title="Settings">
       <form onSubmit={handleSubmit}>
         <div>
           <label htmlFor="restaurant-timezone">Timezone</label>
@@ -289,7 +289,7 @@ function RestaurantSettingsForm({ restaurant }: { restaurant: RestaurantRow }) {
       {feedback !== null && (
         <p role={feedback.tone === 'error' ? 'alert' : 'status'}>{feedback.message}</p>
       )}
-    </section>
+    </SectionCard>
   )
 }
 
@@ -385,12 +385,23 @@ export function ManageRestaurantPage() {
         <p>The restaurant's configuration is not available.</p>
       ) : (
         <>
-          <RestaurantProfileForm key={restaurant.id} restaurant={restaurant} />
-          <RestaurantSettingsForm key={restaurant.id} restaurant={restaurant} />
-          {/* Keyed on the slug: a confirmed identifier change re-renders the
-              panel with the new payload, so the next download encodes the new
-              public entry URL (FR-004/FR-018). */}
-          <RestaurantQrPanel key={`qr-${restaurant.slug}`} slug={restaurant.slug} />
+          <ManagementLayout
+            label="Restaurant sections"
+            sections={[
+              { id: 'profile', label: 'Profile' },
+              { id: 'settings', label: 'Settings' },
+              { id: 'qr', label: 'Entry QR' },
+            ]}
+          >
+            <RestaurantProfileForm key={restaurant.id} restaurant={restaurant} />
+            <RestaurantSettingsForm key={restaurant.id} restaurant={restaurant} />
+            {/* Keyed on the slug: a confirmed identifier change re-renders the
+                panel with the new payload, so the next download encodes the new
+                public entry URL (FR-004/FR-018). */}
+            <SectionCard id="qr" scope="owner">
+              <RestaurantQrPanel key={`qr-${restaurant.slug}`} slug={restaurant.slug} />
+            </SectionCard>
+          </ManagementLayout>
         </>
       )}
 

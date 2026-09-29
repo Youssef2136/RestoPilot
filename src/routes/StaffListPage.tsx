@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { useMemo, useState } from 'react'
 import { getSupabaseClient } from '../lib/supabase'
 import { NotAuthorized } from '../features/auth/guards'
+import styles from './StaffListPage.module.css'
 import {
   useAuthContext,
   type AuthContextMembership,
@@ -205,7 +206,6 @@ export function StaffListPage() {
           </select>
         </div>
       )}
-
       <p>
         Members of {selectedRestaurant?.restaurant_name ?? 'the selected restaurant'} and their
         roles.
@@ -218,24 +218,26 @@ export function StaffListPage() {
       ) : staffQuery.data.length === 0 ? (
         <p>No staff members found for this restaurant.</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Role</th>
-              <th scope="col">Branch</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staffQuery.data.map((row) => (
-              <tr key={row.membershipId}>
-                <td>{row.displayName ?? 'Unknown member'}</td>
-                <td>{row.role}</td>
-                <td>{describeBranch(row.branchId)}</td>
+        <div className={styles.tableWrap}>
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Role</th>
+                <th scope="col">Branch</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {staffQuery.data.map((row) => (
+                <tr key={row.membershipId}>
+                  <td data-label="Name">{row.displayName ?? 'Unknown member'}</td>
+                  <td data-label="Role">{row.role}</td>
+                  <td data-label="Branch">{describeBranch(row.branchId)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {isOwner && (

@@ -144,3 +144,26 @@ Money fidelity is structural: `MoneyText`/`TotalsPanel` (`src/components/money/`
 | Menu route a11y      | not scanned                                                              | axe WCAG 2.2 AA session-gated scan in customer.menu (needs a token — cannot join the signed-out baseline sweep)                                                                                     | customer.menu                                  |
 
 New suites: `e2e/customer.menu.test.ts` (serial, one worker, joins Downtown T2 — NOT the pinned T3 surface). Evidence: `specs/025-customer-ordering-ux/evidence/` (3× 390px journey, desktop side panel).
+
+## Phase 026 presentation record (management surfaces)
+
+Management layout language introduced from 022 tokens: `ManagementLayout` (sticky in-page section
+nav — labels 'Restaurant sections' / 'Branch sections', deliberately NOT 'Staff area'),
+`SectionCard` (optional h2 — children may own a pinned heading), `ScopeBadge` ('Owner controls' /
+'Read-only', text-bearing), `StatusPill` ('Active' / 'Inactive'), `BranchHeader` (h1 name). NO
+frozen anchor moved: every management.surfaces pin (h1/h2s, identifier warning copy, toggle
+names, hours labels, QR heading/downloads, denial h1s) and the full-journey staff chain passed
+unedited.
+
+| Surface / hook           | Before (phase ≤ 025)                    | After (026)                                                                                                        | Asserted by                                           |
+| ------------------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| Restaurant page sections | stacked h2 sections                     | SectionCards (profile/settings/qr ids) under the section nav; fragments reflected in the URL (`#qr`)               | management.surfaces + management.staff (fragment nav) |
+| Branch detail            | h1 + stacked sections + link paragraphs | BranchHeader (meta links) + section nav (hours/tables) + ScopeBadge per section; tables rows carry StatusPill      | management.surfaces, management.staff                 |
+| Table rows               | bare text 'Active'/'Inactive'           | StatusPill text chips (same strings inside the pinned listitems)                                                   | management.surfaces                                   |
+| Staff list               | bare table                              | same table semantics (`th scope`) wrapped for scroll; mobile card-row fallback via `td[data-label]` pseudo-content | management.staff (390px)                              |
+| Staff panel              | standalone section                      | unchanged behavior; read-only hints live on the page sections, not the panel                                       | management.staff                                      |
+
+New suite: `e2e/management.staff.test.ts` (serial; scratch-identity provisioning self-cleans via
+the removal dialog; unique emails/names per run; clipboard permission granted for the copy
+affordance). Evidence: `specs/026-management-ux/evidence/` (restaurant sections, branch detail,
+staff list, credential reveal).

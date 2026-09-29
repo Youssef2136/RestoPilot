@@ -13,6 +13,11 @@ import {
 import { WorkingHoursEditor } from '../features/management/components/WorkingHoursEditor'
 import { WEEKDAY_LABELS, formatInterval, toEditorState } from '../features/management/workingHours'
 import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
+import { ManagementLayout } from '../components/management/ManagementLayout'
+import { SectionCard } from '../components/management/SectionCard'
+import { StatusPill } from '../components/management/StatusPill'
+import { BranchHeader } from '../components/management/BranchHeader'
+import styles from './BranchDetailPage.module.css'
 
 /**
  * The branch view (contracts/management-client.md §2; FR-008, FR-009,
@@ -144,8 +149,8 @@ function DiningTableRowItem({ table, canManage }: { table: DiningTableRow; canMa
   }
 
   return (
-    <li>
-      <span>{table.label}</span> <span>{table.is_active ? 'Active' : 'Inactive'}</span>
+    <li className={styles.tableRow}>
+      <span>{table.label}</span> <StatusPill state={table.is_active ? 'Active' : 'Inactive'} />
       {canManage &&
         (renaming ? (
           <form onSubmit={handleRename}>
@@ -225,8 +230,7 @@ function DiningTablesSection({ branchId, isOwner }: { branchId: string; isOwner:
   const tables = tablesQuery.data ?? []
 
   return (
-    <section aria-labelledby="branch-tables-heading">
-      <h2 id="branch-tables-heading">Tables</h2>
+    <SectionCard id="tables" title="Tables" scope={isOwner ? 'owner' : 'read-only'}>
       {tablesQuery.isPending ? (
         <p>Loading the tables…</p>
       ) : tablesQuery.isError ? (
@@ -234,7 +238,7 @@ function DiningTablesSection({ branchId, isOwner }: { branchId: string; isOwner:
       ) : tables.length === 0 ? (
         <p>No tables in this branch yet.</p>
       ) : (
-        <ul>
+        <ul className={styles.tableList}>
           {tables.map((table) => (
             <DiningTableRowItem key={table.id} table={table} canManage={isOwner} />
           ))}
@@ -260,7 +264,7 @@ function DiningTablesSection({ branchId, isOwner }: { branchId: string; isOwner:
       {feedback !== null && (
         <p role={feedback.tone === 'error' ? 'alert' : 'status'}>{feedback.message}</p>
       )}
-    </section>
+    </SectionCard>
   )
 }
 
@@ -324,50 +328,55 @@ export function BranchDetailPage() {
 
   return (
     <section>
-      <h1>{branch.name}</h1>
+      <BranchHeader
+        name={branch.name}
+        meta={
+          <>
+            <Link to={`/dashboard/branches/${branch.id}/menu`}>{`${branch.name} menu`}</Link>
+            <Link to={`/dashboard/branches/${branch.id}/tax`}>{`${branch.name} tax`}</Link>
+            {canViewSessions(branch.id) && (
+              <Link
+                to={`/dashboard/sessions?branch=${branch.id}`}
+              >{`${branch.name} sessions`}</Link>
+            )}
+          </>
+        }
+      />
 
-      <p>
-        <Link to={`/dashboard/branches/${branch.id}/menu`}>{`${branch.name} menu`}</Link>
-      </p>
+      <ManagementLayout
+        label="Branch sections"
+        sections={[
+          { id: 'hours', label: 'Working hours' },
+          { id: 'tables', label: 'Tables' },
+        ]}
+      >
+        <SectionCard id="hours" title="Working hours" scope={isOwner ? 'owner' : 'read-only'}>
+          {hoursQuery.isPending ? (
+            <p>Loading the working hours…</p>
+          ) : hoursQuery.isError ? (
+            <p role="alert">The working hours could not be loaded. Try again.</p>
+          ) : hours.length === 0 ? (
+            // No rows at all — nothing configured yet (FR-008).
+            <p>No hours configured.</p>
+          ) : (
+            <ul>
+              {toEditorState(hours).map((day) => (
+                <li key={day.weekday}>
+                  {WEEKDAY_LABELS[day.weekday]}:{' '}
+                  {day.intervals.length === 0
+                    ? 'Closed'
+                    : day.intervals.map((interval) => formatInterval(interval)).join(', ')}
+                </li>
+              ))}
+            </ul>
+          )}
+          {isOwner && !hoursQuery.isPending && !hoursQuery.isError && (
+            <WorkingHoursEditor key={branch.id} branchId={branch.id} schedule={hours} />
+          )}
+        </SectionCard>
 
-      <p>
-        <Link to={`/dashboard/branches/${branch.id}/tax`}>{`${branch.name} tax`}</Link>
-      </p>
-
-      {canViewSessions(branch.id) && (
-        <p>
-          <Link to={`/dashboard/sessions?branch=${branch.id}`}>{`${branch.name} sessions`}</Link>
-        </p>
-      )}
-
-      <section aria-labelledby="branch-working-hours-heading">
-        <h2 id="branch-working-hours-heading">Working hours</h2>
-        {hoursQuery.isPending ? (
-          <p>Loading the working hours…</p>
-        ) : hoursQuery.isError ? (
-          <p role="alert">The working hours could not be loaded. Try again.</p>
-        ) : hours.length === 0 ? (
-          // No rows at all — nothing configured yet (FR-008).
-          <p>No hours configured.</p>
-        ) : (
-          <ul>
-            {toEditorState(hours).map((day) => (
-              <li key={day.weekday}>
-                {WEEKDAY_LABELS[day.weekday]}:{' '}
-                {day.intervals.length === 0
-                  ? 'Closed'
-                  : day.intervals.map((interval) => formatInterval(interval)).join(', ')}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {isOwner && !hoursQuery.isPending && !hoursQuery.isError && (
-        <WorkingHoursEditor key={branch.id} branchId={branch.id} schedule={hours} />
-      )}
-
-      <DiningTablesSection key={`tables-${branch.id}`} branchId={branch.id} isOwner={isOwner} />
+        <DiningTablesSection key={`tables-${branch.id}`} branchId={branch.id} isOwner={isOwner} />
+      </ManagementLayout>
 
       <p>
         <Link to="/dashboard/branches">All branches</Link>

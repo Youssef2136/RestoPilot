@@ -1,0 +1,34 @@
+/* Spec 026 — branch detail (tables list density + mobile card fallback). */
+
+.tableList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tableRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.tableRow form {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Mobile: each table row becomes a card (the documented fallback). */
+@media (max-width: 767px) {
+  .tableRow {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+  }
+}

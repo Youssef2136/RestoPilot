@@ -1,0 +1,53 @@
+/* Spec 026 — staff list density + mobile card-row fallback. */
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.tableWrap table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tableWrap th {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border-strong, var(--color-border));
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.tableWrap td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Mobile: the table becomes card rows — each td labels itself via its
+   data-label attribute (same DOM, no duplicated markup). */
+@media (max-width: 767px) {
+  .tableWrap thead {
+    display: none;
+  }
+
+  .tableWrap tr {
+    display: block;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-2);
+  }
+
+  .tableWrap td {
+    display: block;
+    border-bottom: none;
+    padding: var(--space-1) 0;
+  }
+
+  .tableWrap td::before {
+    content: attr(data-label);
+    display: inline-block;
+    width: 5.5rem;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-sm);
+  }
+}
