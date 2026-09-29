@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
 import { signInAs } from './helpers/signInAs'
+import { withEntryLock } from './helpers/entryLock'
 
 /**
  * Kitchen & cashier surfaces E2E (spec 009 T016/T017; SC-004, SC-005;
@@ -39,12 +40,16 @@ async function submitCustomerRound(
   itemName: string,
 ): Promise<void> {
   const page = await browser.newPage()
-  await page.goto(`/r/${SLUG}`)
-  await page.getByLabel('Branch').selectOption({ label: 'Downtown' })
-  await page.getByLabel('Table').selectOption({ label: tableLabel })
-  await page.getByLabel('Your name').fill('E2E Customer')
-  await page.getByLabel('Phone number').fill('+15550888')
-  await page.getByRole('button', { name: 'Join the table' }).click()
+  // The customer entry queues on the shared entry lock: a concurrent
+  // platform kill-switch test would refuse this submit otherwise.
+  await withEntryLock(async () => {
+    await page.goto(`/r/${SLUG}`)
+    await page.getByLabel('Branch').selectOption({ label: 'Downtown' })
+    await page.getByLabel('Table').selectOption({ label: tableLabel })
+    await page.getByLabel('Your name').fill('E2E Customer')
+    await page.getByLabel('Phone number').fill('+15550888')
+    await page.getByRole('button', { name: 'Join the table' }).click()
+  })
   await expect(page.getByRole('heading', { name: 'Menu', level: 2 })).toBeVisible()
   // The Hummus line: scope to its list item so the right Add button is hit
   // (`strong` renders text, not a role — filter by text content).

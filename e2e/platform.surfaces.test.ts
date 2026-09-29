@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
 import { signInAs } from './helpers/signInAs'
+import { withEntryLock } from './helpers/entryLock'
 
 /**
  * Platform surfaces E2E (spec 014 T011; FR-001–FR-010). The house pattern:
@@ -18,6 +19,16 @@ const SLUG = 'blue-olive'
 
 test.describe.configure({ mode: 'serial' })
 
+// The disable→re-enable pair flips the platform kill-switch on Blue Olive.
+// The poisoned span must cover EVERYTHING between those tests (serial or
+// not, another file's customer entry could land in the gap and hit "This
+// restaurant is not available."). The lock is held ONLY across those two
+// tests — NOT the whole file: a file-spanning hold queued every other
+// spec's customer entry behind the entire platform run (~4 min with
+// onboarding) and blew the realtime suite's 30s default test timeout.
+// The afterAll guard below re-enables the kill switch even if the disable
+// test dies mid-window (serial mode would otherwise skip the re-enable
+// test and wedge the tenant).
 test('the platform console lists every restaurant for the super admin (FR-001, FR-008)', async ({
   page,
 }) => {
@@ -81,41 +92,67 @@ test('disablement blocks the customer entry and shows the tenant notice (FR-005/
   page,
   browser,
 }) => {
-  // The super admin disables Blue Olive with a reason.
-  await signInAs(page, seedCredentials.platformAdmin)
-  await page.goto('/admin/platform')
-  await page.getByRole('button', { name: 'Disable' }).first().click()
-  await page
-    .getByPlaceholder(/why is this restaurant being disabled/i)
-    .fill('E2E: platform suspension')
-  await page.getByRole('button', { name: 'Confirm disable' }).click()
-  await expect(page.getByTestId('platform-overview')).toContainText('Disabled')
-  await expect(page.getByTestId('platform-overview')).toContainText('E2E: platform suspension')
+  // Kill-switch window part 1 — queueing budget for the shared entry lock
+  // plus the walk (30s default is not enough under parallel contention).
+  test.setTimeout(120_000)
+  await withEntryLock(async () => {
+    // The super admin disables Blue Olive with a reason.
+    await signInAs(page, seedCredentials.platformAdmin)
+    await page.goto('/admin/platform')
+    await page.getByRole('button', { name: 'Disable' }).first().click()
+    await page
+      .getByPlaceholder(/why is this restaurant being disabled/i)
+      .fill('E2E: platform suspension')
+    await page.getByRole('button', { name: 'Confirm disable' }).click()
+    await expect(page.getByTestId('platform-overview')).toContainText('Disabled')
+    await expect(page.getByTestId('platform-overview')).toContainText('E2E: platform suspension')
 
-  // The customer entry flow refuses at the branch step (the public surface).
-  const customer = await browser.newPage()
-  await customer.goto(`/r/${SLUG}`)
-  await customer.getByLabel('Branch').selectOption({ label: 'Downtown' })
-  await customer.getByLabel('Table').selectOption({ label: 'T3' })
-  await customer.getByLabel('Your name').fill('Blocked Customer')
-  await customer.getByLabel('Phone number').fill('+15550777')
-  await customer.getByRole('button', { name: 'Join the table' }).click()
-  await expect(customer.getByText(/not available/i)).toBeVisible()
-  await customer.close()
+    // The customer entry flow refuses at the branch step (the public surface).
+    const customer = await browser.newPage()
+    await customer.goto(`/r/${SLUG}`)
+    await customer.getByLabel('Branch').selectOption({ label: 'Downtown' })
+    await customer.getByLabel('Table').selectOption({ label: 'T3' })
+    await customer.getByLabel('Your name').fill('Blocked Customer')
+    await customer.getByLabel('Phone number').fill('+15550777')
+    await customer.getByRole('button', { name: 'Join the table' }).click()
+    await expect(customer.getByText(/not available/i)).toBeVisible()
+    await customer.close()
 
-  // Alice sees the disabled banner.
-  await signInAs(page, seedCredentials.alice)
-  const banner = page.getByTestId('subscription-banner')
-  await expect(banner).toBeVisible()
-  await expect(banner).toHaveAttribute('data-banner-state', 'disabled')
-  await expect(banner).toContainText('E2E: platform suspension')
+    // Alice sees the disabled banner.
+    await signInAs(page, seedCredentials.alice)
+    const banner = page.getByTestId('subscription-banner')
+    await expect(banner).toBeVisible()
+    await expect(banner).toHaveAttribute('data-banner-state', 'disabled')
+    await expect(banner).toContainText('E2E: platform suspension')
+  }) // withEntryLock — the kill-switch window stays open for re-enable.
 })
 
 test('re-enable restores the tenant state (FR-005)', async ({ page }) => {
-  await signInAs(page, seedCredentials.platformAdmin)
-  await page.goto('/admin/platform')
-  await page.getByRole('button', { name: 'Re-enable' }).first().click()
-  await expect(page.getByTestId('platform-overview')).toContainText('Expired')
+  // Kill-switch window part 2 — Blue Olive stays kill-switched until this
+  // lands (see the disable test for the lock rationale + budget).
+  test.setTimeout(120_000)
+  await withEntryLock(async () => {
+    await signInAs(page, seedCredentials.platformAdmin)
+    await page.goto('/admin/platform')
+    await page.getByRole('button', { name: 'Re-enable' }).first().click()
+    await expect(page.getByTestId('platform-overview')).toContainText('Expired')
+  })
+})
+
+test.afterAll(async ({ browser }) => {
+  // Kill-switch safety net: if any test above died inside the poisoned
+  // window (serial mode skips the re-enable test after a failure), restore
+  // the tenant so the rest of the suite is not poisoned. A no-op when the
+  // re-enable already ran — no Re-enable button to press.
+  const admin = await browser.newPage()
+  await signInAs(admin, seedCredentials.platformAdmin)
+  await admin.goto('/admin/platform')
+  const reEnable = admin.getByRole('button', { name: 'Re-enable' })
+  if (await reEnable.isVisible().catch(() => false)) {
+    await reEnable.click()
+    await expect(admin.getByTestId('platform-overview')).toContainText('Expired')
+  }
+  await admin.close()
 })
 
 test('non-super-admin identities cannot reach the console (FR-009)', async ({ page }) => {

@@ -49,7 +49,9 @@ describe('route metadata registry (spec 021 FR-02, SC-001)', () => {
   it('resolves parametric routes by segment shape', () => {
     expect(routeMetaFor('/r/demo-restaurant')?.title).toBe('Restaurant entry')
     expect(routeMetaFor('/r/demo-restaurant/menu')?.title).toBe('Menu')
-    expect(routeMetaFor('/order/branch-1')?.title).toBe('Order')
+    // Spec 024 C1: the order deep-link now redirects to the landing — its
+    // title is the landing's (the redirect IS the contract).
+    expect(routeMetaFor('/order/branch-1')?.title).toBe('RestoPilot')
     expect(routeMetaFor('/dashboard/branches/abc')?.title).toBe('Branch detail')
     expect(routeMetaFor('/dashboard/branches/abc/menu')?.title).toBe('Branch menu')
     expect(routeMetaFor('/dashboard/branches/abc/tax')?.title).toBe('Branch tax')

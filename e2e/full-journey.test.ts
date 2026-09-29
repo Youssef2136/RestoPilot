@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
 import { signInAs } from './helpers/signInAs'
 import { acquireFionaLock } from './helpers/fionaLock'
+import { withEntryLock } from './helpers/entryLock'
 
 /**
  * Full-journey E2E — the §27 dress rehearsal (spec 017 T003/T004;
@@ -103,7 +104,9 @@ async function enterAtTable1(page: Page, name: string, phone: string) {
   await page.getByLabel('Table').selectOption({ label: TABLE_1 })
   await page.getByLabel('Your name').fill(name)
   await page.getByLabel('Phone number').fill(phone)
-  await page.getByRole('button', { name: 'Join the table' }).click()
+  // The submit queues on the shared entry lock: a concurrent platform
+  // kill-switch test would refuse this entry otherwise.
+  await withEntryLock(() => page.getByRole('button', { name: 'Join the table' }).click())
   await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
 }
 

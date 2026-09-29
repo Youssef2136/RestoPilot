@@ -1,6 +1,8 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
 import { signInAs } from './helpers/signInAs'
+import { withEntryLock } from './helpers/entryLock'
+import { withMarinaT1Lock } from './helpers/marinaT1Lock'
 
 /**
  * Realtime E2E (spec 012 T011; SC-001…SC-004): a staff surface stays open
@@ -32,12 +34,35 @@ async function submitCustomerRound(
   itemName: string,
 ): Promise<void> {
   const page = await browser.newPage()
-  await page.goto(`/r/${SLUG}`)
-  await page.getByLabel('Branch').selectOption({ label: branchLabel })
-  await page.getByLabel('Table').selectOption({ label: tableLabel })
-  await page.getByLabel('Your name').fill('E2E Realtime Customer')
-  await page.getByLabel('Phone number').fill('+15550998')
-  await page.getByRole('button', { name: 'Join the table' }).click()
+  // The customer entry queues on the shared entry lock: a concurrent
+  // platform kill-switch test would refuse this submit otherwise.
+  await withEntryLock(async () => {
+    await page.goto(`/r/${SLUG}`)
+    await page.getByLabel('Branch').selectOption({ label: branchLabel })
+    const tableSelect = page.getByLabel('Table')
+    try {
+      // <option> elements inside a closed <select> are NEVER visible in
+      // Playwright's sense — waitFor state:'visible' would hang forever.
+      // The contract is EXISTENCE: wait for the element to attach.
+      await tableSelect
+        .locator('option', { hasText: tableLabel })
+        .waitFor({ state: 'attached', timeout: 10_000 })
+    } catch (error) {
+      const options = await tableSelect.locator('option').allTextContents()
+      const branch = await page
+        .getByLabel('Branch')
+        .inputValue()
+        .catch(() => '?')
+      throw new Error(
+        `Table option '${tableLabel}' never rendered (branch=${branch}, options=${JSON.stringify(options)})`,
+        { cause: error },
+      )
+    }
+    await page.getByLabel('Table').selectOption({ label: tableLabel })
+    await page.getByLabel('Your name').fill('E2E Realtime Customer')
+    await page.getByLabel('Phone number').fill('+15550998')
+    await page.getByRole('button', { name: 'Join the table' }).click()
+  })
   await expect(page.getByRole('heading', { name: 'Menu', level: 2 })).toBeVisible()
   const itemLine = page.locator('li', { hasText: itemName }).first()
   await itemLine.getByRole('button', { name: 'Add to cart' }).click()
@@ -86,6 +111,9 @@ test('a customer submission appears in the open cashier dashboard without manual
   page,
   browser,
 }) => {
+  // The customer submission queues on the shared entry lock; under parallel
+  // contention the wait can dwarf the walk itself — budget for the queue.
+  test.setTimeout(120_000)
   await signInAs(page, seedCredentials.carla)
   await page.goto('/dashboard/rounds')
 
@@ -145,43 +173,70 @@ test('the kitchen queue updates live and stays money-free (SC-002)', async ({ pa
   // Marina T1 is the seeded INACTIVE fixture — the owner activates it through
   // the management surface (the browser path; the RPC is not reachable from
   // a test browser), and deactivates it again at the end so the fixture
-  // stays deterministic for management.surfaces.
-  const alice = await browser.newPage()
-  await signInAs(alice, seedCredentials.alice)
-  await alice.goto(`/dashboard/branches/${branchIds.marina}`)
-  const marinaRow = alice.getByRole('listitem').filter({ hasText: 'T1' })
-  await expect(marinaRow).toContainText('Inactive')
-  await alice.getByRole('button', { name: 'Reactivate T1' }).click()
-  await expect(marinaRow).toContainText('Active')
-  await alice.close()
+  // stays deterministic for management.surfaces. The WHOLE flip lives inside
+  // the Marina T1 lock: management.surfaces asserts the seeded Inactive state
+  // and must never observe the Active window.
+  await withMarinaT1Lock(async () => {
+    const alice = await browser.newPage()
+    await signInAs(alice, seedCredentials.alice)
+    await alice.goto(`/dashboard/branches/${branchIds.marina}`)
+    // State-agnostic flip (self-healing fixture): a previously crashed run can
+    // leave T1 Active (its teardown never ran), so drive to Active from
+    // whatever state is present instead of pinning the starting state.
+    // The toggle button IS the state oracle: the label reads 'Reactivate T1'
+    // while inactive and 'Deactivate T1' once active. FIRST wait for the T1 row
+    // to render (data loaded, toggle present) — a bare isVisible() probe can
+    // race the hydration and silently swallow the click. Then click it if
+    // present, and WAIT for the label to flip.
+    const marinaRow = alice.getByRole('listitem').filter({ hasText: 'T1' })
+    await marinaRow.waitFor({ state: 'visible', timeout: 10_000 })
+    const reactivate = alice.getByRole('button', { name: 'Reactivate T1' })
+    if (await reactivate.isVisible()) {
+      await reactivate.click()
+      await expect(alice.getByRole('button', { name: 'Deactivate T1' })).toBeVisible({
+        timeout: 10_000,
+      })
+    }
+    await alice.close()
 
-  // dan keeps the kitchen queue open.
-  await signInAs(page, seedCredentials.dan)
-  await page.goto('/dashboard/kitchen')
-  await expect(page.getByRole('heading', { name: 'Kitchen' })).toBeVisible()
+    // dan keeps the kitchen queue open.
+    await signInAs(page, seedCredentials.dan)
+    await page.goto('/dashboard/kitchen')
+    await expect(page.getByRole('heading', { name: 'Kitchen' })).toBeVisible()
 
-  const ticketsBefore = await page.locator('article[data-ticket-id]').count()
-  await submitCustomerRound(browser, 'Marina', 'T1', 'Hummus')
+    const ticketsBefore = await page.locator('article[data-ticket-id]').count()
+    await submitCustomerRound(browser, 'Marina', 'T1', 'Hummus')
 
-  await expect
-    .poll(async () => page.locator('article[data-ticket-id]').count(), {
-      timeout: 15_000,
-      message: 'the new ticket should arrive live',
-    })
-    .toBeGreaterThan(ticketsBefore)
+    await expect
+      .poll(async () => page.locator('article[data-ticket-id]').count(), {
+        timeout: 15_000,
+        message: 'the new ticket should arrive live',
+      })
+      .toBeGreaterThan(ticketsBefore)
 
-  // SC-002's money-free assertion over the LIVE queue.
-  const pageText = await page.locator('section').innerText()
-  expect(pageText).not.toMatch(/subtotal|tax|total|price/i)
+    // SC-002's money-free assertion over the LIVE queue.
+    const pageText = await page.locator('section').innerText()
+    expect(pageText).not.toMatch(/subtotal|tax|total|price/i)
 
-  // Restore the fixture: Marina T1 back to its seeded inactive state.
-  const aliceAgain = await browser.newPage()
-  await signInAs(aliceAgain, seedCredentials.alice)
-  await aliceAgain.goto(`/dashboard/branches/${branchIds.marina}`)
-  const marinaRowAgain = aliceAgain.getByRole('listitem').filter({ hasText: 'T1' })
-  await aliceAgain.getByRole('button', { name: 'Deactivate T1' }).click()
-  await expect(marinaRowAgain).toContainText('Inactive')
-  await aliceAgain.close()
+    // Restore the fixture: Marina T1 back to its seeded inactive state.
+    // Same hydration discipline as the flip: wait for the row first, then
+    // click, and retry the whole deactivate inside toPass so a swallowed click
+    // (React replacing the node mid-click) self-heals instead of failing the
+    // run. Idempotent — a no-op when the row is already Inactive.
+    const aliceAgain = await browser.newPage()
+    await signInAs(aliceAgain, seedCredentials.alice)
+    await aliceAgain.goto(`/dashboard/branches/${branchIds.marina}`)
+    const marinaRowAgain = aliceAgain.getByRole('listitem').filter({ hasText: 'T1' })
+    await marinaRowAgain.waitFor({ state: 'visible', timeout: 10_000 })
+    await expect(async () => {
+      const deactivate = aliceAgain.getByRole('button', { name: 'Deactivate T1' })
+      if (await deactivate.isVisible()) {
+        await deactivate.click()
+      }
+      await expect(marinaRowAgain).toContainText('Inactive')
+    }).toPass({ timeout: 20_000 })
+    await aliceAgain.close()
+  }) // withMarinaT1Lock — the Active window is closed.
 })
 
 test('the live cue renders on a new round and the reload path reconciles (SC-004, US4)', async ({

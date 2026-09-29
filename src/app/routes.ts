@@ -32,11 +32,17 @@ export type RouteMeta = {
  * module only through routeMetaFor's `extraRoutes` parameter.
  */
 export const ROUTES: RouteMeta[] = [
-  { path: '/', title: 'RestoPilot', description: 'RestoPilot entry point.' },
+  {
+    path: '/',
+    title: 'RestoPilot',
+    description:
+      "RestoPilot — guests order from the restaurant's own page; staff sign in to their dashboard.",
+  },
   {
     path: '/order/:branchId',
-    title: 'Order',
-    description: 'Branch ordering placeholder until the customer entry phase.',
+    title: 'RestoPilot',
+    description:
+      "Old order links redirect to the RestoPilot landing — open the restaurant's page from its QR code.",
   },
   {
     path: '/signin',

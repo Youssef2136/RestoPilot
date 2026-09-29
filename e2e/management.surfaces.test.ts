@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
 import { signInAs, signInAsFiona } from './helpers/signInAs'
+import { withMarinaT1Lock } from './helpers/marinaT1Lock'
 
 /**
  * Management surfaces E2E matrix (spec 004 US1/US2; FR-001, FR-004, FR-005,
@@ -260,15 +261,18 @@ test('the owner sees the branch tables including the seeded inactive table with 
   await expect(page).toHaveURL(/\/dashboard$/)
 
   // Marina carries the seeded inactive table: it stays listed WITH its state
-  // (there is no delete path — only the activation state ever changes).
-  await page.goto(`/dashboard/branches/${branchIds.marina}`)
-  await expect(page.getByRole('heading', { level: 1, name: 'Marina' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Tables' })).toBeVisible()
+  // (there is no delete path — only the activation state ever changes). The
+  // T1 lock keeps realtime's activate/deactivate cycle out of this read.
+  await withMarinaT1Lock(async () => {
+    await page.goto(`/dashboard/branches/${branchIds.marina}`)
+    await expect(page.getByRole('heading', { level: 1, name: 'Marina' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Tables' })).toBeVisible()
 
-  const marinaTable = page.getByRole('listitem').filter({ hasText: 'T1' })
-  await expect(marinaTable).toContainText('Inactive')
-  await expect(page.getByRole('button', { name: 'Reactivate T1' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Deactivate T1' })).toHaveCount(0)
+    const marinaTable = page.getByRole('listitem').filter({ hasText: 'T1' })
+    await expect(marinaTable).toContainText('Inactive')
+    await expect(page.getByRole('button', { name: 'Reactivate T1' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Deactivate T1' })).toHaveCount(0)
+  })
 
   // The owner-only controls: inline rename and the create form.
   await expect(page.getByRole('button', { name: 'Rename T1' })).toBeVisible()

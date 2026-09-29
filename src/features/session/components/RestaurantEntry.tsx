@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useEnterChannelSession, useEnterSession, usePublicRestaurant } from '../useSession'
+import { CustomerShellHeader } from './entry/CustomerShellHeader'
+import { ChannelSelector } from './entry/ChannelSelector'
+import { SessionJoinNotice } from './entry/SessionJoinNotice'
+import styles from './entry/entry.module.css'
 
 /**
  * The public entry flow (contracts/session-client.md §1+§3; spec 007 US1 and
@@ -39,6 +43,11 @@ export function RestaurantEntry({ slug }: Props) {
   const [displayName, setDisplayName] = useState('')
   const [phone, setPhone] = useState('')
   const [error, setError] = useState<string | null>(null)
+  // Focus-on-invalid (spec 024 a11y): the first invalid field receives focus
+  // on a refused client-side submit. The messages/order are unchanged.
+  const nameRef = useRef<HTMLInputElement>(null)
+  const phoneRef = useRef<HTMLInputElement>(null)
+  const addressRef = useRef<HTMLTextAreaElement>(null)
 
   const payload = restaurantQuery.data
   const pending = enterMutation.isPending || channelMutation.isPending
@@ -74,6 +83,12 @@ export function RestaurantEntry({ slug }: Props) {
   async function submit(event: React.FormEvent) {
     event.preventDefault()
     setError(null)
+    // Focus handling runs AFTER render paints the message; the messages and
+    // their ordering are byte-frozen (E2E pins).
+    const withFocus = (message: string, field: React.RefObject<HTMLElement | null>) => {
+      setError(message)
+      requestAnimationFrame(() => field.current?.focus())
+    }
     if (!payload || effectiveBranchId === null) {
       setError('Choose a branch to continue.')
       return
@@ -82,15 +97,15 @@ export function RestaurantEntry({ slug }: Props) {
     const trimmedPhone = phone.replace(/[\s\-()]/g, '')
     const trimmedAddress = address.trim()
     if (name.length < 1) {
-      setError('A display name is required.')
+      withFocus('A display name is required.', nameRef)
       return
     }
     if (name.length > 60) {
-      setError('A display name may be at most 60 characters.')
+      withFocus('A display name may be at most 60 characters.', nameRef)
       return
     }
     if (!/^\+?[0-9]{7,15}$/.test(trimmedPhone)) {
-      setError('A valid phone number is required.')
+      withFocus('A valid phone number is required.', phoneRef)
       return
     }
     if (channel === 'dine-in' && tableId === null) {
@@ -98,11 +113,11 @@ export function RestaurantEntry({ slug }: Props) {
       return
     }
     if (channel === 'delivery' && trimmedAddress.length < 1) {
-      setError('A delivery address is required.')
+      withFocus('A delivery address is required.', addressRef)
       return
     }
     if (channel === 'delivery' && trimmedAddress.length > ADDRESS_MAX) {
-      setError(`A delivery address may be at most ${ADDRESS_MAX} characters.`)
+      withFocus(`A delivery address may be at most ${ADDRESS_MAX} characters.`, addressRef)
       return
     }
     const shared = {
@@ -135,8 +150,10 @@ export function RestaurantEntry({ slug }: Props) {
 
   return (
     <section>
-      <h1>{payload.restaurant.name}</h1>
-      {payload.restaurant.brand_description ? <p>{payload.restaurant.brand_description}</p> : null}
+      <CustomerShellHeader
+        name={payload.restaurant.name}
+        brandDescription={payload.restaurant.brand_description}
+      />
 
       {branches.length > 1 ? (
         <label>
@@ -162,53 +179,24 @@ export function RestaurantEntry({ slug }: Props) {
       )}
 
       {effectiveBranchId !== null ? (
-        <fieldset>
-          <legend>How would you like your order?</legend>
-          <label>
-            <input
-              type="radio"
-              name="channel"
-              value="dine-in"
-              checked={channel === 'dine-in'}
-              onChange={() => setChannel('dine-in')}
-            />{' '}
-            Dine-in
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="channel"
-              value="delivery"
-              checked={channel === 'delivery'}
-              onChange={() => setChannel('delivery')}
-            />{' '}
-            Delivery
-          </label>
-          <label>
-            <input
-              type="radio"
-              name="channel"
-              value="takeaway"
-              checked={channel === 'takeaway'}
-              onChange={() => setChannel('takeaway')}
-            />{' '}
-            Takeaway
-          </label>
-        </fieldset>
+        <ChannelSelector value={channel} onChange={setChannel} />
       ) : null}
 
       {effectiveBranchId !== null && channel === 'dine-in' ? (
-        <label>
-          Table
-          <select value={tableId ?? ''} onChange={(e) => setTableId(e.target.value || null)}>
-            <option value="">Choose a table…</option>
-            {tables.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <>
+          <label>
+            Table
+            <select value={tableId ?? ''} onChange={(e) => setTableId(e.target.value || null)}>
+              <option value="">Choose a table…</option>
+              {tables.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <SessionJoinNotice />
+        </>
       ) : null}
 
       {effectiveBranchId !== null && channel === 'delivery' ? (
@@ -230,30 +218,37 @@ export function RestaurantEntry({ slug }: Props) {
           <label>
             Your name
             <input
+              ref={nameRef}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               maxLength={80}
               placeholder="Shown to the staff"
+              autoComplete="name"
             />
           </label>
           <label>
             Phone number
             <input
+              ref={phoneRef}
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+15551234567"
+              inputMode="tel"
+              autoComplete="tel"
             />
           </label>
           {error ? <p role="alert">{error}</p> : null}
-          <button type="submit" disabled={pending}>
-            {pending
-              ? 'Joining…'
-              : channel === 'dine-in'
-                ? 'Join the table'
-                : channel === 'delivery'
-                  ? 'Start a delivery order'
-                  : 'Start a takeaway order'}
-          </button>
+          <div className={styles.actionRow}>
+            <button type="submit" disabled={pending}>
+              {pending
+                ? 'Joining…'
+                : channel === 'dine-in'
+                  ? 'Join the table'
+                  : channel === 'delivery'
+                    ? 'Start a delivery order'
+                    : 'Start a takeaway order'}
+            </button>
+          </div>
         </form>
       ) : null}
     </section>

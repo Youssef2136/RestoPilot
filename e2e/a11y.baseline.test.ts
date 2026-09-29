@@ -7,7 +7,10 @@ import { expectNoNewViolations } from './helpers/a11y'
  * (helpers/a11y.ts) fail the run; baseline entries require a written
  * justification and an owning phase.
  */
-const scannedRoutes = ['/', '/signin', '/reset-password', '/dashboard']
+// Spec 024 adds the customer entry surface (`/r/blue-olive`) — the phase's
+// fourth public surface (plan T005); the seeded restaurant's entry renders
+// signed-out.
+const scannedRoutes = ['/', '/signin', '/reset-password', '/r/blue-olive', '/dashboard']
 
 for (const route of scannedRoutes) {
   test(`axe baseline: ${route} introduces no new violations (WCAG 2.2 AA)`, async ({ page }) => {

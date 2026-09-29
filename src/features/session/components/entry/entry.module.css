@@ -1,0 +1,94 @@
+/*
+ * Entry components (spec 024 T003) — token consumer only (spec 022 FR-07).
+ * The customer entry is designed at 390 px first: single column, ≥ 44 px
+ * targets, sticky primary action, no horizontal scroll.
+ */
+
+.identity {
+  margin-bottom: var(--space-5);
+}
+
+.identity h1 {
+  font-size: var(--font-size-2xl);
+  line-height: 1.2;
+  margin: 0 0 var(--space-2);
+}
+
+.brandLine {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.channelFieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin: 0 0 var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.channelFieldset legend {
+  font-weight: var(--font-weight-semibold);
+  padding: 0 var(--space-2);
+}
+
+.channelOption {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'radio name'
+    'radio line';
+  align-items: center;
+  column-gap: var(--space-3);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.channelOption input[type='radio'] {
+  grid-area: radio;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--color-brand);
+}
+
+.channelOption:has(input[type='radio']:focus-visible) {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.channelName {
+  grid-area: name;
+  font-weight: var(--font-weight-medium);
+}
+
+.channelLine {
+  grid-area: line;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+}
+
+.joinNotice {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: calc(var(--space-2) * -1) 0 var(--space-3);
+}
+
+/* The sticky primary action (plan risk R2): the action row sticks above the
+ * viewport's bottom edge within the form; the alert sits above it in flow,
+ * never covered. */
+.actionRow {
+  position: sticky;
+  bottom: 0;
+  padding: var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--color-surface) 70%, transparent);
+}
+
+.actionRow button {
+  width: 100%;
+  min-height: 48px;
+  font-size: var(--font-size-md);
+}

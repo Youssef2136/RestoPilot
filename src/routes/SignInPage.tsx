@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 import { authClient } from '../features/auth/authClient'
 import { useAuthContext } from '../features/auth/useAuthContext'
+import { AuthCard } from '../components/auth/AuthCard'
 
 /**
  * Staff sign-in page (contracts/auth-client.md route surface; FR-001).
@@ -112,8 +113,7 @@ export function SignInPage() {
 
   if (mode === 'recover') {
     return (
-      <section aria-labelledby="recover-heading">
-        <h1 id="recover-heading">Password recovery</h1>
+      <AuthCard heading="Password recovery">
         {resetRequested ? (
           // The same generic confirmation for existing and non-existent
           // addresses (US5 scenario 5) — it never states whether the account
@@ -153,13 +153,12 @@ export function SignInPage() {
             </p>
           </form>
         )}
-      </section>
+      </AuthCard>
     )
   }
 
   return (
-    <section aria-labelledby="signin-heading">
-      <h1 id="signin-heading">Staff sign-in</h1>
+    <AuthCard heading="Staff sign-in">
       {/* Spec 023 FR-08: a friendly note when the visitor was redirected from
           a guarded route by a signed-out resolution (session end/expiry) —
           presentation only; the redirect flow itself is unchanged. */}
@@ -202,6 +201,6 @@ export function SignInPage() {
           Forgot your password?
         </button>
       </p>
-    </section>
+    </AuthCard>
   )
 }
