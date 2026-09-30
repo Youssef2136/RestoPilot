@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { PRICE_HINT, canonicalizePrice, formatAdjustment } from '../money'
 import { menuClient, type MenuItemExtraRow } from '../menuClient'
 import { useMenuInvalidation } from '../useMenu'
+import styles from './menu.surfaces.module.css'
 
 /**
  * One item's structured extras (contracts/menu-client.md §5 flow 4; spec 005
@@ -108,7 +109,7 @@ function ExtraRow({
   return (
     <li>
       <form onSubmit={save} aria-label={`Edit extra of ${itemName}`}>
-        <div>
+        <div className={styles.editorField}>
           <label htmlFor={`extra-name-${extra.id}`}>Extra name</label>
           <input
             id={`extra-name-${extra.id}`}
@@ -116,7 +117,7 @@ function ExtraRow({
             onChange={(event) => setName(event.target.value)}
           />
         </div>
-        <div>
+        <div className={styles.editorField}>
           <label htmlFor={`extra-adjustment-${extra.id}`}>Price adjustment</label>
           <input
             id={`extra-adjustment-${extra.id}`}
@@ -124,7 +125,9 @@ function ExtraRow({
             value={adjustment}
             onChange={(event) => setAdjustment(event.target.value)}
           />
-          <p>{`${PRICE_HINT} Currently ${formatAdjustment(extra.price_adjustment)}.`}</p>
+          <p
+            className={styles.hintText}
+          >{`${PRICE_HINT} Currently ${formatAdjustment(extra.price_adjustment)}.`}</p>
         </div>
         <button type="submit" disabled={busy}>
           {busy ? 'Saving…' : 'Save extra'}
@@ -208,7 +211,7 @@ export function ExtrasEditor({
         </ul>
       )}
       <form onSubmit={add} aria-label={`Add an extra to ${itemName}`}>
-        <div>
+        <div className={styles.editorField}>
           <label htmlFor={`new-extra-name-${itemId}`}>Extra name</label>
           <input
             id={`new-extra-name-${itemId}`}
@@ -216,7 +219,7 @@ export function ExtrasEditor({
             onChange={(event) => setName(event.target.value)}
           />
         </div>
-        <div>
+        <div className={styles.editorField}>
           <label htmlFor={`new-extra-adjustment-${itemId}`}>Price adjustment (optional)</label>
           <input
             id={`new-extra-adjustment-${itemId}`}
@@ -224,7 +227,7 @@ export function ExtrasEditor({
             value={adjustment}
             onChange={(event) => setAdjustment(event.target.value)}
           />
-          <p>{PRICE_HINT}</p>
+          <p className={styles.hintText}>{PRICE_HINT}</p>
         </div>
         <button type="submit" disabled={busy}>
           {busy ? 'Adding…' : 'Add extra'}

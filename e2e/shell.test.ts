@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
-import { signInAs, signInAsFiona } from './helpers/signInAs'
+import { signInAs } from './helpers/signInAs'
+import { withFionaLock } from './helpers/fionaLock'
 
 /**
  * Shell E2E (spec 023 T011; FR-01, FR-03, FR-09, FR-12; Gates).
@@ -178,10 +179,15 @@ test.describe('the offline banner (FR-07, Q5)', () => {
 
 test.describe('sign-out (FR-01 header composition)', () => {
   test('signing out from the staff shell re-protects the staff area', async ({ page }) => {
-    await signInAsFiona(page, seedCredentials.fiona)
-    await page.getByRole('button', { name: 'Sign out' }).click()
-    await expect(page).toHaveURL(/\/signin$/)
-    await page.goto('/dashboard')
-    await expect(page).toHaveURL(/\/signin$/)
+    // The lock holds across the whole body (not just the sign-in): the
+    // full-journey's creation flow can flip Fiona's membership mid-test,
+    // and the poisoned-password window would kill the session outright.
+    await withFionaLock(async () => {
+      await signInAs(page, seedCredentials.fiona)
+      await page.getByRole('button', { name: 'Sign out' }).click()
+      await expect(page).toHaveURL(/\/signin$/)
+      await page.goto('/dashboard')
+      await expect(page).toHaveURL(/\/signin$/)
+    })
   })
 })

@@ -11,6 +11,7 @@ import {
 } from '../menuImages'
 import { menuClient } from '../menuClient'
 import { useMenuInvalidation } from '../useMenu'
+import styles from './menu.surfaces.module.css'
 
 /**
  * One item's image field (contracts/menu-images.md §4; spec 005 US5,
@@ -123,26 +124,38 @@ export function ItemImageField({
   return (
     <section aria-label={`Image for item ${itemId}`}>
       <h4>Image</h4>
-      {resolved && path !== null && signedUrl !== null && <img src={signedUrl} alt="" />}
+      {resolved && path !== null && signedUrl !== null && (
+        <img src={signedUrl} alt="" className={styles.editorImage} />
+      )}
       {path !== null && signedUrl === null && <p>An image is set but cannot be displayed.</p>}
       <div>
-        <label htmlFor={`item-image-${itemId}`}>
-          Add or replace (JPEG, PNG, or WebP; up to 5 MB)
-        </label>
-        <input
-          id={`item-image-${itemId}`}
-          type="file"
-          accept={MENU_IMAGE_MIME_TYPES.join(',')}
-          disabled={busy}
-          onChange={(event) => {
-            const file = event.target.files?.[0]
-            event.target.value = ''
-            if (file !== undefined) {
-              void handleFile(file)
-            }
-          }}
-        />
-        <p>{`Up to ${Math.round(MENU_IMAGE_MAX_BYTES / (1024 * 1024))} MB.`}</p>
+        {/* The upload affordance is the desktop/tablet path; below 768px the
+            documented boundary (spec 027 Q3) swaps it — same DOM — for the
+            note, keeping read + simple edits as the mobile capability. */}
+        <div className={styles.uploadAffordance}>
+          <label htmlFor={`item-image-${itemId}`}>
+            Add or replace (JPEG, PNG, or WebP; up to 5 MB)
+          </label>
+          <input
+            id={`item-image-${itemId}`}
+            type="file"
+            accept={MENU_IMAGE_MIME_TYPES.join(',')}
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0]
+              event.target.value = ''
+              if (file !== undefined) {
+                void handleFile(file)
+              }
+            }}
+          />
+        </div>
+        <p className={styles.uploadBoundaryNote}>
+          Image uploads need a wider screen — add or replace the image on a tablet or desktop.
+        </p>
+        <p
+          className={styles.hintText}
+        >{`Up to ${Math.round(MENU_IMAGE_MAX_BYTES / (1024 * 1024))} MB.`}</p>
       </div>
       {path !== null && (
         <button type="button" onClick={() => void remove()} disabled={busy}>

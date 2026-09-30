@@ -45,7 +45,10 @@
 }
 
 .categoryButtonEmpty {
-  opacity: 0.5;
+  /* Dimmed-but-readable: an opacity over the primary ink composited to a
+     tint that FAILED the axe floor on the customer menu. The muted ink
+     token holds ≥4.5:1 on raised surfaces. */
+  color: var(--color-ink-muted);
 }
 
 /* ── Menu sections & items ───────────────────────────────────────────────── */

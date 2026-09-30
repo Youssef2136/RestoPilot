@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { branchIds, seedCredentials } from '../tests/database/helpers/fixtures'
-import { signInAs, signInAsFiona } from './helpers/signInAs'
+import { signInAs } from './helpers/signInAs'
+import { acquireFionaLock } from './helpers/fionaLock'
 import { withMarinaT1Lock } from './helpers/marinaT1Lock'
 
 /**
@@ -31,26 +32,34 @@ import { withMarinaT1Lock } from './helpers/marinaT1Lock'
 test("Fiona's /dashboard renders the creation panel and no other tenant's data (FR-001)", async ({
   page,
 }) => {
-  // Fiona sign-ins queue on the shared-fixture lock (the full-journey holds
-  // it for its ~60s span; the auth.routes walkthrough for its poisoned
-  // window) — budget for the wait, not just the walk.
+  // Fiona sign-ins queue on the shared-fixture lock — but the sign-in-window
+  // lock alone is NOT enough here: the full-journey's creation flow makes
+  // her a real owner, which hides the creation panel this test exists to
+  // pin. Hold the lock ACROSS the whole body (the journey holds it for its
+  // own span; the lock is not reentrant, so sign in through plain signInAs
+  // inside it) and budget for the wait, not just the walk.
   test.setTimeout(240_000)
-  await signInAsFiona(page, seedCredentials.fiona)
-  await expect(page).toHaveURL(/\/dashboard$/)
-  await expect(page.getByRole('heading', { level: 1, name: 'Staff Dashboard' })).toBeVisible()
+  const releaseFionaLock = await acquireFionaLock()
+  try {
+    await signInAs(page, seedCredentials.fiona)
+    await expect(page).toHaveURL(/\/dashboard$/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Staff Dashboard' })).toBeVisible()
 
-  // The FR-001 bootstrap: a linked profile without memberships gets the
-  // creation panel.
-  await expect(
-    page.getByRole('heading', { level: 2, name: 'Create your restaurant' }),
-  ).toBeVisible()
-  await expect(page.getByText('Your account is not yet part of a restaurant.')).toBeVisible()
+    // The FR-001 bootstrap: a linked profile without memberships gets the
+    // creation panel.
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Create your restaurant' }),
+    ).toBeVisible()
+    await expect(page.getByText('Your account is not yet part of a restaurant.')).toBeVisible()
 
-  // No other tenant's data, no staff-area membership surfaces.
-  await expect(page.getByText('Blue Olive')).toHaveCount(0)
-  await expect(page.getByText('Cedar Grill')).toHaveCount(0)
-  await expect(page.getByRole('navigation', { name: 'Staff area' })).toHaveCount(0)
-  await expect(page.getByRole('link', { name: 'Staff list' })).toHaveCount(0)
+    // No other tenant's data, no staff-area membership surfaces.
+    await expect(page.getByText('Blue Olive')).toHaveCount(0)
+    await expect(page.getByText('Cedar Grill')).toHaveCount(0)
+    await expect(page.getByRole('navigation', { name: 'Staff area' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Staff list' })).toHaveCount(0)
+  } finally {
+    await releaseFionaLock()
+  }
 })
 
 test('the owner (Alice) reaches the management navigation and /dashboard/restaurant (FR-017)', async ({

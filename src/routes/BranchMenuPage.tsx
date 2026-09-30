@@ -7,14 +7,24 @@ import {
   RestaurantAvailabilityToggle,
 } from '../features/menu/components/AvailabilityControls'
 import { BranchMenuPreview } from '../features/menu/components/BranchMenuPreview'
-import { branchMenuQueryKey, useBranchMenu } from '../features/menu/useMenu'
+import { invalidateMenuForRealtime, useBranchMenu } from '../features/menu/useMenu'
+import { ManagementLayout } from '../components/management/ManagementLayout'
+import { SectionCard } from '../components/management/SectionCard'
 
 /**
- * Branch menu view (contracts/menu-client.md §2; spec 005 US2, FR-014/FR-015)
- * — the exit condition made visible: the owner (any branch of their
- * restaurant) or a branch-scoped member (their own branch) sees this branch's
- * menu exactly as customers will, with its effective availability, and may
- * adjust availability where their role allows.
+ * Branch menu view (contracts/menu-client.md §2; spec 005 US2, FR-014/FR-015;
+ * spec 027 T006 re-skin) — the exit condition made visible: the owner (any
+ * branch of their restaurant) or a branch-scoped member (their own branch)
+ * sees this branch's menu exactly as customers will, with its effective
+ * availability, and may adjust availability where their role allows. The
+ * sections live in the phase-06 SectionCards with the ScopeBadge treatment
+ * (owner vs manager clarity).
+ *
+ * Realtime (spec 027 Q5/FR-09): one `branch_unavailable_items` subscription
+ * invalidates BOTH projections — the customer-visible branch menu AND the
+ * restaurant availability surface — so a mid-service toggle lands without a
+ * manual refresh (the exit criterion; the E2E proves it). The event payload
+ * is never rendered (Constitution I).
  *
  * The projection's own scope check decides server-side; this page's gate only
  * chooses what to render, and an out-of-scope branch renders the explicit
@@ -31,13 +41,13 @@ export function BranchMenuPage() {
     canManageRestaurant,
   } = useAuthContext()
 
-  // The live menu (spec 012 US5, FR-009): availability changes on this
-  // branch (toggle, 005's unavailability rules) invalidate the branch menu
-  // read — the projection recomputes effective availability on refetch.
+  // One subscription, both projections: the branch menu (customer-visible)
+  // and every restaurant menu tree. invalidateMenuForRealtime clears the
+  // whole `['menu', …]` root — the branch key is a child of it.
   useRealtimeInvalidation({
     scopeValue: branchId ?? null,
     table: 'branch_unavailable_items',
-    invalidate: (qc) => qc.invalidateQueries({ queryKey: branchMenuQueryKey(branchId ?? null) }),
+    invalidate: invalidateMenuForRealtime,
   })
 
   const branchMenuQuery = useBranchMenu(branchId ?? null)
@@ -91,6 +101,12 @@ export function BranchMenuPage() {
   const isOwner = restaurantId !== null && canManageRestaurant(restaurantId)
   const canManageBranch = canManageBranchAvailability(branchId)
 
+  const sections = [
+    { id: 'preview', label: 'Menu preview' },
+    ...(canManageBranch ? [{ id: 'branch-availability', label: 'Branch availability' }] : []),
+    ...(isOwner ? [{ id: 'restaurant-availability', label: 'Restaurant-wide availability' }] : []),
+  ]
+
   return (
     <section>
       <h1>{menu.branch.name} menu</h1>
@@ -100,68 +116,100 @@ export function BranchMenuPage() {
         restaurant-wide, and items this branch has marked unavailable, are not offered.
       </p>
 
-      <BranchMenuPreview menu={menu} />
+      <ManagementLayout label="Branch menu sections" sections={sections}>
+        <SectionCard id="preview">
+          {/* The preview owns its category headings — no section h2 between
+              the h1 and them (the customer-mirror contract). */}
+          <BranchMenuPreview menu={menu} />
+        </SectionCard>
 
-      {canManageBranch && (
-        <section aria-labelledby="branch-availability-heading">
-          <h2 id="branch-availability-heading">Branch availability</h2>
-          <p>{`Adjust what ${menu.branch.name} offers. This affects only this branch.`}</p>
-          {menu.categories.map((category) => (
-            <div key={category.id}>
-              <h3>{category.name}</h3>
-              <ul>
-                {category.items.map((item) => (
-                  <li key={item.id}>
-                    <BranchAvailabilityToggle
-                      restaurantId={menu.restaurant.id}
-                      branchId={menu.branch.id}
-                      itemId={item.id}
-                      itemName={item.name}
-                      isAvailableAtBranch={
-                        item.is_offered || item.unavailable_reason === 'restaurant'
-                      }
-                      unavailableReason={item.unavailable_reason}
-                      canManage={canManageBranch}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-      )}
+        {canManageBranch && (
+          <SectionCard
+            id="branch-availability"
+            title="Branch availability"
+            scope={isOwner ? 'owner' : undefined}
+          >
+            <p>{`Adjust what ${menu.branch.name} offers. This affects only this branch.`}</p>
+            <AvailabilityGroups
+              menu={menu}
+              render={(category) => (
+                <BranchAvailabilityToggle
+                  restaurantId={menu.restaurant.id}
+                  branchId={menu.branch.id}
+                  itemId={category.item.id}
+                  itemName={category.item.name}
+                  isAvailableAtBranch={
+                    category.item.is_offered || category.item.unavailable_reason === 'restaurant'
+                  }
+                  unavailableReason={category.item.unavailable_reason}
+                  canManage={canManageBranch}
+                />
+              )}
+            />
+          </SectionCard>
+        )}
 
-      {isOwner && (
-        <section aria-labelledby="restaurant-availability-heading">
-          <h2 id="restaurant-availability-heading">Restaurant-wide availability</h2>
-          <p>
-            Owner controls that apply to every branch of {menu.restaurant.name}. They are also
-            available on the menu management page.
-          </p>
-          {menu.categories.map((category) => (
-            <div key={category.id}>
-              <h3>{category.name}</h3>
-              <ul>
-                {category.items.map((item) => (
-                  <li key={item.id}>
-                    <RestaurantAvailabilityToggle
-                      restaurantId={menu.restaurant.id}
-                      itemId={item.id}
-                      itemName={item.name}
-                      isAvailable={item.unavailable_reason !== 'restaurant'}
-                      canManage={isOwner}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-      )}
+        {isOwner && (
+          <SectionCard
+            id="restaurant-availability"
+            title="Restaurant-wide availability"
+            scope="owner"
+          >
+            <p>
+              Owner controls that apply to every branch of {menu.restaurant.name}. They are also
+              available on the menu management page.
+            </p>
+            <AvailabilityGroups
+              menu={menu}
+              render={(category) => (
+                <RestaurantAvailabilityToggle
+                  restaurantId={menu.restaurant.id}
+                  itemId={category.item.id}
+                  itemName={category.item.name}
+                  isAvailable={category.item.unavailable_reason !== 'restaurant'}
+                  canManage={isOwner}
+                />
+              )}
+            />
+          </SectionCard>
+        )}
+      </ManagementLayout>
 
       <p>
         <Link to="/dashboard/branches">Back to branches</Link>
       </p>
     </section>
+  )
+}
+
+/**
+ * The per-category grouping shared by both availability sections (T006): the
+ * projection's categories in order, each item rendered by the section's
+ * toggle. The h3-per-category structure is the pinned shape the toggles'
+ * reasons hang from.
+ */
+function AvailabilityGroups({
+  menu,
+  render,
+}: {
+  menu: import('../features/menu/menuClient').BranchMenu
+  render: (entry: {
+    category: import('../features/menu/menuClient').BranchMenuCategory
+    item: import('../features/menu/menuClient').BranchMenuItem
+  }) => React.ReactNode
+}) {
+  return (
+    <div>
+      {menu.categories.map((category) => (
+        <div key={category.id} className="availabilityGroup">
+          <h3>{category.name}</h3>
+          <ul>
+            {category.items.map((item) => (
+              <li key={item.id}>{render({ category, item })}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
   )
 }

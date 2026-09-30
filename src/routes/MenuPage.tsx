@@ -2,12 +2,16 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext, type AuthContextMembership } from '../features/auth/useAuthContext'
-import { MenuStructurePanel } from '../features/menu/components/MenuStructurePanel'
+import { MenuStructurePanel, AddCategoryForm } from '../features/menu/components/MenuStructurePanel'
 import { useRestaurantMenu } from '../features/menu/useMenu'
+import { ManagementLayout } from '../components/management/ManagementLayout'
+import { SectionCard } from '../components/management/SectionCard'
 
 /**
- * Menu management (contracts/menu-client.md §2; spec 005 US1, FR-001…FR-010):
- * the owner's surface for the restaurant's single shared menu.
+ * Menu management (contracts/menu-client.md §2; spec 005 US1, FR-001…FR-010;
+ * spec 027 T002 re-skin): the owner's surface for the restaurant's single
+ * shared menu, hosted in the phase-06 management layout language — a section
+ * nav over the Structure and Add-category cards.
  *
  * Route guarded by `RequireStaff`; the in-page gate is `canManageRestaurant`,
  * which renders the explicit denial view for anyone else — rejected, not
@@ -98,14 +102,31 @@ export function MenuPage() {
         </div>
       )}
 
-      <h2>Categories and items</h2>
-      {menuQuery.isPending && <p>Loading the menu…</p>}
-      {menuQuery.isError && (
-        <p role="alert">The menu could not be loaded. Reload the page and try again.</p>
-      )}
-      {menuQuery.data !== undefined && (
-        <MenuStructurePanel restaurantId={effectiveRestaurantId} menu={menuQuery.data} />
-      )}
+      <ManagementLayout
+        label="Menu sections"
+        sections={[
+          { id: 'structure', label: 'Categories and items' },
+          { id: 'add-category', label: 'Add a category' },
+        ]}
+      >
+        <SectionCard id="structure" title="Categories and items" scope="owner">
+          {menuQuery.isPending && <p>Loading the menu…</p>}
+          {menuQuery.isError && (
+            <p role="alert">The menu could not be loaded. Reload the page and try again.</p>
+          )}
+          {menuQuery.data !== undefined && (
+            <MenuStructurePanel restaurantId={effectiveRestaurantId} menu={menuQuery.data} />
+          )}
+        </SectionCard>
+
+        <SectionCard id="add-category">
+          {/* The create-category form OWNS its pinned heading ('Add a category'
+              h3) — the SectionCard renders without an h2 (the phase-06 pattern
+              for children-owned headings). Rendered once the menu read has
+              the restaurant context (its create RPC is restaurant-scoped). */}
+          {menuQuery.data !== undefined && <AddCategoryForm restaurantId={effectiveRestaurantId} />}
+        </SectionCard>
+      </ManagementLayout>
     </section>
   )
 }

@@ -159,6 +159,17 @@ export function invalidateMenu(queryClient: QueryClient, restaurantId: string): 
   void queryClient.invalidateQueries({ queryKey: ['menu', 'branch'] })
 }
 
+/**
+ * The realtime invalidator for a branch's availability events (spec 027
+ * T006): clears the branch projection key AND every restaurant menu tree —
+ * an event names WHAT changed, never WHO may see it, so every menu-derived
+ * read refetches and no surface holds a stale availability (Constitution I;
+ * the E2E proves the no-refresh effect).
+ */
+export function invalidateMenuForRealtime(queryClient: QueryClient): Promise<unknown> {
+  return queryClient.invalidateQueries({ queryKey: ['menu'] })
+}
+
 /** Convenience hook for components that mutate and then invalidate. */
 export function useMenuInvalidation(): (restaurantId: string) => void {
   const queryClient = useQueryClient()

@@ -1,0 +1,345 @@
+/* Spec 027 — menu management surfaces. Phase-02 tokens only (design.literals gate). */
+
+/* ── Structure view (owner) ─────────────────────────────────────────────── */
+
+.structureStack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.categoryBlock {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: var(--space-3);
+  scroll-margin-top: 4rem;
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.categoryHeader h3 {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.categoryDescription {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-sm);
+}
+
+.categoryActions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: var(--space-2) 0;
+}
+
+.itemList {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.itemRow {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  padding: var(--space-3);
+}
+
+.itemBody {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.itemNameLine {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.itemName {
+  font-weight: var(--font-weight-semibold);
+}
+
+.itemPrice {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+.itemDescription {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-sm);
+}
+
+.itemMeta {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.pillAvailable,
+.pillStopped,
+.pillOverride {
+  display: inline-block;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+}
+
+.pillAvailable {
+  color: var(--color-positive);
+  border-color: var(--color-positive);
+}
+
+.pillStopped {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
+.pillOverride {
+  color: var(--color-ink-muted);
+  border-style: dashed;
+}
+
+.extrasPreview {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+}
+
+.extrasPreview li {
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+}
+
+.itemActions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+}
+
+.moveControls {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* ── Image thumbnail + placeholder language ─────────────────────────────── */
+
+.imageThumb {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  object-fit: cover;
+}
+
+.imagePlaceholder {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-xs);
+}
+
+.editorImage {
+  max-width: 320px;
+  max-height: 240px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  object-fit: cover;
+}
+
+/* ── Filter ─────────────────────────────────────────────────────────────── */
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 24rem;
+}
+
+.filterInput {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  padding: 0 var(--space-3);
+  min-height: var(--control-height-compact);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-sm);
+}
+
+.filteredEmpty {
+  color: var(--color-ink-muted);
+  font-style: italic;
+  margin: var(--space-1) 0;
+}
+
+/* ── Availability sections (branch page) ────────────────────────────────── */
+
+.availabilityList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.availabilityRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  padding: var(--space-2) var(--space-3);
+}
+
+.availabilityRow .availabilityBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.availabilityNote {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-sm);
+}
+
+.availabilityGroup + .availabilityGroup {
+  margin-top: var(--space-4);
+}
+
+.availabilityGroup h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-md);
+}
+
+/* ── Editor panel (item) ────────────────────────────────────────────────── */
+
+/* The editor's outer wrapper (a <section>, never a <form> — the extras and
+   image blocks host their own forms; nested forms are invalid HTML). */
+.editorSection {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-3);
+  margin-top: var(--space-2);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.editorSection > form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.editorPanel {
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: var(--space-3);
+  margin-top: var(--space-2);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.editorPanel form {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.editorField {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.editorField label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.editorField input {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  padding: 0 var(--space-3);
+  min-height: var(--control-height-compact);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-sm);
+}
+
+.hintText {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-xs);
+}
+
+/* ── Mobile: same-DOM card fallback + the documented upload boundary ────── */
+
+.uploadBoundaryNote {
+  display: none;
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-xs);
+}
+
+@media (max-width: 767px) {
+  .itemRow {
+    flex-direction: column;
+  }
+
+  .itemBody {
+    width: 100%;
+  }
+
+  .filterBar {
+    max-width: none;
+  }
+
+  /* The mobile editing boundary (spec Q3): heavy image work defers; the note
+     replaces the affordance in the same DOM. */
+  .uploadAffordance {
+    display: none;
+  }
+
+  .uploadBoundaryNote {
+    display: block;
+  }
+}

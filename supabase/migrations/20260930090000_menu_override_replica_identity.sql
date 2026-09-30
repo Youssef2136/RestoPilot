@@ -1,0 +1,31 @@
+-- ────────────────────────────────────────────────────────────────────────────
+-- Spec 027 (menu management UX) — realtime RESTORE delivery fix (FR-09/Q5).
+--
+-- Symptom: an availability STOP (insert into branch_unavailable_items)
+-- reached subscribers instantly, but the RESTORE (delete of the override
+-- row) never did — the observer's customer view kept hiding the item until
+-- a manual refresh.
+--
+-- Root cause: the table's replica identity is the default (PRIMARY KEY),
+-- so the WAL payload of a DELETE carries only `id`. Realtime evaluates the
+-- channel filter (`branch_id=eq.<uuid>`) and the SELECT policy against that
+-- payload; `branch_id` is absent, the row matches neither, and the event is
+-- silently dropped — exactly the field the subscription is scoped by.
+--
+-- Fix: REPLICA IDENTITY FULL puts the whole row into DELETE payloads, so
+-- the same filter and policy that authorize INSERT (stop) events authorize
+-- DELETE (restore) events. The table is the presence-only, immutable
+-- override (no UPDATE paths — the RPCs insert and delete), so the wider
+-- payload costs nothing semantically.
+--
+-- Realtime must be restarted after this change is applied to a running
+-- project for the new identity to take effect (supabase db reset replays
+-- migrations before clients subscribe, which is the exercised path).
+-- ────────────────────────────────────────────────────────────────────────────
+
+alter table public.branch_unavailable_items replica identity full;
+
+-- Probe (manual verification): with Bob subscribed on
+-- `realtime:branch_unavailable_items:<branch>` filtered by branch_id,
+-- `select set_menu_item_availability(item, branch, true)` emits a DELETE
+-- event whose old record carries branch_id (it did not before this change).

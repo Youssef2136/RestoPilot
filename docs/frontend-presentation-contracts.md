@@ -167,3 +167,33 @@ New suite: `e2e/management.staff.test.ts` (serial; scratch-identity provisioning
 the removal dialog; unique emails/names per run; clipboard permission granted for the copy
 affordance). Evidence: `specs/026-management-ux/evidence/` (restaurant sections, branch detail,
 staff list, credential reveal).
+
+## Phase 027 presentation record (menu management UX)
+
+Menu management re-skinned from the 022 tokens + 026 management language: `MenuPage` and
+`BranchMenuPage` now render `SectionCard`s under a `ManagementLayout` section nav ('Menu sections'
+/ 'Branch menu sections'), the structure panel gets dense item rows (64 px thumbnails via the
+signed-URL `useItemImage` hook, availability/override/extras pills, per-category filtered-empty
+line), a 'Filter items' input, and the item editor hosts its extras/image blocks inside a
+`section[aria-label="Edit <item>"]` wrapper — the save form keeps `Item details for <item>` (a
+form inside a form is invalid HTML and silently breaks the inner submits — the T005 nested-form
+fix). Below 768 px rows fall back to cards and the upload affordance is swapped — same DOM — for
+the capability-boundary note. NO frozen anchor moved: every menu.surfaces pin (13 tests) and the
+menu.client 52 unit tests + design.literals passed UNEDITED after the re-skin.
+
+| Surface / hook   | Before (phase ≤ 026)                                                              | After (027)                                                                                                                                                                        | Asserted by                                     |
+| ---------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| Menu page        | h1 + stacked panels                                                               | ManagementLayout ('Menu sections') + SectionCards #structure / #add-category (add-category renders once menu data is present)                                                      | menu.management (owner journey, axe)            |
+| Item rows        | sparse list, no imagery                                                           | dense rows: ItemThumb (signed URL, 'No image' placeholder, alt=""), price, pills (Available/Stopped, 'N branch overrides', extras preview)                                         | menu.surfaces (pins unedited) + menu.management |
+| Item search      | none                                                                              | 'Filter items' input + per-category 'No items match your filter.'                                                                                                                  | menu.management (FR-02)                         |
+| Item editor      | one form hosting the extras/image blocks (invalid nesting — inner submits broken) | section 'Edit X' → form 'Item details for X' + ExtrasEditor + ItemImageField; the editor STAYS OPEN on a save (Close dismisses)                                                    | menu.management (owner journey, 390px)          |
+| Branch menu page | stacked availability sections                                                     | ManagementLayout ('Branch menu sections') + SectionCards preview / branch-availability / restaurant-availability (conditional) + ScopeBadge                                        | menu.management (realtime, FR-09)               |
+| Menu realtime    | branch toggle events only delivered for INSERTs (stop)                            | `invalidateMenuForRealtime` clears the whole `['menu']` root; REPLICA IDENTITY FULL on branch_unavailable_items so DELETE (restore) payloads carry branch_id and reach subscribers | menu.management (FR-05/FR-09 exit criterion)    |
+| Mobile < 768 px  | untested                                                                          | card-row fallback; upload affordance hidden + boundary note shown (same DOM)                                                                                                       | menu.management (390px)                         |
+
+New suite: `e2e/menu.management.test.ts` (serial; the scratch category is reused, items carry a
+per-run suffix, cleanup is legal-only — the RPC set has no item deletion). Schema fix riding this
+phase: `supabase/migrations/20260930090000_menu_override_replica_identity.sql` (REPLICA IDENTITY
+FULL on `branch_unavailable_items` — restore events were silently dropped because DELETE payloads
+carried only `id`). Evidence: `specs/027-menu-management-ux/evidence/` (menu structure, item
+editor, branch menu Marina + Downtown, 390 px editor).
