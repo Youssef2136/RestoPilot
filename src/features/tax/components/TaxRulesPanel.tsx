@@ -2,6 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { taxClient } from '../taxClient'
 import { canonicalizeRate, formatRate, isValidRateInput, RATE_HINT } from '../taxMoney'
 import { useTaxInvalidation, type TaxRuleInventory, type TaxRuleNode } from '../useTax'
+import styles from './tax.surfaces.module.css'
 
 /**
  * The tax rule configuration panel (contracts/tax-client.md §3 flow 1, §4;
@@ -61,6 +62,8 @@ function RuleFields(props: {
   onSubmit: () => void
   onCancel: () => void
   submitLabel: string
+  /** The current validation/refusal message, rendered as the error summary. */
+  errorMessage?: string | null
 }) {
   const {
     name,
@@ -88,9 +91,19 @@ function RuleFields(props: {
     onSubmit()
   }
 
+  // The rate hint rides `aria-describedby` (the a11y requirement): the input
+  // is ALWAYS described by it — the pre-submit validity just toggles its
+  // emphasis; the server's validation messages surface verbatim above.
+  const rateHintId = `rule-rate-hint-${name.length}-${rate.length}`
+
   return (
-    <form onSubmit={handleSubmit}>
-      <div>
+    <form onSubmit={handleSubmit} noValidate>
+      {(props.errorMessage ?? null) !== null && (
+        <p className={styles.errorSummary} role="alert">
+          {props.errorMessage}
+        </p>
+      )}
+      <div className={styles.fieldGroup}>
         <label htmlFor={`rule-name-${name.length}-${rate.length}`}>Name</label>
         <input
           id={`rule-name-${name.length}-${rate.length}`}
@@ -99,7 +112,7 @@ function RuleFields(props: {
           disabled={busy}
         />
       </div>
-      <div>
+      <div className={styles.fieldGroup}>
         <label htmlFor={`rule-rate-${name.length}-${rate.length}`}>Rate (%)</label>
         <input
           id={`rule-rate-${name.length}-${rate.length}`}
@@ -107,8 +120,11 @@ function RuleFields(props: {
           onChange={(event) => onRate(event.target.value)}
           disabled={busy}
           aria-invalid={!rateAcceptable}
+          aria-describedby={rateHintId}
         />
-        {!rateAcceptable && <p role="note">{RATE_HINT}</p>}
+        <p id={rateHintId} className={styles.hintText}>
+          {RATE_HINT}
+        </p>
       </div>
       <div>
         <label htmlFor={`rule-scope-${name.length}-${rate.length}`}>Scope</label>
@@ -126,61 +142,73 @@ function RuleFields(props: {
         </select>
       </div>
 
+      {/* The multi-select target pickers are the documented <768px boundary
+          (spec 028): hidden same-DOM with the guidance note replacing them —
+          the phase-07 pattern (CSS only, no JS branch). */}
       {scope === 'items' && (
-        <fieldset>
-          <legend>Items</legend>
-          {targets.items.length === 0 && <p>This restaurant has no menu items yet.</p>}
-          {targets.items.map((item) => (
-            <label key={item.id}>
-              <input
-                type="checkbox"
-                checked={targetIds.includes(item.id)}
-                onChange={() => onToggleTarget(item.id)}
-                disabled={busy}
-              />{' '}
-              {item.name}
-            </label>
-          ))}
-        </fieldset>
+        <div className={styles.pickerBlock}>
+          <fieldset className={styles.editorFieldset}>
+            <legend>Items</legend>
+            {targets.items.length === 0 && <p>This restaurant has no menu items yet.</p>}
+            {targets.items.map((item) => (
+              <label key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={targetIds.includes(item.id)}
+                  onChange={() => onToggleTarget(item.id)}
+                  disabled={busy}
+                />{' '}
+                {item.name}
+              </label>
+            ))}
+          </fieldset>
+        </div>
       )}
 
       {scope === 'categories' && (
-        <fieldset>
-          <legend>Categories</legend>
-          {targets.categories.length === 0 && <p>This restaurant has no categories yet.</p>}
-          {targets.categories.map((category) => (
-            <label key={category.id}>
-              <input
-                type="checkbox"
-                checked={targetIds.includes(category.id)}
-                onChange={() => onToggleTarget(category.id)}
-                disabled={busy}
-              />{' '}
-              {category.name}
-            </label>
-          ))}
-        </fieldset>
+        <div className={styles.pickerBlock}>
+          <fieldset className={styles.editorFieldset}>
+            <legend>Categories</legend>
+            {targets.categories.length === 0 && <p>This restaurant has no categories yet.</p>}
+            {targets.categories.map((category) => (
+              <label key={category.id}>
+                <input
+                  type="checkbox"
+                  checked={targetIds.includes(category.id)}
+                  onChange={() => onToggleTarget(category.id)}
+                  disabled={busy}
+                />{' '}
+                {category.name}
+              </label>
+            ))}
+          </fieldset>
+        </div>
       )}
 
-      <fieldset>
-        <legend>Compounds on (applied earlier)</legend>
-        {sourceOptions.filter((rule) => rule.id).length === 0 && (
-          <p>No active restaurant-level rules to compound on.</p>
-        )}
-        {sourceOptions
-          .filter((rule) => rule.branch_id === null)
-          .map((rule) => (
-            <label key={rule.id}>
-              <input
-                type="checkbox"
-                checked={sourceIds.includes(rule.id)}
-                onChange={() => onToggleSource(rule.id)}
-                disabled={busy}
-              />{' '}
-              {rule.name}
-            </label>
-          ))}
-      </fieldset>
+      <div className={styles.pickerBlock}>
+        <fieldset className={styles.editorFieldset}>
+          <legend>Compounds on (applied earlier)</legend>
+          {sourceOptions.filter((rule) => rule.id).length === 0 && (
+            <p>No active restaurant-level rules to compound on.</p>
+          )}{' '}
+          {sourceOptions
+            .filter((rule) => rule.branch_id === null)
+            .map((rule) => (
+              <label key={rule.id}>
+                <input
+                  type="checkbox"
+                  checked={sourceIds.includes(rule.id)}
+                  onChange={() => onToggleSource(rule.id)}
+                  disabled={busy}
+                />{' '}
+                {rule.name}
+              </label>
+            ))}
+        </fieldset>
+      </div>
+      <p className={styles.pickerBoundaryNote} role="note">
+        Target and compound pickers need a wider screen — set them on a tablet or desktop.
+      </p>
 
       <button type="submit" disabled={busy || !rateAcceptable || name.trim() === ''}>
         {busy ? 'Saving…' : submitLabel}
@@ -217,15 +245,17 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
     [targets.categories],
   )
 
-  /** A rule is deletable exactly when the read marks it unreferenced. */
+  /**
+   * A rule is deletable exactly when the SERVER would accept it: no
+   * overrides, no junction targets, no INCOMING compound references, and no
+   * recorded snapshot binding its id. Outgoing citations (this rule's own
+   * compoundSourceIds) do NOT block deletion — the junction rows die with it
+   * (delete_unused_tax_rule's contract; the old client check wrongly counted
+   * them, hiding the Delete button on compound rules).
+   */
   function isUnreferenced(rule: TaxRuleNode): boolean {
     const compoundedOn = rules.some((other) => other.compoundSourceIds.includes(rule.id))
-    return (
-      rule.itemIds.length === 0 &&
-      rule.categoryIds.length === 0 &&
-      rule.compoundSourceIds.length === 0 &&
-      !compoundedOn
-    )
+    return rule.itemIds.length === 0 && rule.categoryIds.length === 0 && !compoundedOn
   }
 
   function resetForm() {
@@ -240,12 +270,15 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
     setBusy(true)
     setNotice(null)
     const result = await action()
-    setBusy(false)
     if (!result.ok) {
+      setBusy(false)
       setNotice(result.message ?? 'The change could not be saved.')
       return false
     }
-    invalidate(restaurantId)
+    // Hold busy through the invalidate → refetch round trip so the list
+    // re-renders the SAVED state before the controls re-enable (027 D8).
+    await invalidate(restaurantId)
+    setBusy(false)
     return true
   }
 
@@ -308,17 +341,34 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
     }
   }
 
-  /** Submit the complete ordered list with this rule moved one position. */
+  /**
+   * Submit the complete ordered list with this rule moved one position.
+   *
+   * The reorder RPC validates the list against ONE context (`branch_id is
+   * not distinct from` the addressed context — the count check counts that
+   * context's rules only), so the restaurant list and each branch-only list
+   * reorder SEPARATELY: submitting the displayed (interleaved) list is
+   * refused with 'The reorder list must contain every rule of the context
+   * exactly once.' — the real bug this phase's E2E caught. The swap therefore
+   * happens within the moved rule's own context and submits ONLY that
+   * context's ids; the displayed order (a (sort_order, name) merge across
+   * contexts) shifts accordingly.
+   */
   async function handleReorder(ruleId: string, direction: -1 | 1) {
-    const index = rules.findIndex((rule) => rule.id === ruleId)
-    const swapWith = index + direction
-    if (index < 0 || swapWith < 0 || swapWith >= rules.length) {
+    const moved = rules.find((rule) => rule.id === ruleId)
+    if (moved === undefined) {
       return
     }
-    const next = [...rules]
-    const moved = next[index] as TaxRuleNode
+    const contextRules = rules.filter((rule) => rule.branch_id === moved.branch_id)
+    const index = contextRules.findIndex((rule) => rule.id === ruleId)
+    const swapWith = index + direction
+    if (index < 0 || swapWith < 0 || swapWith >= contextRules.length) {
+      return // already at the context edge
+    }
+    const next = [...contextRules]
+    const movedNode = next[index] as TaxRuleNode
     next[index] = next[swapWith] as TaxRuleNode
-    next[swapWith] = moved
+    next[swapWith] = movedNode
     await run(() =>
       taxClient.reorderRules(
         restaurantId,
@@ -344,6 +394,10 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
   return (
     <section aria-labelledby="tax-rules-heading">
       <h2 id="tax-rules-heading">Tax rules</h2>
+      <p>
+        The order below is the order taxes apply in — each compound rule calculates after the rules
+        it names. Retiring a rule stops applying it to new calculations; it stays listed.
+      </p>
 
       {notice !== null && <p role="alert">{notice}</p>}
 
@@ -351,20 +405,30 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
         <p>No tax rules yet. Add the first rule to start charging tax.</p>
       )}
 
-      <ol>
+      <ol className={styles.ruleList}>
         {rules.map((rule, index) => (
-          <li key={rule.id}>
-            <strong>{rule.name}</strong> — {formatRate(rule.rate)}{' '}
+          <li key={rule.id} className={styles.ruleRow}>
+            <strong className={styles.ruleName}>{rule.name}</strong> — {formatRate(rule.rate)}{' '}
             <span>({scopeBadge(rule.scope)})</span>{' '}
             {rule.branch_id !== null && <span>(branch-only)</span>}
-            {!rule.is_active && <span> (retired)</span>}
+            {rule.is_active ? (
+              <span className={styles.pillActive}>Active</span>
+            ) : (
+              <span className={styles.pillRetired}>Retired</span>
+            )}
             {rule.compoundSourceIds.length > 0 && (
-              <span>
+              <span className={styles.ruleMeta}>
                 {' '}
                 — compounds on{' '}
                 {rule.compoundSourceIds
                   .map((sourceId) => namesById.get(sourceId) ?? 'unknown rule')
-                  .join(', ')}
+                  .join(', ')}{' '}
+                (calculated after{' '}
+                {rule.compoundSourceIds
+                  .map((sourceId) => namesById.get(sourceId) ?? 'unknown rule')
+                  .join(', ')
+                  .toLowerCase()}
+                )
               </span>
             )}
             {rule.scope === 'items' && rule.itemIds.length > 0 && (
@@ -386,8 +450,7 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
               </span>
             )}
             {mode !== 'creating' && (
-              <span>
-                {' '}
+              <span className={styles.ruleActions}>
                 <button
                   type="button"
                   onClick={() => handleReorder(rule.id, -1)}
@@ -476,6 +539,7 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
           targets={targets}
           sourceOptions={rules.filter((rule) => rule.is_active)}
           busy={busy}
+          errorMessage={notice}
           onName={setName}
           onRate={setRate}
           onScope={(value) => {
@@ -524,6 +588,7 @@ export function TaxRulesPanel({ restaurantId, inventory, targets }: PanelProps) 
             targets={targets}
             sourceOptions={rules.filter((rule) => rule.is_active && rule.id !== mode.editing)}
             busy={busy}
+            errorMessage={notice}
             onName={setName}
             onRate={setRate}
             onScope={(value) => {

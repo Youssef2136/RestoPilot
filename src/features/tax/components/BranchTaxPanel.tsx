@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { taxClient, type BranchTaxRule, type BranchTaxConfig } from '../taxClient'
 import { canonicalizeRate, formatRate, isValidRateInput, RATE_HINT } from '../taxMoney'
 import { useTaxInvalidation } from '../useTax'
+import styles from './tax.surfaces.module.css'
 
 /**
  * The branch's tax view (contracts/tax-client.md §3 flow 2; spec 006 US2):
@@ -20,6 +21,23 @@ interface PanelProps {
   restaurantId: string
   config: BranchTaxConfig
   canManage: boolean
+}
+
+/**
+ * The inheritance badge (spec 028 FR-05): text-bearing precedence honesty —
+ * 'Overridden' marks the branch's own decision (warning tint), 'Inherited'
+ * marks the restaurant default. NEVER color-only. The badge vocabulary was
+ * chosen to avoid the pinned strings ('(branch override)'/'Downtown
+ * surcharge') which the E2E pins as count-0 on specific pages.
+ */
+function InheritanceBadge({ origin }: { origin: BranchTaxRule['origin'] }) {
+  if (origin === 'override') {
+    return <span className={styles.badgeOverridden}>Overridden</span>
+  }
+  if (origin === 'branch-only') {
+    return null // the '(branch-only)' text remains the distinct marker
+  }
+  return <span className={styles.badgeInherited}>Inherited</span>
 }
 
 /** Where an editable rule shows its rate from. */
@@ -57,12 +75,17 @@ export function BranchTaxPanel({ restaurantId, config, canManage }: PanelProps) 
     setBusy(true)
     setNotice(null)
     const result = await action()
-    setBusy(false)
     if (!result.ok) {
+      setBusy(false)
       setNotice(result.message ?? 'The change could not be saved.')
       return false
     }
-    invalidate(restaurantId)
+    // The busy state HELDS through the invalidate → refetch round trip: the
+    // panel re-renders from the freshly fetched read before the controls
+    // re-enable, so a fast follow-up click can never race the saved state
+    // (the 027 controlled-checkbox lesson).
+    await invalidate(restaurantId)
+    setBusy(false)
     return true
   }
 
@@ -105,26 +128,40 @@ export function BranchTaxPanel({ restaurantId, config, canManage }: PanelProps) 
 
       {config.rules.length === 0 && <p>No tax rules apply at this branch.</p>}
 
-      <ol>
+      <ol className={styles.ruleList}>
         {config.rules.map((rule) => (
-          <li key={rule.rule_id}>
-            <strong>{rule.name}</strong> — {effectiveRateLabel(rule)}{' '}
+          <li key={rule.rule_id} className={styles.ruleRow}>
+            <strong className={styles.ruleName}>{rule.name}</strong> — {effectiveRateLabel(rule)}{' '}
             <span>
               ({rule.scope === 'total' ? 'Total' : rule.scope === 'items' ? 'Items' : 'Categories'})
-            </span>
-            {canManage && rule.origin === 'restaurant' && (
+            </span>{' '}
+            <InheritanceBadge origin={rule.origin} />
+            {/* The clearing affordance (spec 028 state matrix): an OVERRIDDEN
+                rule carries 'Use restaurant default' directly — the old panel
+                only offered controls while origin === 'restaurant', which
+                locked an override in place with no visible way back (the gap
+                this phase's badge-cycle E2E caught). */}
+            {canManage && (rule.origin === 'restaurant' || rule.origin === 'override') && (
               <span>
                 {' '}
                 {editingRuleId === rule.rule_id ? (
                   <>
-                    <label htmlFor={`override-rate-${rule.rule_id}`}>Replacement rate</label>
+                    <label htmlFor={`override-rate-${rule.rule_id}`}>Replacement rate</label>{' '}
                     <input
                       id={`override-rate-${rule.rule_id}`}
                       value={draftRate}
                       onChange={(event) => setDraftRate(event.target.value)}
                       disabled={busy}
                       aria-invalid={!isValidRateInput(draftRate)}
+                      aria-describedby={`override-hint-${rule.rule_id}`}
                     />
+                    <span
+                      id={`override-hint-${rule.rule_id}`}
+                      className={styles.hintText}
+                      role="note"
+                    >
+                      {RATE_HINT}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleSaveOverride(rule)}
@@ -139,6 +176,14 @@ export function BranchTaxPanel({ restaurantId, config, canManage }: PanelProps) 
                       Cancel
                     </button>
                   </>
+                ) : rule.origin === 'override' ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleClearOverride(rule)}
+                    disabled={busy}
+                  >
+                    Use restaurant default
+                  </button>
                 ) : (
                   <button
                     type="button"

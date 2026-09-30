@@ -118,6 +118,10 @@ export interface UpdateTaxRuleInput {
   compoundSourceIds?: string[]
 }
 
+/** The once-only outcome of `record_tax_snapshot` (migration 20260919122120). */
+export type SnapshotOutcome =
+  { recorded: true; snapshotId: string } | { recorded: false; snapshotId: string | null }
+
 export const taxClient = {
   /** FR-005: create a rule (restaurant-level, or branch-only with a branch id). */
   async createRule(input: CreateTaxRuleInput): Promise<TaxResult<TaxRuleRow>> {
@@ -134,6 +138,55 @@ export const taxClient = {
         p_compound_source_ids: input.compoundSourceIds ?? undefined,
       }),
     )
+  },
+
+  /**
+   * FR-08 (spec 028 D1): record the branch's CURRENTLY SAVED configuration as
+   * a once-only snapshot, keyed by a caller-composed fingerprint (the label
+   * plus the configuration's content — the fingerprint composition is the
+   * caller's contract; the RPC enforces once-only per fingerprint and reports
+   * a conflicting re-record as `recorded:false` — idempotent, not an error).
+   * Owner-only: the RPC raises its own denial, mapped like every sibling.
+   */
+  async recordSnapshot(input: {
+    restaurantId: string
+    branchId: string
+    fingerprint: string
+    payload: Record<string, unknown>
+  }): Promise<TaxResult<SnapshotOutcome>> {
+    const { data, error } = await (async () => {
+      try {
+        return await getSupabaseClient().rpc('record_tax_snapshot', {
+          p_restaurant_id: input.restaurantId,
+          p_branch_id: input.branchId,
+          p_fingerprint: input.fingerprint,
+          p_payload: input.payload as unknown as import('../../types/database.types').Json,
+        })
+      } catch {
+        return { data: null, error: { code: 'retry', message: TAX_RETRY_MESSAGE } }
+      }
+    })()
+    if (error !== null) {
+      return { ok: false, ...mapTaxError(error) }
+    }
+    if (
+      data !== null &&
+      typeof data === 'object' &&
+      'recorded' in data &&
+      typeof (data as { recorded: unknown }).recorded === 'boolean'
+    ) {
+      const shape = data as { recorded: boolean; snapshot_id?: string | null }
+      return shape.recorded
+        ? {
+            ok: true,
+            data: {
+              recorded: true,
+              snapshotId: shape.snapshot_id ?? 'unknown-snapshot-id',
+            },
+          }
+        : { ok: true, data: { recorded: false, snapshotId: shape.snapshot_id ?? null } }
+    }
+    return { ok: false, kind: 'retry', message: TAX_RETRY_MESSAGE }
   },
 
   /** FR-005: the full-shape edit — targets and sources are replaced wholesale. */

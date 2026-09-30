@@ -4,6 +4,7 @@ import { formatPrice } from '../../menu/money'
 import { formatRate } from '../taxMoney'
 import { useTaxPreview } from '../useTax'
 import type { TaxSelection } from '../taxClient'
+import styles from './tax.surfaces.module.css'
 
 /**
  * The calculation preview (contracts/tax-client.md §3 flow 3; spec 006 US3):
@@ -81,6 +82,10 @@ export function TaxPreview({ branchId, menu }: { branchId: string; menu: BranchM
   }
 
   const lines = previewQuery.data?.lines ?? []
+  // The busy state (FR-06): while the engine call is in flight, the button
+  // shows 'Calculating…' and a status line replaces guessing — the previous
+  // result stays until the new one lands (never a partial render).
+  const isCalculating = submitted !== null && previewQuery.isFetching
 
   return (
     <section aria-labelledby="tax-preview-heading">
@@ -89,7 +94,6 @@ export function TaxPreview({ branchId, menu }: { branchId: string; menu: BranchM
         Build a basket and submit it to see the exact lines the customer will be shown — computed
         once per submission, never per keystroke.
       </p>
-
       {offeredItems.length === 0 ? (
         <p>This branch has no offered items yet, so there is nothing to preview.</p>
       ) : (
@@ -115,14 +119,12 @@ export function TaxPreview({ branchId, menu }: { branchId: string; menu: BranchM
           </select>
         </div>
       )}
-
       {entries.length === 0 && (
         <p>The basket is empty; a submitted empty basket shows zero lines and no taxes.</p>
       )}
-
-      <ol>
+      <ol className={styles.basketList}>
         {entries.map((entry) => (
-          <li key={entry.key}>
+          <li key={entry.key} className={styles.basketRow}>
             <strong>{entry.item.name}</strong> — {formatPrice(entry.item.price)}{' '}
             <label>
               Qty{' '}
@@ -167,19 +169,21 @@ export function TaxPreview({ branchId, menu }: { branchId: string; menu: BranchM
           </li>
         ))}
       </ol>
-
-      <button type="button" onClick={handleSubmit} disabled={entries.length === 0}>
-        Calculate taxes
+      <button type="button" onClick={handleSubmit} disabled={entries.length === 0 || isCalculating}>
+        {isCalculating ? 'Calculating…' : 'Calculate taxes'}
       </button>
-
+      {isCalculating && (
+        <p role="status" className={styles.hintText}>
+          Calculating the exact lines the customer will be shown…
+        </p>
+      )}
       {previewQuery.isError && (
         <p role="alert">
           {previewQuery.error instanceof Error ? previewQuery.error.message : 'Calculation failed.'}
         </p>
-      )}
-
+      )}{' '}
       {previewQuery.data !== undefined && (
-        <div aria-label="Calculation result">
+        <section aria-label="Calculation result" aria-live="polite">
           <h3>What the customer will be shown</h3>
           {lines.length === 0 ? (
             <p>No taxes apply to this basket — the total equals the subtotal.</p>
@@ -210,7 +214,7 @@ export function TaxPreview({ branchId, menu }: { branchId: string; menu: BranchM
             Subtotal: {formatPrice(previewQuery.data.subtotal)} — Total:{' '}
             <strong>{formatPrice(previewQuery.data.total)}</strong>
           </p>
-        </div>
+        </section>
       )}
     </section>
   )

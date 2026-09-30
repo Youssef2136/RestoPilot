@@ -1,22 +1,26 @@
 import { Link, useParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
+import { ManagementLayout } from '../components/management/ManagementLayout'
+import { SectionCard } from '../components/management/SectionCard'
 import { BranchTaxPanel } from '../features/tax/components/BranchTaxPanel'
 import { TaxPreview } from '../features/tax/components/TaxPreview'
 import { useBranchTaxConfig } from '../features/tax/useTax'
 import { useBranchMenu } from '../features/menu/useMenu'
 
 /**
- * The branch's tax view (contracts/tax-client.md §2; spec 006 US2): the
- * branch's effective tax configuration — computed by
+ * The branch's tax view (contracts/tax-client.md §2; spec 006 US2; spec 028
+ * T007 re-skin): the branch's effective tax configuration — computed by
  * `get_branch_tax_config`, never assembled in the client (Constitution V) —
- * with the management controls only within `canManageBranchTax`.
+ * now under the phase-026 management language (SectionCards inside a 'Branch
+ * tax sections' nav: Effective configuration / Overrides / Calculation
+ * preview), with the management controls only within `canManageBranchTax`.
  *
  * Route guarded by `RequireStaff`; the in-page gates are `canViewBranchTax`
  * (the page renders at all) and `canManageBranchTax` (the controls render).
- * The configuration RPC's own scope check remains the boundary — an
- * out-of-scope branch id resolves as a denial from the server side too
- * (Constitution IV).
+ * The configuration RPC's own scope check decides server-side; this page's
+ * gate only chooses what to render, and an out-of-scope branch renders the
+ * explicit denial — rejected, not hidden (feature 004's posture).
  */
 export function BranchTaxPage() {
   const { branchId } = useParams<{ branchId: string }>()
@@ -94,6 +98,12 @@ export function BranchTaxPage() {
   )
   const canManage = canManageRestaurant(restaurantId) || isBranchManagerHere
 
+  const sections = [
+    { id: 'effective', label: 'Effective configuration' },
+    ...(canManage ? [{ id: 'overrides', label: 'Overrides' }] : []),
+    ...(menuQuery.data !== undefined ? [{ id: 'preview', label: 'Calculation preview' }] : []),
+  ]
+
   return (
     <section>
       <h1>{config.branch.name} tax</h1>
@@ -106,9 +116,34 @@ export function BranchTaxPage() {
         <p>You can view this configuration but not change it.</p>
       )}
 
-      <BranchTaxPanel restaurantId={restaurantId} config={config} canManage={canManage} />
+      <ManagementLayout label="Branch tax sections" sections={sections}>
+        <SectionCard
+          id="effective"
+          title="Effective configuration"
+          scope={canManage ? 'owner' : 'read-only'}
+        >
+          <BranchTaxPanel restaurantId={restaurantId} config={config} canManage={canManage} />
+        </SectionCard>
 
-      {menuQuery.data !== undefined && <TaxPreview branchId={branchId!} menu={menuQuery.data} />}
+        {canManage && (
+          <SectionCard id="overrides" title="Overrides" scope="owner">
+            <p>
+              A replacement rate applies at this branch only; “Use restaurant default” clears it and
+              the rule shows as inherited again. The badge on each rule says where its rate comes
+              from.
+            </p>
+            {/* The per-rule override editor lives inside the effective list
+                (BranchTaxPanel) — this section documents the posture and
+                anchors the nav. */}
+          </SectionCard>
+        )}
+
+        {menuQuery.data !== undefined && (
+          <SectionCard id="preview" title="Calculation preview">
+            <TaxPreview branchId={branchId!} menu={menuQuery.data} />
+          </SectionCard>
+        )}
+      </ManagementLayout>
 
       <p>
         <Link to={`/dashboard/branches/${branchId}`}>Back to the branch</Link>

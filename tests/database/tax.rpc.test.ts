@@ -1125,11 +1125,18 @@ describe('tax snapshots: recorded payload, immutability, and read scope (FR-016,
     expect(eveRows).toBe('0')
   })
 
-  it('no surface of this feature records snapshots (clarification 3, executable guard)', () => {
-    // The client module is the only import path for tax RPCs; it must expose
-    // no snapshot method, so no surface can call the function by accident.
+  it('the snapshot surface is owner-only through the client contract (spec 028 D1 supersedes 006 clarification 3)', () => {
+    // Spec 006 clarification 3 kept record_tax_snapshot unsurfaced; spec 028
+    // D1 (approved by the project owner, 2026-09-30) supersedes it with a
+    // deliberate, owner-only SnapshotAction. The guard becomes its inverse:
+    // the client exposes EXACTLY the audited mapping (no second path), and
+    // the RPC's own owner-only authorization remains the boundary — already
+    // proven by the once-only and cross-tenant guards above.
     const surfaceMethodNames = Object.keys(taxClient)
-    expect(surfaceMethodNames).not.toContain('recordSnapshot')
-    expect(surfaceMethodNames).not.toContain('recordTaxSnapshot')
+    expect(surfaceMethodNames).toContain('recordSnapshot')
+    const snapshotLike = surfaceMethodNames.filter((name) =>
+      /recordTaxSnapshot|snapshot/i.test(name),
+    )
+    expect(snapshotLike).toEqual(['recordSnapshot'])
   })
 })

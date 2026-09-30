@@ -85,7 +85,14 @@ test('carla voids a locked real round; the bill shows the voided section and the
     .first()
     .getByRole('button', { name: 'Lock round' })
     .click()
-  const locked = page.locator('[data-round-state="lock"]').first()
+  // Scope the locked card to THIS journey's round: the seeded fixture carries
+  // a VOIDED lock-state round (T2, 'E2E: wrong order'), and a bare .first()
+  // over '[data-round-state="lock"]' resolves it the instant the Lock click
+  // lands — before this run's refetch promotes our card — after which a
+  // voided card offers no Void round control at all (the timeout this run
+  // hit). Exclude voided cards; ours is the only non-voided lock under the
+  // fresh reset the suite assumes.
+  const locked = page.locator('article[data-round-state="lock"]:not([data-voided="true"])').first()
   await expect(locked).toBeVisible()
 
   // Scope every later interaction to THIS run's round by id — earlier runs'

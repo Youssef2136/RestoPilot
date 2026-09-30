@@ -1,7 +1,9 @@
 import {
+  useMutation,
   useQuery,
   useQueryClient,
   type QueryClient,
+  type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { getSupabaseClient } from '../../lib/supabase'
@@ -200,13 +202,52 @@ export function useTaxPreview(
  * that changed, every branch configuration, and every preview.
  * Over-invalidating is deliberate: a save must never leave a stale rate,
  * order, or override on screen (contracts/tax-client.md §4; FR-011).
- */ export function invalidateTax(queryClient: QueryClient, restaurantId: string): void {
-  void queryClient.invalidateQueries({ queryKey: taxQueryKey(restaurantId) })
-  void queryClient.invalidateQueries({ queryKey: ['tax', 'branch'] })
+ *
+ * Returns a promise that settles when the refetches do, so a caller's run()
+ * can hold its busy state until the UI actually shows the saved state (the
+ * 027 controlled-checkbox lesson: release the control AFTER the round trip).
+ */
+export async function invalidateTax(queryClient: QueryClient, restaurantId: string): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: taxQueryKey(restaurantId) }),
+    queryClient.invalidateQueries({ queryKey: ['tax', 'branch'] }),
+  ])
 }
 
 /** Convenience hook for components that mutate and then invalidate. */
-export function useTaxInvalidation(): (restaurantId: string) => void {
+export function useTaxInvalidation(): (restaurantId: string) => Promise<void> {
   const queryClient = useQueryClient()
   return (restaurantId: string) => invalidateTax(queryClient, restaurantId)
+}
+
+/**
+ * The snapshot mutation (spec 028 FR-08/D1): one owner-only RPC call per
+ * press. The outcome is never thrown — `recorded:false` is the once-only
+ * guarantee holding (an idempotent outcome, not an error), and the surface
+ * states it; refusals surface the server's own message via the TaxResult.
+ */
+export function useRecordTaxSnapshot(): UseMutationResult<
+  import('./taxClient').SnapshotOutcome,
+  Error,
+  {
+    restaurantId: string
+    branchId: string
+    fingerprint: string
+    payload: Record<string, unknown>
+  }
+> {
+  return useMutation({
+    mutationFn: async (input: {
+      restaurantId: string
+      branchId: string
+      fingerprint: string
+      payload: Record<string, unknown>
+    }) => {
+      const result = await taxClient.recordSnapshot(input)
+      if (!result.ok) {
+        throw new Error(result.message)
+      }
+      return result.data
+    },
+  })
 }

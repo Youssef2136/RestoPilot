@@ -197,3 +197,42 @@ phase: `supabase/migrations/20260930090000_menu_override_replica_identity.sql` (
 FULL on `branch_unavailable_items` — restore events were silently dropped because DELETE payloads
 carried only `id`). Evidence: `specs/027-menu-management-ux/evidence/` (menu structure, item
 editor, branch menu Marina + Downtown, 390 px editor).
+
+## Phase 028 presentation record (tax configuration UX)
+
+Tax surfaces re-skinned from the 022 tokens + 026 management language: `TaxPage` and
+`BranchTaxPage` render `SectionCard`s under `ManagementLayout` section navs ('Tax sections' /
+'Branch tax sections'), the rules list becomes dense rows (StatusPill-style Active/Retired,
+scope badges, compound 'calculated after' labels), the editor groups its fields into fieldsets
+with `aria-describedby` hints and an error summary, `BranchTaxPanel` carries the text-bearing
+InheritanceBadge ('Inherited'/'Overridden' — never color-only), and `TaxPreview` announces its
+results in an `aria-live` 'Calculation result' region with a Calculating… busy state (the
+engine's lines and the pinned 'Subtotal: 6.50' text stay verbatim). The owner-only
+`SnapshotAction` (spec 028 D1) records the once-only configuration snapshots with a stable
+button label and outcomes stated in the status paragraph. Below 768 px the multi-select
+target/compound pickers swap — same DOM — for the boundary note. Real pre-existing defects the
+phase's E2E caught and fixed: the reorder submission mixed branch and restaurant rules (the RPC
+requires ONE context — the fix submits only the moved rule's context), `isUnreferenced` counted
+outgoing compound citations (delete now mirrors the server: incoming refs only), and an
+overridden row offered NO clearing control ('Use restaurant default' added). NO frozen anchor
+moved: every tax.surfaces pin (14 tests) and the tax.client 28 unit tests passed UNEDITED; the
+spec-006 'no snapshot surface' executable guard is superseded by D1 (inverse assertion).
+
+| Surface / hook  | Before (phase ≤ 027)                                                   | After (028)                                                                                                         | Asserted by                                    |
+| --------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Tax page        | h1 + stacked panels                                                    | ManagementLayout ('Tax sections') + SectionCards #rules/#add-rule/#snapshot (D1)                                    | tax.management (axe, owner journey)            |
+| Rule rows       | sparse text lines                                                      | dense rows: scope badge, targets, rate, Active/Retired pill, compound 'calculated after' naming its source          | tax.surfaces (pins unedited) + tax.management  |
+| Rule editor     | flat form                                                              | grouped fieldsets + aria-describedby hints + error summary + structurally disabled submit on a malformed rate       | tax.management (rate refusal)                  |
+| Reorder         | submitted the mixed displayed list (refused for branch-adjacent moves) | per-context swap + per-context submission                                                                           | tax.management (reorder legs)                  |
+| Delete gating   | blocked on outgoing citations too                                      | server parity (incoming refs only)                                                                                  | tax.management (cleanup path)                  |
+| Branch page     | stacked sections, plain-text origins                                   | ManagementLayout ('Branch tax sections') + SectionCards + InheritanceBadge + clearing affordance on overridden rows | tax.management (badge cycle)                   |
+| Preview         | own table, silent refresh                                              | 'Calculation result' aria-live region + Calculating… busy; engine output verbatim                                   | tax.management (FR-06/FR-10) + determinism pin |
+| Snapshots       | unsurfaced (spec 006 clarification 3)                                  | owner-only SnapshotAction: branch select + label + Record; once-only outcome stated, never an error                 | tax.management (record + re-record)            |
+| Mobile < 768 px | untested                                                               | pickers hidden + boundary note (same DOM); rules + preview readable                                                 | tax.management (390px)                         |
+
+New suite: `e2e/tax.management.test.ts` (serial; per-run suffixed scratch rules; cleanup is
+legal-only — scope-change to total clears junction targets before delete; seeded state restored
+after the override cycle). Cross-file discipline added: `e2e/helpers/t2Lock.ts` (the T2 shared
+table mutex — customer.menu's exact bill assertions vs reports.surfaces' rounds). Evidence:
+`specs/028-tax-configuration-ux/evidence/` (rules, rule editor, branch preview, 390 px
+boundary).
