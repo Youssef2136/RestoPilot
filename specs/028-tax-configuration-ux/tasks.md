@@ -15,7 +15,7 @@
 | T009 | `TaxPreview` re-skin on the `TotalsPanel` bill shell: frozen 'Add an item' basket select, engine lines verbatim in order, CALCULATING busy state, live-region result announcement, empty-basket/payload/provider states distinct | FR-06/09/10 | [X] |
 | T010 | New E2E `e2e/tax.management.test.ts` (serial): owner scratch-config journey (compound + reorder + retire + legal cleanup), rate-refusal verbatim, manager override cycle with badge flip + seeded restore, preview busy→result, snapshot record + once-only, 390px boundary, axe on both routes | Gates | [X] |
 | T011 | Validation: db:reset → `npm run verify` → full Playwright → `impeccable detect src` 0; convergence fixes; check off `tax-fidelity.md` items | Gates | [X] |
-| T012 | Ledger §Phase 028 + evidence screenshots; checkpoint `feat(028)` + push; phase reports + state DONE | CHECKPOINT/REPORT | [ ] |
+| T012 | Ledger §Phase 028 + evidence screenshots; checkpoint `feat(028)` + push; phase reports + state DONE | CHECKPOINT/REPORT | [X] |
 
 ## Dependencies
 

@@ -1,10 +1,18 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
+import { useNewRoundCue } from '../features/realtime/useNewRoundCue'
 import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
 import { BillPanel } from '../features/staffOps/components/BillPanel'
-import { RoundCard } from '../features/staffOps/components/RoundCard'
+import { LiveBadge } from '../features/staffOps/components/LiveBadge'
+import { NewRoundCueBanner } from '../features/staffOps/components/NewRoundCueBanner'
+import { ReconnectingBanner } from '../features/staffOps/components/ReconnectingBanner'
+import { RoundsBoard } from '../features/staffOps/components/RoundsBoard'
+import type { RefusalAttempt } from '../features/staffOps/roundGroups'
+import { pickRefusal } from '../features/staffOps/roundGroups'
+import styles from '../features/staffOps/staffOps.surfaces.module.css'
+import type { TransitionHandlers } from '../features/staffOps/components/TransitionActions'
 import {
   branchRoundsKey,
   kitchenQueueKey,
@@ -16,16 +24,20 @@ import {
 } from '../features/staffOps/useStaffOps'
 
 /**
- * The cashier rounds dashboard (spec 009 T011/T013, `/dashboard/rounds`):
- * the selected branch's rounds grouped by state, with the per-state controls
- * and the selected session's bill. The page gate is role-derived — cashier,
- * manager or owner over the branch; kitchen is explicitly refused here (its
- * surface is `/dashboard/kitchen`) — while every action is re-authorized by
- * its RPC regardless (Constitution IV).
+ * The cashier rounds dashboard (spec 009 T011/T013, `/dashboard/rounds`;
+ * specs/029 FR-01…FR-10): the selected branch's rounds on the BOARD —
+ * groups as labelled regions with counts, per-state controls, the cued new
+ * round marked in place — with the freshness badge, the reconnecting banner,
+ * the polite refresh announcement, and the selected session's bill. The page
+ * gate is role-derived — cashier, manager or owner over the branch; kitchen
+ * is explicitly refused here (its surface is `/dashboard/kitchen`) — while
+ * every action is re-authorized by its RPC regardless (Constitution IV).
  *
  * Branch options come from the identity's memberships; the `?branch=`
  * deep-link pattern preselects one (the 007 sessions pattern).
  */
+
+type RealtimeHealth = 'connected' | 'reconnecting'
 
 export function CashierRoundsPage() {
   const { isPending, isError } = useAuthContext()
@@ -49,6 +61,18 @@ export function CashierRoundsPage() {
       ? requestedBranchId
       : (branchOptions[0]?.id ?? null))
 
+  // Realtime health (specs/029 FR-07, D2): the binding's status callback —
+  // unused by any surface until this phase — reports the transport;
+  // SUBSCRIBED clears the banner (its recovery refetch reconciles the gap).
+  // The handler is stable so the subscription never re-wires per render.
+  const [realtimeHealth, setRealtimeHealth] = useState<RealtimeHealth>('connected')
+  const handleRealtimeStatus = useCallback(
+    (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => {
+      setRealtimeHealth(status === 'SUBSCRIBED' ? 'connected' : 'reconnecting')
+    },
+    [],
+  )
+
   // The live dashboard (spec 012 US1, FR-005): any committed write to this
   // branch's rounds (customer submissions, staff transitions, modifications,
   // voids) invalidates the branch reads — the next render refetches the
@@ -63,6 +87,7 @@ export function CashierRoundsPage() {
         qc.invalidateQueries({ queryKey: kitchenQueueKey(effectiveBranchId) }),
         qc.invalidateQueries({ queryKey: ['staffOps', 'sessionBill'] }),
       ]),
+    onStatus: handleRealtimeStatus,
   })
 
   const roundsQuery = useBranchRounds(effectiveBranchId)
@@ -77,32 +102,65 @@ export function CashierRoundsPage() {
 
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
 
-  // The card's refusal text: whichever mutation last failed for this round,
-  // rendered verbatim — no optimistic state anywhere (§5.4).
-  const refusalFor = (roundId: string): string | null => {
-    for (const mutation of [
-      accept,
-      startPrep,
-      ready,
-      lock,
-      outForDelivery,
-      completed,
-      modify,
-      voidRound,
-    ]) {
-      // voidRound's variables are `{ roundId, reason }` — match on the round id
-      // half so its verbatim refusal lands on the originating card.
-      if (
-        mutation.isError &&
-        (mutation.variables === roundId ||
-          (typeof mutation.variables === 'object' &&
-            mutation.variables !== null &&
-            (mutation.variables as { roundId?: string }).roundId === roundId))
-      ) {
-        return mutation.error instanceof Error ? mutation.error.message : 'The action was refused.'
-      }
+  // The new-round cue (spec 012 US4; specs/029 FR-08, D3): the cued round's
+  // card is marked in place and scrolled into view — presentation only,
+  // never a focus steal (a refetch never moves focus).
+  const { cue, clearCue } = useNewRoundCue(effectiveBranchId)
+  useEffect(() => {
+    if (cue === null) {
+      return
     }
-    return null
+    document
+      .querySelector(`article[data-round-id="${cue.roundId}"]`)
+      ?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [cue])
+
+  // The refresh announcement (FR-07): ONE polite region; it speaks when a
+  // fetch RESOLVES (coalesced upstream by the binding), never per event.
+  const [announcement, setAnnouncement] = useState('')
+  const announcedAtRef = useRef(0)
+  const dataUpdatedAt = roundsQuery.dataUpdatedAt
+  useEffect(() => {
+    if (dataUpdatedAt === 0 || dataUpdatedAt === announcedAtRef.current) {
+      return
+    }
+    announcedAtRef.current = dataUpdatedAt
+    const count = roundsQuery.data?.length ?? 0
+    setAnnouncement(`The rounds board refreshed — ${count} rounds on the board.`)
+  }, [dataUpdatedAt, roundsQuery.data])
+
+  // The card's refusal text (FR-09): whichever mutation last failed for this
+  // round, routed by the extracted picker — rendered verbatim, no optimistic
+  // state anywhere (§5.4).
+  const attempts: RefusalAttempt[] = [
+    accept,
+    startPrep,
+    ready,
+    lock,
+    outForDelivery,
+    completed,
+    modify,
+    voidRound,
+  ]
+  const refusalFor = (roundId: string): string | null => pickRefusal(roundId, attempts)
+
+  const busy =
+    accept.isPending ||
+    startPrep.isPending ||
+    ready.isPending ||
+    lock.isPending ||
+    outForDelivery.isPending ||
+    completed.isPending ||
+    modify.isPending ||
+    voidRound.isPending
+
+  const handlers: TransitionHandlers = {
+    onAccept: (roundId) => accept.mutate(roundId),
+    onStart: (roundId) => startPrep.mutate(roundId),
+    onReady: (roundId) => ready.mutate(roundId),
+    onLock: (roundId) => lock.mutate(roundId),
+    onOutForDelivery: (roundId) => outForDelivery.mutate(roundId),
+    onCompleted: (roundId) => completed.mutate(roundId),
   }
 
   if (isPending || optionsPending) {
@@ -136,19 +194,10 @@ export function CashierRoundsPage() {
   }
 
   const rounds = roundsQuery.data ?? []
-  const groups: Array<[string, typeof rounds]> = [
-    ['new', rounds.filter((r) => r.state === 'new')],
-    ['in progress', rounds.filter((r) => r.state === 'accepted' || r.state === 'preparing')],
-    ['ready', rounds.filter((r) => r.state === 'ready')],
-    // The delivery machine (spec 010 §3): dispatched and delivered rounds are
-    // terminal-adjacent groups of their own — dine-in never reaches them.
-    ['out for delivery', rounds.filter((r) => r.state === 'out_for_delivery')],
-    ['delivered', rounds.filter((r) => r.state === 'completed')],
-    ['served', rounds.filter((r) => r.state === 'lock')],
-  ]
+  const staleError = roundsQuery.isError && roundsQuery.data !== undefined
 
   return (
-    <section>
+    <section data-density="compact">
       <h1>Rounds</h1>
 
       {branchOptions.length > 1 && (
@@ -168,53 +217,44 @@ export function CashierRoundsPage() {
         </div>
       )}
 
+      <header className={styles.boardToolbar}>
+        <LiveBadge updatedAt={roundsQuery.dataUpdatedAt} fetching={roundsQuery.isFetching} />
+      </header>
+
+      <ReconnectingBanner
+        reconnecting={realtimeHealth === 'reconnecting'}
+        staleError={staleError}
+        onRetry={() => void roundsQuery.refetch()}
+      />
+
       {roundsQuery.isPending && <p>Loading the branch rounds…</p>}
-      {roundsQuery.isError && (
+      {roundsQuery.isError && roundsQuery.data === undefined && (
         <p role="alert">The rounds could not be loaded. Reload the page and try again.</p>
       )}
 
-      {groups.map(([label, groupRounds]) => (
-        <div key={label}>
-          <h2>{label}</h2>
-          {groupRounds.length === 0 ? (
-            <p>Nothing here.</p>
-          ) : (
-            groupRounds.map((round) => (
-              <RoundCard
-                key={round.round_id}
-                round={round}
-                busy={
-                  accept.isPending ||
-                  startPrep.isPending ||
-                  ready.isPending ||
-                  lock.isPending ||
-                  outForDelivery.isPending ||
-                  completed.isPending ||
-                  modify.isPending ||
-                  voidRound.isPending
-                }
-                refusal={refusalFor(round.round_id)}
-                billSelected={selectedSessionId === round.session_id}
-                onSelectForBill={() =>
-                  setSelectedSessionId((current) =>
-                    current === round.session_id ? null : round.session_id,
-                  )
-                }
-                onAccept={() => accept.mutate(round.round_id)}
-                onStart={() => startPrep.mutate(round.round_id)}
-                onReady={() => ready.mutate(round.round_id)}
-                onLock={() => lock.mutate(round.round_id)}
-                onOutForDelivery={() => outForDelivery.mutate(round.round_id)}
-                onCompleted={() => completed.mutate(round.round_id)}
-                onModify={(itemId, action, quantity) =>
-                  modify.mutate({ roundId: round.round_id, itemId, action, quantity })
-                }
-                onVoid={(reason) => voidRound.mutate({ roundId: round.round_id, reason })}
-              />
-            ))
-          )}
-        </div>
-      ))}
+      <RoundsBoard
+        rounds={rounds}
+        busy={busy}
+        refusalFor={refusalFor}
+        cuedRoundId={cue?.roundId ?? null}
+        billSelectedSessionId={selectedSessionId}
+        onSelectForBill={(round) =>
+          setSelectedSessionId((current) =>
+            current === round.session_id ? null : round.session_id,
+          )
+        }
+        onModify={(round, itemId, action, quantity) =>
+          modify.mutate({ roundId: round.round_id, itemId, action, quantity })
+        }
+        onVoid={(round, reason) => voidRound.mutate({ roundId: round.round_id, reason })}
+        handlers={handlers}
+      />
+
+      <p aria-live="polite" className={styles.srOnly}>
+        {announcement}
+      </p>
+
+      <NewRoundCueBanner cue={cue} onDismiss={clearCue} />
 
       {selectedSessionId !== null && <BillPanel sessionId={selectedSessionId} />}
     </section>

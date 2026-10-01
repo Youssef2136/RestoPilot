@@ -236,3 +236,43 @@ after the override cycle). Cross-file discipline added: `e2e/helpers/t2Lock.ts` 
 table mutex — customer.menu's exact bill assertions vs reports.surfaces' rounds). Evidence:
 `specs/028-tax-configuration-ux/evidence/` (rules, rule editor, branch preview, 390 px
 boundary).
+
+## Phase 029 presentation record (cashier operations UX)
+
+The cashier surfaces re-skinned into the 022 token system as an operable board: the rounds page
+renders its six state groups as labelled regions (`<section aria-label>` + heading + count pill)
+under a compact `data-density='compact'` root — columns side-by-side at ≥1025 px (the cashier
+station), stacked below (same DOM, `@media` only). `RoundCard` rebuilt with `StateChip` state
+vocabulary + channel chip + tabular-numeral money, inline 'Reduce one'/'Remove line' with
+consequence copy, `TransitionActions` (pinned names, busy/disabled), the two-step void with the
+boundary/irreversibility statement, a distinct voided treatment (danger surface + text-bearing
+note), and the cued round marked with a 'New order' badge + `data-round-cue`. `BillPanel` rebuilt
+as the printed check (hairline separators, tabular numerals, participants as chips, tax lines by
+name, voided section, emphasized grand total). Freshness (D2): 'Updated Xs ago' `LiveBadge`
+ticking from `dataUpdatedAt` with a pulsing dot while refetching; a polite `aria-live` refresh
+announcement; the binding's previously-unused `onStatus` now drives the 'Reconnecting…' banner
+(CHANNEL_ERROR/TIMED_OUT/CLOSED), clearing on SUBSCRIBED; a stale-data error keeps the last-known
+board with 'Retry now'. The cue (D3) gained its clear path: the dashboard banner links to the
+board, the board marks the round in place. Sessions re-skinned on the same tokens with the pinned
+dialog names and the single role=status closure notice intact. NO frozen anchor moved: every
+cashier/kitchen/bill-void/realtime/session/realtime/full-journey/reports pin (174 tests) and the
+staffops.client payload-discipline suite passed UNEDITED.
+
+| Surface / hook  | Before (phase ≤ 028)                | After (029)                                                                                           | Asserted by                                   |
+| --------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Rounds page     | stacked div groups, 'Nothing here.' | RoundsBoard labelled regions + counts + named empties; compact density; board grid ≥1025 px           | cashier.operations (tablet pass, axe)         |
+| Round card      | plain text state + inline buttons   | StateChip + channel chip + 'New order' cue badge + tabular money + consequence copy; voided distinct  | cashier.operations + realtime pins unedited   |
+| Void flow       | confirm with reason only            | VoidRoundDialog: pinned names + boundary/irreversibility statement                                    | bill.void.audit (pins unedited)               |
+| Bill            | sparse section list                 | printed-check BillPanel on money primitives (numeric pins held: voided line 2 figures, grand total 1) | bill.void.audit + kitchen.cashier unedited    |
+| Freshness       | none                                | LiveBadge 'Updated Xs ago' + pulse; polite refresh announcement                                       | cashier.operations (badge ticks)              |
+| Connection      | silent CHANNEL_ERROR/TIMED_OUT      | ReconnectingBanner from binding `onStatus`; recovery on SUBSCRIBED; stale-data retry posture          | cashier.operations (offline → banner → clear) |
+| Cue             | announcement only on the dashboard  | + 'Show the new order' board link; board marks the cued round (scroll, no focus steal)                | realtime pins unedited + cashier.operations   |
+| Sessions panel  | plain rows                          | token re-skin (SessionRow cards, participant chips); pinned names + single role=status intact         | session.surfaces unedited + axe               |
+| Refusal routing | page-level scan                     | extracted `pickRefusal` (unit-tested) rendering verbatim on the originating card                      | unit roundBoard (11)                          |
+
+New suite: `e2e/cashier.operations.test.ts` (serial; Marina T1 scratch fixture under the existing
+`withMarinaT1Lock` — activate → operate → deactivate; the customer entry queues on `withEntryLock`):
+tablet-viewport full chain with a keyboard-only leg, the offline → reconnecting → recovery banner
+behavior, the 390 px void journey, and the axe floor on both routes. Evidence:
+`specs/029-cashier-operations-ux/evidence/` (board tablet, incoming round, card modify, bill,
+390 px).

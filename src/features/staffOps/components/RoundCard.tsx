@@ -1,248 +1,167 @@
 import { useState } from 'react'
-import { ConfirmDialog } from '../../../components/ui'
+import { Button, MoneyText, StateChip, type DomainStatus } from '../../../components/ui'
 import { formatPrice } from '../../menu/money'
 import { channelLabel } from '../../session/sessionClient'
-import type { BranchRound, RoundActionResult } from '../staffOpsClient'
+import styles from '../staffOps.surfaces.module.css'
+import type { BranchRound } from '../staffOpsClient'
+import { MODIFIABLE, isVoidable } from '../roundGroups'
+import { RefusalText } from './RefusalText'
+import { TransitionActions, type TransitionHandlers } from './TransitionActions'
+import { VoidRoundDialog } from './VoidRoundDialog'
 
 /**
- * One branch round on the cashier dashboard (spec 009 T011; spec 010 T013;
- * contracts/staff-ops-client.md §4; contracts/session-client.md §4; US2, US3).
+ * One branch round on the cashier board (spec 009 T011; spec 010 T013;
+ * spec 011 T008; specs/029 FR-02/03/04, D5; contracts/staff-ops-client.md
+ * §4; contracts/session-client.md §4).
  *
- * Controls are enabled exactly per state: accept on `new`; modify (remove a
- * line, reduce a quantity) on `new`–`preparing`; lock on `ready`; nothing on
- * `lock` (and nothing ever for kitchen — that gate lives server-side, the
- * refusal renders verbatim). DELIVERY rounds extend the machine (spec 010
- * FR-005): "Send out for delivery" on `ready`, "Mark completed" on
- * `out_for_delivery` — lock is not offered on delivery, `completed` is its
- * terminal. The card carries the channel chip (FR-009); money text is the
- * round's CAPTURED values only.
+ * The card is the board's workhorse: header (table/channel + the pinned
+ * 'round <id8>' fragment + state chip + cued marker), item lines with the
+ * inline modify controls ('Reduce one' / 'Remove line' — D5, the E2E
+ * contract), the captured money line, the state-gated transition actions
+ * (pinned names), the boundary-aware two-step void, and the 'Show bill'
+ * selection. Everything re-renders from the refetched read — no optimistic
+ * state (§5.4). The void is an OVERLAY: `data-voided` flips while the round
+ * keeps its state, and the voided note carries the reason verbatim.
  */
 
 export interface RoundCardProps {
   round: BranchRound
   busy: boolean
   refusal: string | null
-  onAccept: () => void
-  onStart: () => void
-  onReady: () => void
-  onModify: (itemId: string, action: 'remove' | 'reduce', quantity?: number) => void
-  onLock: () => void
-  onOutForDelivery: () => void
-  onCompleted: () => void
-  onVoid: (reason: string) => void
-  onSelectForBill: () => void
+  /** The new-round cue names THIS round (FR-08, D3) — visible marker only. */
+  cued?: boolean
   billSelected: boolean
-}
-
-const ACCEPTABLE = new Set(['new'])
-const STARTABLE = new Set(['accepted'])
-const READIABLE = new Set(['preparing'])
-const MODIFIABLE = new Set(['new', 'accepted', 'preparing'])
-const LOCKABLE = new Set(['ready'])
-const DISPATCHABLE = new Set(['ready'])
-const COMPLETABLE = new Set(['out_for_delivery'])
-const IS_DELIVERY = (round: BranchRound) => round.session_type === 'delivery'
-
-/**
- * The void boundary per channel (spec 011 FR-004): dine-in at `lock`,
- * delivery at `out_for_delivery`+ (the server accepts through `completed`),
- * takeaway at `ready`. Below the boundary the control is not offered at all
- * — void is not the edit path.
- */
-function VOIDABLE(round: BranchRound): boolean {
-  if (round.session_type === 'dine-in') return round.state === 'lock'
-  if (round.session_type === 'delivery')
-    return round.state === 'out_for_delivery' || round.state === 'completed'
-  return round.state === 'ready'
+  onSelectForBill: () => void
+  onModify: (itemId: string, action: 'remove' | 'reduce', quantity?: number) => void
+  onVoid: (reason: string) => void
+  handlers: TransitionHandlers
 }
 
 export function RoundCard({
   round,
   busy,
   refusal,
-  onAccept,
-  onStart,
-  onReady,
-  onModify,
-  onLock,
-  onOutForDelivery,
-  onCompleted,
-  onVoid,
-  onSelectForBill,
+  cued = false,
   billSelected,
+  onSelectForBill,
+  onModify,
+  onVoid,
+  handlers,
 }: RoundCardProps) {
   const [voiding, setVoiding] = useState(false)
-  const [voidReason, setVoidReason] = useState('')
-  const reasonOk = voidReason.trim().length > 0
+  const modifiable = !round.voided && MODIFIABLE.has(round.state)
 
   return (
     <article
+      className={[styles.card, cued ? styles.cardCued : ''].filter(Boolean).join(' ')}
       data-round-id={round.round_id}
       data-round-state={round.state}
       data-voided={round.voided}
     >
-      <header>
-        <h3>
+      <header className={styles.cardHeader}>
+        <h3 className={styles.cardTitle}>
           {round.table_label !== null
             ? `Table ${round.table_label}`
             : channelLabel(round.session_type)}{' '}
-          — round {round.round_id.slice(0, 8)}{' '}
-          <span data-channel-chip>{channelLabel(round.session_type)}</span>
+          — round {round.round_id.slice(0, 8)}
         </h3>
-        <p>
-          State: <strong>{round.state}</strong>
-        </p>
+        <div className={styles.cardMeta}>
+          {cued && <span className={styles.cueBadge}>New order</span>}
+          <StateChip status={round.voided ? 'voided' : (round.state as DomainStatus)} />
+          <span data-channel-chip className={styles.channelChip}>
+            {channelLabel(round.session_type)}
+          </span>
+        </div>
         {round.voided && (
-          <p data-voided-note>
+          <p data-voided-note className={styles.voidedNote}>
             <strong>Voided</strong>
             {round.void_reason !== null ? ` — ${round.void_reason}` : ''}
           </p>
         )}
-        {IS_DELIVERY(round) && round.delivery_address ? (
-          <p>Deliver to: {round.delivery_address}</p>
+        {round.session_type === 'delivery' && round.delivery_address ? (
+          <p className={styles.addressLine}>Deliver to: {round.delivery_address}</p>
         ) : null}
       </header>
 
-      <ul>
+      <ul className={styles.lineList}>
         {round.items.map((item) => (
-          <li key={`${round.round_id}-${item.item_id}`}>
-            {item.name} × {item.quantity} — {formatPrice(item.unit_price)} each
-            {item.extras.length > 0 ? ` (+ ${item.extras.join(', ')})` : ''} ={' '}
-            {formatPrice((parseFloat(item.unit_price) * item.quantity).toFixed(2))}{' '}
-            {MODIFIABLE.has(round.state) && (
+          <li key={`${round.round_id}-${item.item_id}`} className={styles.lineRow}>
+            <span className={styles.lineMain}>
               <span>
-                {' '}
+                {item.name} × {item.quantity}
+                {item.extras.length > 0 ? ` (+ ${item.extras.join(', ')})` : ''}
+              </span>
+              <span className={styles.lineMoney}>
+                {formatPrice(item.unit_price)} each ·{' '}
+                <MoneyText value={(parseFloat(item.unit_price) * item.quantity).toFixed(2)} />
+              </span>
+            </span>
+            {modifiable && (
+              <span className={styles.lineModify}>
                 {item.quantity > 1 && (
-                  <button
-                    type="button"
+                  <Button
+                    size="sm"
                     disabled={busy}
                     onClick={() => onModify(item.item_id, 'reduce', item.quantity - 1)}
                   >
                     Reduce one
-                  </button>
-                )}{' '}
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => onModify(item.item_id, 'remove')}
-                >
+                  </Button>
+                )}
+                <Button size="sm" disabled={busy} onClick={() => onModify(item.item_id, 'remove')}>
                   Remove line
-                </button>
+                </Button>
               </span>
             )}
           </li>
         ))}
       </ul>
-
-      <p>
-        Subtotal {formatPrice(round.subtotal)} · tax {formatPrice(round.tax_total)}
-      </p>
-
-      {refusal !== null && (
-        <p role="alert" data-refusal>
-          {refusal}
+      {modifiable && round.items.length > 0 && (
+        <p className={styles.modifyHint}>
+          Reducing or removing a line tells the kitchen immediately — the server re-derives the
+          captured prices.
         </p>
       )}
 
-      <footer>
-        {!round.voided && ACCEPTABLE.has(round.state) && (
-          <button type="button" disabled={busy} onClick={onAccept}>
-            Accept round
-          </button>
-        )}
-        {!round.voided && STARTABLE.has(round.state) && (
-          <button type="button" disabled={busy} onClick={onStart}>
-            Start preparation
-          </button>
-        )}
-        {!round.voided && READIABLE.has(round.state) && (
-          <button type="button" disabled={busy} onClick={onReady}>
-            Mark ready
-          </button>
-        )}
-        {!round.voided && LOCKABLE.has(round.state) && !IS_DELIVERY(round) && (
-          <button type="button" disabled={busy} onClick={onLock}>
-            Lock round
-          </button>
-        )}
-        {!round.voided && IS_DELIVERY(round) && DISPATCHABLE.has(round.state) && (
-          <button type="button" disabled={busy} onClick={onOutForDelivery}>
-            Send out for delivery
-          </button>
-        )}
-        {!round.voided && IS_DELIVERY(round) && COMPLETABLE.has(round.state) && (
-          <button type="button" disabled={busy} onClick={onCompleted}>
-            Mark completed
-          </button>
-        )}
-        {round.state === 'lock' && !round.voided && <span>Served (locked)</span>}
-        {round.state === 'completed' && !round.voided && <span>Delivered (completed)</span>}
+      <p className={styles.totalsRow}>
+        <span>
+          Subtotal <MoneyText value={round.subtotal} />
+        </span>
+        <span>
+          tax <MoneyText value={round.tax_total} />
+        </span>
+      </p>
 
-        {/* The void control (spec 011 FR-004): boundary states only, the
-            reason prompt with the non-empty check as client-side feedback —
-            the server re-validates in its documented order regardless.
-            Spec 023 FR-06 (Q4): the two-step void runs through the
-            ConfirmDialog primitive — "Void round" opens, "Confirm void"
-            confirms, "Cancel" cancels (E2E contract names). */}
-        {!round.voided && VOIDABLE(round) && (
-          <button type="button" disabled={busy} onClick={() => setVoiding(true)}>
-            Void round
-          </button>
-        )}
-        {!round.voided && VOIDABLE(round) && (
-          <ConfirmDialog
-            open={voiding}
-            onCancel={() => {
-              setVoiding(false)
-              setVoidReason('')
-            }}
-            onConfirm={() => {
-              if (!reasonOk || busy) return
-              onVoid(voidReason.trim())
-              setVoiding(false)
-              setVoidReason('')
-            }}
-            title={`Void ${round.table_label ?? 'round'}`.trim()}
-            confirmLabel="Confirm void"
-            cancelLabel="Cancel"
-            confirmDisabled={!reasonOk}
-            busy={busy}
-          >
-            <form
-              onSubmit={(event) => {
-                event.preventDefault()
-                if (!reasonOk || busy) return
-                onVoid(voidReason.trim())
-                setVoiding(false)
-                setVoidReason('')
-              }}
-            >
-              <label htmlFor={`void-reason-${round.round_id}`}>Void reason</label>
-              <input
-                id={`void-reason-${round.round_id}`}
-                value={voidReason}
-                onChange={(event) => setVoidReason(event.target.value)}
-                maxLength={500}
-                placeholder="Why is this round being voided?"
-              />
-            </form>
-          </ConfirmDialog>
-        )}
-        <label>
-          <input
-            type="checkbox"
-            checked={billSelected}
-            onChange={onSelectForBill}
+      {refusal !== null && <RefusalText message={refusal} />}
+
+      <TransitionActions round={round} busy={busy} handlers={handlers} />
+
+      {!round.voided && isVoidable(round) && (
+        <>
+          <Button
+            variant="danger"
+            className={styles.touchAction}
             disabled={busy}
+            onClick={() => setVoiding(true)}
+          >
+            Void round
+          </Button>
+          <VoidRoundDialog
+            open={voiding}
+            round={round}
+            busy={busy}
+            onCancel={() => setVoiding(false)}
+            onConfirm={(reason) => {
+              onVoid(reason)
+              setVoiding(false)
+            }}
           />
-          Show bill
-        </label>
-      </footer>
+        </>
+      )}
+
+      <label className={styles.billToggle}>
+        <input type="checkbox" checked={billSelected} onChange={onSelectForBill} disabled={busy} />{' '}
+        Show bill
+      </label>
     </article>
   )
-}
-
-/** Map a transition result to the state label the card re-renders from. */
-export function resultState(result: RoundActionResult): string {
-  return result.round.state
 }

@@ -1,0 +1,14 @@
+# Analysis: Cashier Operations UX (Phase 09)
+
+Cross-checked the plan against the frozen contracts and the Master Plan's phase §. Findings:
+
+1. **Frozen-coverage expansion beyond the summary's list**: `e2e/full-journey.test.ts` (fiona) drives the rounds board ('Rounds' nav link, chain via `data-round-state`, kitchen via `data-ticket-state`, the LOCKED card must contain /Total/i with a digit) and closes a session through the strict `getByRole('status')` lookup; `e2e/reports.surfaces.test.ts` US3 drives a void on Downtown T2 through the board (t2Lock). Both files are now first-class fidelity anchors — recorded in `checklists/cashier-fidelity.md` and honored by keeping the card's 'Subtotal … tax …' line and the 'round <id8>' heading fragment.
+2. **Strict-mode hazards mapped**: on `/dashboard/sessions` the closure notice must remain the ONLY role=status (toasts host is role=region). The reconnecting banner therefore ships with `aria-live="polite"` (no role=status) and renders on the rounds page only. Single-branch pages must not gain a 'Branch' label or the text 'Marina' (carla/eve count-0 pins). New button labels avoid the pinned names.
+3. **Numeric pins in the bill**: bill.void.audit counts EXACTLY two decimal figures on the journey's voided line and parses ONE number out of `bill-grand-total` for the delta math — the rebuilt BillPanel must not add figures inside those elements (no counts, timestamps, or tax-line echoes there).
+4. **Kitchen untouched**: phase 10 owns KitchenDashboardPage/TicketCard; the kitchen's money-free pins stay green by construction (no changes to kitchen surfaces or the money-free parser).
+5. **`onStatus` is already supported** by `useRealtimeInvalidation` but unused by any surface — wiring it on the rounds page is additive (no default-behavior change: the binding keeps its SUBSCRIBED recovery refetch; FA-2 respected).
+6. **Reconnect test realism**: `context.setOffline(true)` kills the WS transport → CHANNEL_ERROR fires → banner; recovery asserts via `toPass` with generous timeout (supabase-js reconnect backoff). The stale-data error path (isError + data) keeps the board rendered — matching the current page's composition (the error paragraph renders ALONGSIDE the groups).
+7. **Marina T1 as the new suite's scratch fixture**: entering at Downtown would add 'new'-state Hummus cards that other serial files' `.first()` lookups could grab (kitchen.cashier/bill.void/realtime all anchor on the first incoming card). Marina T1 under `withMarinaT1Lock` (activate → operate → deactivate, self-healing flip) avoids every cross-file first() race; the entry itself queues on the shared entryLock.
+8. **No backend work**: the RPC set, realtime tables, and cue hook cover every FR; `staffOpsClient.ts`/`useStaffOps.ts` stay byte-identical (payload discipline tests UNCHANGED).
+
+Verdict: NO blocking contract gaps; D1–D5 resolve the plan's clarify questions within the frozen contracts. Proceed to IMPLEMENT.
