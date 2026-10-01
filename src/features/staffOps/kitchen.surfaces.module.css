@@ -1,0 +1,257 @@
+/*
+ * Spec 030 — the kitchen display surfaces (FR-01/02/03, D1/D2/D4).
+ * Phase-02 tokens ONLY — no raw values (the design literals gate covers
+ * comments too). The KDS scale is the point: readable from two metres, on
+ * a screen nobody touches with clean hands — large radii, heavy borders,
+ * strong counts, honest ages.
+ */
+
+/* ── Board: three fluid slabs (D4: ≥1025 fills the viewport; portrait
+   stacks the SAME DOM) ─────────────────────────────────────────────────── */
+
+.board {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+@media (min-width: 1025px) {
+  .board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+    align-items: start;
+  }
+}
+
+.column {
+  background: var(--color-surface-sunken);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.columnHeading {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-ink);
+}
+
+.columnCount {
+  flex-shrink: 0;
+  min-width: 2.25rem;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-raised);
+  border: var(--border-width) solid var(--color-border);
+  color: var(--color-ink);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.columnList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.columnEmpty {
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-md);
+  text-align: center;
+}
+
+/* ── Ticket card (FR-02): KDS scale, angled-glance legible ──────────────── */
+
+.ticket {
+  background: var(--color-surface-raised);
+  border: var(--border-width-strong) solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ticketHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ticketHeading {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-ink);
+}
+
+.ticketMeta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--font-size-md);
+  color: var(--color-ink-muted);
+}
+
+/* The age (D2): the band carries the meaning — ink for fresh/working,
+   the warning pair for late — plus the text-bearing label, never color
+   alone. */
+.ageFresh,
+.ageWorking {
+  font-variant-numeric: tabular-nums;
+}
+
+.ageLate {
+  font-variant-numeric: tabular-nums;
+  color: var(--color-warning);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ageBadge {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-surface);
+}
+
+.itemList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-3) 0 0;
+  border-top: var(--border-width) solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.itemLine {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  font-size: var(--font-size-lg);
+  color: var(--color-ink);
+}
+
+.itemQuantity {
+  flex-shrink: 0;
+  min-width: 2rem;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-weight: var(--font-weight-bold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.itemName {
+  font-weight: var(--font-weight-semibold);
+}
+
+.itemExtras {
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-md);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* The one large-format control (FR-04): well above the touch floor. */
+.bigAction {
+  min-height: 3.5rem;
+  min-width: 60%;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  flex: 1 1 auto;
+}
+
+/* The refusal: verbatim on the originating card (FR-08) — danger pair,
+   text-bearing. */
+.ticketRefusal {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-surface);
+  color: var(--color-danger);
+  font-size: var(--font-size-md);
+}
+
+/* The one-shot NEW highlight (D1): a brand-tinted entry treatment that
+   fades — composition is the alarm (the incoming column leads); no sound,
+   no persistent flash. Reduced motion collapses the animation globally in
+   base.css. */
+.ticketArrived {
+  border-color: var(--color-brand);
+  animation: ticketArrive 2.4s var(--ease-out) forwards;
+}
+
+@keyframes ticketArrive {
+  from {
+    background: var(--color-brand-surface);
+  }
+  to {
+    background: var(--color-surface-raised);
+  }
+}
+
+/* ── Postures (FR-05 loading/empty) ─────────────────────────────────────── */
+
+.skeletonCard {
+  height: 9rem;
+  border-radius: var(--radius-lg);
+}
+
+.emptyBoard {
+  margin: 0;
+  padding: var(--space-8) var(--space-4);
+  border: var(--border-width) dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-lg);
+  text-align: center;
+}
+
+.boardToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Visually hidden until announced (the refresh announcement region). */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
-import { TicketCard } from '../features/staffOps/components/TicketCard'
+import { KitchenBoard } from '../features/staffOps/components/KitchenBoard'
+import { LiveBadge } from '../features/staffOps/components/LiveBadge'
+import { ReconnectingBanner } from '../features/staffOps/components/ReconnectingBanner'
+import kitchenStyles from '../features/staffOps/kitchen.surfaces.module.css'
 import {
   kitchenQueueKey,
   useKitchenQueue,
@@ -12,14 +15,22 @@ import {
 } from '../features/staffOps/useStaffOps'
 
 /**
- * The kitchen dashboard (spec 009 T014/T015, `/dashboard/kitchen`): the
- * selected branch's non-locked tickets in three columns — new (incoming),
- * preparing, ready — with start/ready controls per state (a `new` ticket
- * needs the cashier's accept first, per US3's clarification; kitchen acts
- * from `accepted`). No money text anywhere (FR-010). Access is role-derived
- * (kitchen/cashier/manager/owner) and every action re-authorized by its RPC
- * (Constitution IV).
+ * The kitchen dashboard (spec 009 T014/T015, `/dashboard/kitchen`; specs/
+ * 030 FR-01…FR-09): the KDS board — three columns with counts and real
+ * headings, tickets at display scale, the honest age — with the freshness
+ * badge, the reconnecting banner, and the polite refresh announcement.
+ * Exactly two actions exist ('Start preparation', 'Mark ready' — the
+ * pinned names); a `new` ticket awaits the cashier (D3: visible, not
+ * actionable — the accept control does not exist here). No money text
+ * anywhere (FR-010 — the payload carries none and the surface must not
+ * invent any). Access is role-derived (kitchen/cashier/manager/owner) and
+ * every action re-authorized by its RPC (Constitution IV).
  */
+
+type RealtimeHealth = 'connected' | 'reconnecting'
+
+const ARRIVAL_HIGHLIGHT_MS = 3_000
+
 export function KitchenDashboardPage() {
   const { isPending, isError } = useAuthContext()
   const [searchParams] = useSearchParams()
@@ -41,6 +52,17 @@ export function KitchenDashboardPage() {
       ? requestedBranchId
       : (branchOptions[0]?.id ?? null))
 
+  // Realtime health (specs/030 FR-05): the ticket binding reports the
+  // transport; SUBSCRIBED clears the banner (its recovery refetch reconciles
+  // the gap). The handler is stable so the subscription never re-wires.
+  const [realtimeHealth, setRealtimeHealth] = useState<RealtimeHealth>('connected')
+  const handleTicketStatus = useCallback(
+    (status: 'SUBSCRIBED' | 'CHANNEL_ERROR' | 'TIMED_OUT' | 'CLOSED') => {
+      setRealtimeHealth(status === 'SUBSCRIBED' ? 'connected' : 'reconnecting')
+    },
+    [],
+  )
+
   // The live queue (spec 012 US2, FR-006): new tickets and ticket state
   // changes invalidate the queue — the money-free, channel-blind contract
   // is unchanged (the events invalidate, the READ decides what may render).
@@ -48,6 +70,7 @@ export function KitchenDashboardPage() {
     scopeValue: effectiveBranchId,
     table: 'kitchen_tickets',
     invalidate: (qc) => qc.invalidateQueries({ queryKey: kitchenQueueKey(effectiveBranchId) }),
+    onStatus: handleTicketStatus,
   })
   // A newly submitted round creates the ticket — `rounds` events keep the
   // queue live for the incoming column too.
@@ -69,6 +92,38 @@ export function KitchenDashboardPage() {
     }
     return null
   }
+
+  // The one-shot arrival highlight (D1): track ticket ids the board has
+  // already shown; brand-new ids get the entry treatment for a beat, then
+  // the id joins the seen set — an unrelated refetch never re-arms it.
+  const [arrivedTicketIds, setArrivedTicketIds] = useState<ReadonlySet<string>>(new Set())
+  const seenTicketIdsRef = useRef<ReadonlySet<string>>(new Set())
+  const tickets = useMemo(() => queueQuery.data ?? [], [queueQuery.data])
+  useEffect(() => {
+    const unseen = tickets
+      .map((ticket) => ticket.ticket_id)
+      .filter((id) => !seenTicketIdsRef.current.has(id))
+    if (unseen.length === 0) {
+      return
+    }
+    seenTicketIdsRef.current = new Set([...seenTicketIdsRef.current, ...unseen])
+    setArrivedTicketIds(new Set(unseen))
+    const timer = setTimeout(() => setArrivedTicketIds(new Set()), ARRIVAL_HIGHLIGHT_MS)
+    return () => clearTimeout(timer)
+  }, [tickets])
+
+  // The refresh announcement (the 029 pattern): ONE polite region, speaks
+  // when a fetch RESOLVES (coalesced upstream), never per event.
+  const [announcement, setAnnouncement] = useState('')
+  const announcedAtRef = useRef(0)
+  const dataUpdatedAt = queueQuery.dataUpdatedAt
+  useEffect(() => {
+    if (dataUpdatedAt === 0 || dataUpdatedAt === announcedAtRef.current) {
+      return
+    }
+    announcedAtRef.current = dataUpdatedAt
+    setAnnouncement(`The kitchen queue refreshed — ${tickets.length} tickets on the board.`)
+  }, [dataUpdatedAt, tickets.length])
 
   if (isPending || optionsPending) {
     return (
@@ -100,58 +155,62 @@ export function KitchenDashboardPage() {
     )
   }
 
-  const tickets = queueQuery.data ?? []
-  const columns: Array<[string, typeof tickets]> = [
-    ['new', tickets.filter((t) => t.state === 'new')],
-    ['preparing', tickets.filter((t) => t.state === 'accepted' || t.state === 'preparing')],
-    ['ready', tickets.filter((t) => t.state === 'ready')],
-  ]
+  const busy = start.isPending || ready.isPending
+  const staleError = queueQuery.isError && queueQuery.data !== undefined
 
   return (
     <section>
       <h1>Kitchen</h1>
 
-      {branchOptions.length > 1 && (
-        <div>
-          <label htmlFor="kitchen-branch">Branch</label>
-          <select
-            id="kitchen-branch"
-            value={effectiveBranchId ?? ''}
-            onChange={(event) => setSelectedBranchId(event.target.value)}
-          >
-            {branchOptions.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.label}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div className={kitchenStyles.boardToolbar}>
+        <LiveBadge updatedAt={queueQuery.dataUpdatedAt} fetching={queueQuery.isFetching} />
+        {branchOptions.length > 1 && (
+          <div>
+            <label htmlFor="kitchen-branch">Branch</label>
+            <select
+              id="kitchen-branch"
+              value={effectiveBranchId ?? ''}
+              onChange={(event) => setSelectedBranchId(event.target.value)}
+            >
+              {branchOptions.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
 
-      {queueQuery.isPending && <p>Loading the kitchen queue…</p>}
-      {queueQuery.isError && (
+      <ReconnectingBanner
+        reconnecting={realtimeHealth === 'reconnecting'}
+        staleError={staleError}
+        onRetry={() => void queueQuery.refetch()}
+      />
+
+      {queueQuery.isError && queueQuery.data === undefined && (
         <p role="alert">The queue could not be loaded. Reload the page and try again.</p>
       )}
 
-      {columns.map(([label, columnTickets]) => (
-        <div key={label} data-kitchen-column={label}>
-          <h2>{label}</h2>
-          {columnTickets.length === 0 ? (
-            <p>Nothing here.</p>
-          ) : (
-            columnTickets.map((ticket) => (
-              <TicketCard
-                key={ticket.ticket_id}
-                ticket={ticket}
-                busy={start.isPending || ready.isPending}
-                refusal={refusalFor(ticket.round_id)}
-                onStart={() => start.mutate(ticket.round_id)}
-                onReady={() => ready.mutate(ticket.round_id)}
-              />
-            ))
-          )}
-        </div>
-      ))}
+      {tickets.length === 0 && !queueQuery.isPending && (
+        <p className={kitchenStyles.emptyBoard}>
+          The kitchen queue is empty — incoming, in preparation and ready columns are all clear.
+        </p>
+      )}
+
+      <KitchenBoard
+        tickets={tickets}
+        busy={busy}
+        loading={queueQuery.isPending && tickets.length === 0}
+        refusalFor={refusalFor}
+        arrivedTicketIds={arrivedTicketIds}
+        onStart={(roundId) => start.mutate(roundId)}
+        onReady={(roundId) => ready.mutate(roundId)}
+      />
+
+      <p aria-live="polite" className={kitchenStyles.srOnly ?? undefined}>
+        {announcement}
+      </p>
     </section>
   )
 }

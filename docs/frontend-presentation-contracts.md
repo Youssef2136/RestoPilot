@@ -276,3 +276,39 @@ tablet-viewport full chain with a keyboard-only leg, the offline → reconnectin
 behavior, the 390 px void journey, and the axe floor on both routes. Evidence:
 `specs/029-cashier-operations-ux/evidence/` (board tablet, incoming round, card modify, bill,
 390 px).
+
+## Phase 030 presentation record (kitchen display UX)
+
+The kitchen route re-skinned from a plain three-div list into a KDS-scale board on the same
+022 tokens: three columns ('Incoming'/'In preparation'/'Ready to serve') with real h2 headings,
+large count pills, and named empties (deliberately DIVs — the route's frozen single-`section`
+innerText pin and the board's aria-label + heading structure carry the semantics); `TicketCard`
+rebuilt at display scale — StatusPill state vocabulary, the D2 three-band honest age
+('3 min' → '1 h 05 min', never seconds; fresh/working/late with a static text-bearing 'late'
+treatment), quantity-emphasized item lines with extras, 'Counter order' heads for the channel
+sessions (never 'Table null'), and the two large-format controls ('Start preparation'/'Mark
+ready') well above the touch floor; the one-shot D1 arrival highlight (brand surface fading —
+composition is the alarm; reduced-motion collapses it; no sound, no notifications); freshness
+LiveBadge + the ReconnectingBanner on the ticket binding's `onStatus` + the polite refresh
+announcement (029 components reused); skeleton-column loading and an overall-empty state.
+The incoming `new` tickets are VISIBLE but NOT actionable (D3 — the cashier accepts first; no
+accept control exists here). The money-free/address-free blindness re-asserted over the live
+board (the seeded '12 Marina Walk' never renders). NO frozen anchor moved: kitchen.cashier,
+realtime, and full-journey passed UNEDITED.
+
+| Surface / hook   | Before (phase ≤ 029)                                                  | After (030)                                                                                                  | Asserted by                                   |
+| ---------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Kitchen board    | three plain divs, 'Nothing here.'                                       | three labelled columns + count pills + named empties + skeleton loading (divs — the single-`section` pin holds) | kitchen.display (SC-01) + kitchen.cashier     |
+| Ticket card      | plain state text, small controls                                        | KDS scale: StatusPill, D2 age bands, quantity-emphasized lines, 'Counter order' heads, large-format controls    | kitchen.display + full-journey pins unedited  |
+| Arrival cue      | none                                                                    | one-shot brand fade (D1, visual-only alarm; reduced-motion collapse)                                            | kitchen.display                               |
+| Freshness/conn.  | none on the route                                                       | LiveBadge + ReconnectingBanner + polite announcement (029 components)                                           | kitchen.display (offline → banner → recovery) |
+| Blindness        | money-free via payload                                                  | money-free + address-free re-asserted over the LIVE board text                                                  | kitchen.display (SC-03)                       |
+| Phone (<768)     | untested                                                                | readable stacked fallback, no horizontal overflow (boundary documented, not a working surface)                  | kitchen.display (390px)                       |
+
+New suite: `e2e/kitchen.display.test.ts` (serial; the Marina T1 fixture under
+`withMarinaT1Lock` — activate → operate → deactivate; the customer entry queues on
+`withEntryLock`): the landscape 1280×800 journey (live arrival, the cashier-accept split with
+dan's open board moving columns live, the keyboard-only walk), reload recovery, the offline
+banner, the blindness re-assert, and the 390px fallback. Unit: `tests/unit/ticketAge.test.ts`
+(D2 formats/bands/null-safety). Evidence: `specs/030-kitchen-display-ux/evidence/` (KDS tablet,
+empty board, 390px).
