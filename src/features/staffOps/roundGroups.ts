@@ -87,6 +87,22 @@ export function isVoidable(round: { session_type: string; state: string }): bool
 /** Lines may be modified until preparation is under way (spec 009 §4). */
 export const MODIFIABLE = new Set(['new', 'accepted', 'preparing'])
 
+/** The channel filter's values (specs/031 FR-05, D2) — 'all' is the default. */
+export type ChannelFilterValue = 'all' | 'dine-in' | 'delivery' | 'takeaway'
+
+/**
+ * Whether a round survives the channel filter (D2): pure presentation over
+ * the already-read board — the default 'all' keeps every round, so the
+ * default rendering is exactly the unfiltered board. Unknown channel values
+ * survive only the default (the filter never silently widens).
+ */
+export function matchesChannel(
+  round: { session_type: string },
+  filter: ChannelFilterValue,
+): boolean {
+  return filter === 'all' || round.session_type === filter
+}
+
 /** One mutation's error posture, shaped like react-query's useMutation result. */
 export interface RefusalAttempt {
   isError: boolean

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   groupRoundsByState,
+  matchesChannel,
   pickRefusal,
   ROUND_GROUP_ORDER,
   roundGroupKey,
@@ -110,5 +111,26 @@ describe('pickRefusal', () => {
         { isError: true, variables: 'round-1', error: new Error('second') },
       ]),
     ).toBe('first')
+  })
+})
+
+describe('matchesChannel (specs/031 FR-05, D2)', () => {
+  const round = (sessionType: string) => ({ session_type: sessionType })
+
+  it('keeps every round under the default (the frozen board)', () => {
+    expect(matchesChannel(round('dine-in'), 'all')).toBe(true)
+    expect(matchesChannel(round('delivery'), 'all')).toBe(true)
+    expect(matchesChannel(round('takeaway'), 'all')).toBe(true)
+  })
+
+  it('narrows to the named channel only', () => {
+    expect(matchesChannel(round('delivery'), 'delivery')).toBe(true)
+    expect(matchesChannel(round('dine-in'), 'delivery')).toBe(false)
+    expect(matchesChannel(round('takeaway'), 'takeaway')).toBe(true)
+    expect(matchesChannel(round('delivery'), 'dine-in')).toBe(false)
+  })
+
+  it('never silently widens on an unknown channel value', () => {
+    expect(matchesChannel(round('delivery'), 'mystery' as never)).toBe(false)
   })
 })

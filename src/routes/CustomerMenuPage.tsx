@@ -5,6 +5,8 @@ import { CartRegion } from '../features/order/components/CartRegion'
 import { CategoryNav } from '../features/order/components/CategoryNav'
 import { MenuSections } from '../features/order/components/MenuSections'
 import { RoundsHistory } from '../features/order/components/RoundsHistory'
+import { cutoffCrossed } from '../features/order/cutoffState'
+import { useSessionRounds } from '../features/order/useOrder'
 import { SessionIndicator } from '../features/session/components/SessionIndicator'
 import { SESSION_UNAVAILABLE_MESSAGE } from '../features/session/sessionClient'
 import {
@@ -28,7 +30,10 @@ import styles from './CustomerMenuPage.module.css'
  * returns the customer to the entry route. Unchanged from its 007/024 shape.
  *
  * The channel (for the CutoffNotice state) rides the same session-context
- * read the indicator uses — no new customer read.
+ * read the indicator uses — no new customer read. The cutoff pre-emption
+ * (specs/031 FR-02, D1) derives from the SAME rounds cache the history
+ * renders — the 10 s poll is the client's knowledge of the server's rule —
+ * and never speculates while that read is pending or errored.
  */
 export function CustomerMenuPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -37,6 +42,7 @@ export function CustomerMenuPage() {
   const token = sessionTokenScope()
   const menuQuery = useSessionMenu()
   const contextQuery = useSessionContext()
+  const roundsQuery = useSessionRounds()
   const { addLine } = useCart()
 
   const backToEntry = () => navigate(slug ? `/r/${slug}` : '/', { replace: true })
@@ -83,6 +89,11 @@ export function CustomerMenuPage() {
 
   const menu = menuQuery.data
   const channel = contextQuery.data?.session.type ?? 'dine-in'
+  // FR-02/D1: disabled ADD affordance only, derived from the shared rounds
+  // cache; the cart and the submit path stay alive (the server's verbatim
+  // refusal remains the authority).
+  const orderingClosed =
+    roundsQuery.data !== undefined && cutoffCrossed(channel, roundsQuery.data.rounds)
 
   return (
     <section className={styles.page}>
@@ -91,13 +102,18 @@ export function CustomerMenuPage() {
       <CategoryNav categories={menu.categories} />
       <div className={styles.menuLayout}>
         <div>
-          <MenuSections menu={menu} onAdd={addLine} />
+          <MenuSections
+            menu={menu}
+            onAdd={addLine}
+            orderingClosed={orderingClosed}
+            cutoffNoticeId="cutoff-notice"
+          />
         </div>
         <div className={styles.cartColumn}>
-          <CartRegion menu={menu} channel={channel} />
+          <CartRegion menu={menu} channel={channel} orderingClosed={orderingClosed} />
         </div>
       </div>
-      <RoundsHistory />
+      <RoundsHistory channel={channel} />
     </section>
   )
 }

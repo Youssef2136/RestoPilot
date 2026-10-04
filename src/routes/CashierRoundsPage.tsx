@@ -5,12 +5,13 @@ import { useAuthContext } from '../features/auth/useAuthContext'
 import { useNewRoundCue } from '../features/realtime/useNewRoundCue'
 import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
 import { BillPanel } from '../features/staffOps/components/BillPanel'
+import { ChannelFilter } from '../features/staffOps/components/ChannelFilter'
 import { LiveBadge } from '../features/staffOps/components/LiveBadge'
 import { NewRoundCueBanner } from '../features/staffOps/components/NewRoundCueBanner'
 import { ReconnectingBanner } from '../features/staffOps/components/ReconnectingBanner'
 import { RoundsBoard } from '../features/staffOps/components/RoundsBoard'
-import type { RefusalAttempt } from '../features/staffOps/roundGroups'
-import { pickRefusal } from '../features/staffOps/roundGroups'
+import type { ChannelFilterValue, RefusalAttempt } from '../features/staffOps/roundGroups'
+import { matchesChannel, pickRefusal } from '../features/staffOps/roundGroups'
 import styles from '../features/staffOps/staffOps.surfaces.module.css'
 import type { TransitionHandlers } from '../features/staffOps/components/TransitionActions'
 import {
@@ -101,6 +102,9 @@ export function CashierRoundsPage() {
   const voidRound = useVoidRound(effectiveBranchId)
 
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
+  // specs/031 FR-05 (D2): the channel filter — presentation over the read
+  // set; 'all' (the default) renders exactly the unfiltered board.
+  const [channelFilter, setChannelFilter] = useState<ChannelFilterValue>('all')
 
   // The new-round cue (spec 012 US4; specs/029 FR-08, D3): the cued round's
   // card is marked in place and scrolled into view — presentation only,
@@ -194,6 +198,7 @@ export function CashierRoundsPage() {
   }
 
   const rounds = roundsQuery.data ?? []
+  const filteredRounds = rounds.filter((round) => matchesChannel(round, channelFilter))
   const staleError = roundsQuery.isError && roundsQuery.data !== undefined
 
   return (
@@ -227,13 +232,15 @@ export function CashierRoundsPage() {
         onRetry={() => void roundsQuery.refetch()}
       />
 
+      <ChannelFilter value={channelFilter} onChange={setChannelFilter} />
+
       {roundsQuery.isPending && <p>Loading the branch rounds…</p>}
       {roundsQuery.isError && roundsQuery.data === undefined && (
         <p role="alert">The rounds could not be loaded. Reload the page and try again.</p>
       )}
 
       <RoundsBoard
-        rounds={rounds}
+        rounds={filteredRounds}
         busy={busy}
         refusalFor={refusalFor}
         cuedRoundId={cue?.roundId ?? null}

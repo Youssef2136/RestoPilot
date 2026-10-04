@@ -5,9 +5,10 @@ import { MoneyText } from '../../../components/money/MoneyText'
 import styles from './order.surfaces.module.css'
 
 /**
- * ItemCard (spec 025 T002/T003): the ordered-field item row — name, image
- * slot (designed absence Q4), advisory price, description, availability —
- * followed by the add controls (extras fieldset + quantity + Add to cart).
+ * ItemCard (spec 025 T002/T003; specs/031 FR-02, D1): the ordered-field item
+ * row — name, image slot (designed absence Q4), advisory price, description,
+ * availability — followed by the add controls (extras fieldset + quantity +
+ * Add to cart).
  *
  * Field order is a pinned E2E contract (session.surfaces' poisoned-cart test
  * and full-journey both scope by `li` hasText 'Item Name' then reach the
@@ -16,13 +17,24 @@ import styles from './order.surfaces.module.css'
  * them. Availability never hides: a not-offered item renders visibly
  * unavailable (price struck through, controls absent, reason stated) — the
  * "visible unavailability" rule.
+ *
+ * The cutoff pre-emption (D1): when the session's ordering is closed the add
+ * button is PROGRAMMATICALLY disabled — never merely styled — and explains
+ * itself through `aria-describedby` pointing at the cart's cutoff notice.
+ * The quantity input and the cart's own controls stay alive: the server's
+ * verbatim refusal on submit remains the authority, and the cart keeps its
+ * lines (the preserved-cart contract).
  */
 export function ItemCard({
   item,
   onAdd,
+  orderingClosed = false,
+  cutoffNoticeId,
 }: {
   item: BranchMenuItem
   onAdd: (itemId: string, extraIds: string[], quantity: number) => void
+  orderingClosed?: boolean
+  cutoffNoticeId?: string
 }) {
   const [selected, setSelected] = useState<string[]>([])
   const [quantity, setQuantity] = useState(1)
@@ -113,7 +125,13 @@ export function ItemCard({
             }}
           />
         </label>{' '}
-        <button type="button" className={styles.addButton} onClick={handleAdd}>
+        <button
+          type="button"
+          className={styles.addButton}
+          disabled={orderingClosed}
+          aria-describedby={orderingClosed ? cutoffNoticeId : undefined}
+          onClick={handleAdd}
+        >
           Add to cart
         </button>
         <p aria-live="polite" className={styles.announcement}>

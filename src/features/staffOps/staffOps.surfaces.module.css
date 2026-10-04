@@ -288,15 +288,33 @@
   gap: var(--space-3);
 }
 
-/* The channel chip (dine-in / delivery / takeaway) on round cards. */
-.channelChip {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-sunken);
-  color: var(--color-ink-muted);
-  font-size: var(--font-size-xs);
+/* specs/031 FR-05 (D2): the channel filter — a compact fieldset row above
+   the board; wraps under narrow widths (same DOM, tablet-first). */
+.channelFilter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  border: 0;
 }
 
+.channelFilter legend {
+  padding: 0;
+  margin-right: var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.channelFilterOption {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-sm);
+}
+
+/* The channel chip (dine-in / delivery / takeaway) on round cards. */
 /* Visually hidden until announced (the refresh announcement region). */
 .srOnly {
   position: absolute;

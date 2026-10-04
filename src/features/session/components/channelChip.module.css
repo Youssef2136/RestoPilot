@@ -1,0 +1,12 @@
+/*
+ * The channel chip (specs/031 FR-01) — one treatment everywhere: a quiet,
+ * text-bearing pill. Tokens only (the 022 system); identical values to the
+ * staff board's former local class so the board's look is unchanged.
+ */
+.chip {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  color: var(--color-ink-muted);
+  font-size: var(--font-size-xs);
+}

@@ -533,6 +533,15 @@ test('the delivery cutoff refuses additional orders above the preserved cart (FR
 
   // Drive the round past the cutoff server-side: the seeded cashier accepts,
   // prepares, marks ready, then dispatches (out_for_delivery fires the cutoff).
+  // specs/031 D1 migration (recorded): the second cart line is added HERE —
+  // BELOW the cutoff — because the phase's disabled-add pre-emption now
+  // closes the menu's add affordance once the dispatch lands (the tested
+  // contract itself is unchanged: the verbatim refusal + preserved cart).
+  // The disabled affordance + notice link + announcement are asserted in
+  // e2e/channel.operations.test.ts (the new channel spec).
+  await addHummus('2')
+  await expect(cart.getByText('Hummus × 2')).toBeVisible()
+
   const staff = await page.context().browser()!.newContext()
   const staffPage = await staff.newPage()
   await signInAs(staffPage, seedCredentials.carla)
@@ -562,9 +571,9 @@ test('the delivery cutoff refuses additional orders above the preserved cart (FR
   ).toBeVisible()
   await staff.close()
 
-  // Back in the customer tab: the second submission hits the cutoff verbatim,
-  // and the cart is preserved above it (FR-011, T010's contract).
-  await addHummus('2')
+  // Back in the customer tab: the submission hits the cutoff verbatim, and
+  // the cart is preserved above it (FR-011, T010's contract — unchanged;
+  // only the add's TIMING moved below the cutoff per specs/031 D1).
   await page.getByRole('button', { name: 'Send order to the kitchen' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'already on its way' })).toBeVisible()
   await expect(cart.getByText('Hummus × 2')).toBeVisible()

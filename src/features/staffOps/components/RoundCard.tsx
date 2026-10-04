@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button, MoneyText, StateChip, type DomainStatus } from '../../../components/ui'
 import { formatPrice } from '../../menu/money'
 import { channelLabel } from '../../session/sessionClient'
+import { ChannelChip } from '../../session/components/ChannelChip'
 import styles from '../staffOps.surfaces.module.css'
 import type { BranchRound } from '../staffOpsClient'
 import { MODIFIABLE, isVoidable } from '../roundGroups'
@@ -68,9 +69,7 @@ export function RoundCard({
         <div className={styles.cardMeta}>
           {cued && <span className={styles.cueBadge}>New order</span>}
           <StateChip status={round.voided ? 'voided' : (round.state as DomainStatus)} />
-          <span data-channel-chip className={styles.channelChip}>
-            {channelLabel(round.session_type)}
-          </span>
+          <ChannelChip type={round.session_type} />
         </div>
         {round.voided && (
           <p data-voided-note className={styles.voidedNote}>

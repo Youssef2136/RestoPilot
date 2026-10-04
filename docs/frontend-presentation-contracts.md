@@ -296,14 +296,14 @@ accept control exists here). The money-free/address-free blindness re-asserted o
 board (the seeded '12 Marina Walk' never renders). NO frozen anchor moved: kitchen.cashier,
 realtime, and full-journey passed UNEDITED.
 
-| Surface / hook   | Before (phase ≤ 029)                                                  | After (030)                                                                                                  | Asserted by                                   |
-| ---------------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
-| Kitchen board    | three plain divs, 'Nothing here.'                                       | three labelled columns + count pills + named empties + skeleton loading (divs — the single-`section` pin holds) | kitchen.display (SC-01) + kitchen.cashier     |
-| Ticket card      | plain state text, small controls                                        | KDS scale: StatusPill, D2 age bands, quantity-emphasized lines, 'Counter order' heads, large-format controls    | kitchen.display + full-journey pins unedited  |
-| Arrival cue      | none                                                                    | one-shot brand fade (D1, visual-only alarm; reduced-motion collapse)                                            | kitchen.display                               |
-| Freshness/conn.  | none on the route                                                       | LiveBadge + ReconnectingBanner + polite announcement (029 components)                                           | kitchen.display (offline → banner → recovery) |
-| Blindness        | money-free via payload                                                  | money-free + address-free re-asserted over the LIVE board text                                                  | kitchen.display (SC-03)                       |
-| Phone (<768)     | untested                                                                | readable stacked fallback, no horizontal overflow (boundary documented, not a working surface)                  | kitchen.display (390px)                       |
+| Surface / hook  | Before (phase ≤ 029)              | After (030)                                                                                                     | Asserted by                                   |
+| --------------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Kitchen board   | three plain divs, 'Nothing here.' | three labelled columns + count pills + named empties + skeleton loading (divs — the single-`section` pin holds) | kitchen.display (SC-01) + kitchen.cashier     |
+| Ticket card     | plain state text, small controls  | KDS scale: StatusPill, D2 age bands, quantity-emphasized lines, 'Counter order' heads, large-format controls    | kitchen.display + full-journey pins unedited  |
+| Arrival cue     | none                              | one-shot brand fade (D1, visual-only alarm; reduced-motion collapse)                                            | kitchen.display                               |
+| Freshness/conn. | none on the route                 | LiveBadge + ReconnectingBanner + polite announcement (029 components)                                           | kitchen.display (offline → banner → recovery) |
+| Blindness       | money-free via payload            | money-free + address-free re-asserted over the LIVE board text                                                  | kitchen.display (SC-03)                       |
+| Phone (<768)    | untested                          | readable stacked fallback, no horizontal overflow (boundary documented, not a working surface)                  | kitchen.display (390px)                       |
 
 New suite: `e2e/kitchen.display.test.ts` (serial; the Marina T1 fixture under
 `withMarinaT1Lock` — activate → operate → deactivate; the customer entry queues on
@@ -312,3 +312,43 @@ dan's open board moving columns live, the keyboard-only walk), reload recovery, 
 banner, the blindness re-assert, and the 390px fallback. Unit: `tests/unit/ticketAge.test.ts`
 (D2 formats/bands/null-safety). Evidence: `specs/030-kitchen-display-ux/evidence/` (KDS tablet,
 empty board, 390px).
+
+## Phase 031 presentation record (delivery & takeaway channel UX)
+
+The three channels became legible everywhere they matter (specs/031; Master Plan §Frontend
+Phase 11). The cutoff is the SERVER's `submit_round` rule mirrored for presentation
+(`cutoffCrossed` — delivery closes on `out_for_delivery`/`completed`, takeaway on
+`ready`/`lock`, dine-in never, voided included — server parity is the contract), derived on
+the customer page from the SAME shared rounds cache the history renders. D1: the poll is
+the client's knowledge; the pre-emption disables the ADD affordance only, BEFORE the
+attempt — the cart and the submit path stay alive so the server's verbatim refusal
+(FR-06, frozen) remains possible and was proven live with the cart preserved. The channel's
+status story renders as a milestone timeline (`aria-current="step"`; the raw chip is
+suppressed ONLY when the state maps — F9) with the pickup readiness announced politely
+(D4). The cashier board narrows honestly by channel (FR-05/D2: counts and empties derive
+from the FILTERED set), completion is two-step (FR-03/D3 — the pinned 'Mark completed'
+opens the consequence dialog), the kitchen's channel blindness is re-asserted over a LIVE
+delivery round (D6/FR-04 — kitchen code untouched), and branch sessions carry the
+'Counter session' neutral marker (D5). NO frozen anchor moved: full-journey and kitchen
+suites passed UNEDITED; the customer page's single `role="status"` stays the submit-success
+region (the new announcements are `aria-live="polite"`; CutoffNotice stays `role="note"`).
+
+| Surface / hook  | Before (phase ≤ 030)                               | After (031)                                                                                                     | Asserted by                                       |
+| --------------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Channel chip    | ad-hoc channel spans (RoundCard/SessionIndicator)  | one extracted ChannelChip (`data-channel-chip`) named in the indicator and on every staff card                  | channel.operations (FR-01)                        |
+| Customer cutoff | none — the refusal was the first sign              | disabled Add to cart + `aria-describedby` → `#cutoff-notice` + polite crossing announcement, BEFORE the attempt | channel.operations + session.surfaces FR-011 (D1) |
+| Status story    | raw state chips only                               | StatusTimeline milestones (aria-current="step", way/pickup emphasis) + pickup announcement                      | channel.operations (FR-07, D4)                    |
+| Cashier filter  | one full board                                     | ChannelFilter radios (All channels default) narrowing honestly, restoring exactly                               | channel.operations (FR-05, D2)                    |
+| Completion      | one-tap 'Mark completed'                           | two-step: the pinned button opens the consequence dialog ('Complete the delivery' / 'Not yet')                  | channel.operations (FR-03, D3)                    |
+| Branch sessions | channel-typed heads only                           | 'Counter session' neutral marker for no-table sessions                                                          | staff surface (D5)                                |
+| Cart micro-btns | 025 buttons ~19.8px wide (axe target-size finding) | `.smallButton` min-width/min-height 1.5rem (A3 owned here)                                                      | channel.operations axe pass (default viewport)    |
+
+New suite: `e2e/channel.operations.test.ts` (3): the delivery journey (chip, pre-emption,
+verbatim refusal with the cart preserved, one-tap dispatch, two-step completion, timeline,
+kitchen blindness over the LIVE round, axe at the default viewport, 390px overflow-only),
+the channel filter, and the takeaway leg (cutoff on `ready`, pickup announcement,
+timeline). Unit: `tests/unit/cutoffState.test.ts` (11 — mirror parity incl. voided;
+milestones/fallback) and `roundBoard` +3 (`matchesChannel`). `session.surfaces` FR-011
+migrated to D1 (the second add happens BEFORE the threshold crossing; the verbatim refusal
+
+- preserved cart unchanged).

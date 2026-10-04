@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Button } from '../../../components/ui'
 import styles from '../staffOps.surfaces.module.css'
 import type { BranchRound } from '../staffOpsClient'
+import { CompletionConfirmDialog } from './CompletionConfirmDialog'
 
 /**
  * The state-gated transition controls (specs/029 FR-02): EXACTLY the
@@ -40,6 +42,10 @@ export function TransitionActions({
   handlers: TransitionHandlers
 }) {
   const id = round.round_id
+  // specs/031 FR-03 (D3): completion is terminal — the pinned 'Mark
+  // completed' button OPENS the consequence dialog; the dialog's confirm
+  // fires the same handler. Dispatch stays one-tap.
+  const [confirmingCompletion, setConfirmingCompletion] = useState(false)
   return (
     <div className={styles.actions}>
       {!round.voided && ACCEPTABLE.has(round.state) && (
@@ -77,13 +83,25 @@ export function TransitionActions({
         </Button>
       )}
       {!round.voided && IS_DELIVERY(round) && COMPLETABLE.has(round.state) && (
-        <Button
-          className={styles.touchAction}
-          disabled={busy}
-          onClick={() => handlers.onCompleted(id)}
-        >
-          Mark completed
-        </Button>
+        <>
+          <Button
+            className={styles.touchAction}
+            disabled={busy}
+            onClick={() => setConfirmingCompletion(true)}
+          >
+            Mark completed
+          </Button>
+          <CompletionConfirmDialog
+            open={confirmingCompletion}
+            round={round}
+            busy={busy}
+            onCancel={() => setConfirmingCompletion(false)}
+            onConfirm={() => {
+              setConfirmingCompletion(false)
+              handlers.onCompleted(id)
+            }}
+          />
+        </>
       )}
     </div>
   )

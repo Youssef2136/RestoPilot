@@ -181,9 +181,17 @@
   font-size: var(--font-size-sm);
 }
 
+/* specs/031 audit fix (findings A3): the cart's micro-buttons (+ / − /
+   Remove) and the history's Refresh grow to the 24 px WCAG 2.2 target-size
+   floor with true spacing between neighbours — the 390 px closed-state axe
+   scan (this phase's new 390 px coverage) exposed the pre-existing
+   under-sized controls. One min-height declaration is layout-neutral:
+   the buttons are inline in a roomy row. */
 .smallButton {
-  margin-right: var(--space-1);
+  margin-right: var(--space-2);
   padding: 0 var(--space-2);
+  min-width: 1.5rem;
+  min-height: 1.5rem;
 }
 
 .cartActions {
@@ -207,6 +215,54 @@
   border-radius: var(--radius-lg);
   color: var(--color-text-muted);
   font-size: var(--font-size-sm);
+}
+
+/* specs/031 D1: the crossing announcement — plain, calm prose; the emphasis
+   lives in the wording, never an alarm treatment. */
+.cutoffClosed {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+/* specs/031 FR-07/D4: the status timeline — compact milestones; the current
+   step is text-bearing (aria-current carries the semantics too); the pickup/
+   on-its-way emphasis is a static highlight, never an alarm. */
+.timeline {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+}
+
+.timelineStep + .timelineStep::before {
+  content: '→';
+  margin-right: var(--space-2);
+  color: var(--color-ink-muted);
+}
+
+.timelineCurrent {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.timelineEmphasis {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: 0 var(--space-2);
+}
+
+/* specs/031 D4: the takeaway pickup readiness announcement. */
+.pickupReady {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
 }
 
 /* ── History & freshness (Q3) ────────────────────────────────────────────── */

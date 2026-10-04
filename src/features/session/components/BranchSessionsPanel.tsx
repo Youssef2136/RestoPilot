@@ -79,7 +79,13 @@ export function BranchSessionsPanel({ branchId, branchName, canClose }: BranchSe
                 : null
             return (
               <li key={session.id} className={styles.sessionRow}>
-                <p className={styles.sessionMain}>{session.table_label}</p>
+                {/* specs/031 FR-01, D5: channel sessions (table_id null) render
+                    here with an empty table_label — the read's payload carries
+                    no session_type, so a per-channel chip would be a claim the
+                    client cannot verify (a §3.8 contract conflict, RECORDED
+                    not patched). The neutral marker says honestly: a no-table
+                    session is open. */}
+                <p className={styles.sessionMain}>{session.table_label ?? 'Counter session'}</p>
                 <p className={styles.sessionMeta}>
                   Opened {new Date(session.opened_at).toLocaleTimeString()}
                 </p>

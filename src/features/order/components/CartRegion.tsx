@@ -9,22 +9,33 @@ import { SubmitBar } from './SubmitBar'
 import styles from './order.surfaces.module.css'
 
 /**
- * CartRegion (spec 025 T004/T005/T008): THE `region` named `Cart` — the
- * frozen E2E assertion scope (never renamed, never unmounted while the menu
- * is up). Desktop (≥1024px) it renders as a side panel; below that the CSS
- * presents the same DOM as a bottom sheet (Q1 — one DOM, two shells; the
- * region and its pins stay reachable in both).
+ * CartRegion (spec 025 T004/T005/T008; specs/031 FR-02, D1): THE `region`
+ * named `Cart` — the frozen E2E assertion scope (never renamed, never
+ * unmounted while the menu is up). Desktop (≥1024px) it renders as a side
+ * panel; below that the CSS presents the same DOM as a bottom sheet (Q1 —
+ * one DOM, two shells; the region and its pins stay reachable in both).
  *
  * Contents: the itemized lines (adjust/remove), the ADVISORY before-tax
  * total through TotalsPanel, the CutoffNotice state (before any submit
- * attempt), and the SubmitBar (busy/disabled, verbatim refusal alert,
- * success status naming the ticket).
+ * attempt — the anchor the disabled add controls describe themselves
+ * through), and the SubmitBar (busy/disabled, verbatim refusal alert,
+ * success status naming the ticket). The cutoff NEVER disables the cart
+ * itself: lines stay adjustable and the submit stays enabled so the
+ * server's verbatim refusal remains possible (D1).
  */
 
 const MIN_QUANTITY = 1
 const MAX_QUANTITY = 99
 
-export function CartRegion({ menu, channel }: { menu: BranchMenu; channel: string }) {
+export function CartRegion({
+  menu,
+  channel,
+  orderingClosed = false,
+}: {
+  menu: BranchMenu
+  channel: string
+  orderingClosed?: boolean
+}) {
   const { lines, update } = useCart()
 
   // The payload's display map: prices, names, extras (identical shape to the
@@ -146,7 +157,12 @@ export function CartRegion({ menu, channel }: { menu: BranchMenu; channel: strin
         </ul>
       )}
       <TotalsPanel advisoryTotal={total} />
-      <CutoffNotice channel={channel} hasLines={lines.length > 0} />
+      <CutoffNotice
+        channel={channel}
+        hasLines={lines.length > 0}
+        orderingClosed={orderingClosed}
+        id="cutoff-notice"
+      />
       <div className={styles.cartActions}>
         <SubmitBar lines={lines} />
       </div>

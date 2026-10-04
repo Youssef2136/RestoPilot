@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { channelLabel } from '../sessionClient'
 import { forgetSession, useSessionContext } from '../useSession'
+import { ChannelChip } from './ChannelChip'
 
 /**
  * The minimal session indicator (spec 007 FR-021, clarification 4; spec 010
@@ -46,8 +46,7 @@ export function SessionIndicator() {
   if (session.table_id === null) {
     return (
       <p aria-live="polite">
-        {indicator.restaurant_name} · {indicator.branch_name} ·{' '}
-        <strong>{channelLabel(session.type)}</strong>
+        {indicator.restaurant_name} · {indicator.branch_name} · <ChannelChip type={session.type} />
         {session.type === 'delivery' && session.delivery_address ? (
           <span> — {session.delivery_address}</span>
         ) : null}

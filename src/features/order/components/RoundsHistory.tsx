@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSessionRounds, sessionRoundsKey } from '../useOrder'
 import { roundStateLabel } from '../roundStateLabels'
+import { milestoneFor } from '../cutoffState'
 import { sessionTokenScope } from '../../session/useSession'
 import { TotalsPanel } from '../../../components/money/TotalsPanel'
+import { StatusTimeline } from './StatusTimeline'
 import styles from './order.surfaces.module.css'
 
 /**
@@ -54,12 +56,21 @@ function RefreshAffordance({
   )
 }
 
-export function RoundsHistory() {
+export function RoundsHistory({ channel = 'dine-in' }: { channel?: string }) {
   const roundsQuery = useSessionRounds()
   const queryClient = useQueryClient()
   const token = sessionTokenScope()
   const refetchRounds = () =>
     void queryClient.invalidateQueries({ queryKey: sessionRoundsKey(token) })
+  // FR-07 (specs/031): the pickup/on-its-way readiness announcement — it
+  // enters the DOM with the state (polite live region; the page's single
+  // role="status" stays the submit-success region), and unmounts with the
+  // state's exit. One readiness: the FIRST ready/picked-up milestone state.
+  const rounds = roundsQuery.data?.rounds ?? []
+  const pickupAnnouncement =
+    channel === 'takeaway' && rounds.some((round) => round.state === 'ready')
+      ? 'Your pickup order is ready.'
+      : null
 
   if (roundsQuery.isPending) {
     return null
@@ -76,7 +87,7 @@ export function RoundsHistory() {
     )
   }
 
-  const rounds = roundsQuery.data.rounds
+  const historyRounds = roundsQuery.data?.rounds
 
   return (
     <section aria-label="Your rounds">
@@ -88,7 +99,13 @@ export function RoundsHistory() {
           onRefresh={refetchRounds}
         />
       </div>
-      {rounds.length === 0 && <p>No rounds yet.</p>}
+      {historyRounds === undefined ? null : historyRounds.length === 0 ? (
+        <p>No rounds yet.</p>
+      ) : pickupAnnouncement !== null ? (
+        <p aria-live="polite" className={styles.pickupReady}>
+          {pickupAnnouncement}
+        </p>
+      ) : null}
       <ul className={styles.roundList}>
         {rounds.map((round, index) => (
           <li key={round.id} className={styles.roundCard}>
@@ -96,7 +113,11 @@ export function RoundsHistory() {
               <strong>
                 Round {index + 1} — {new Date(round.created_at).toLocaleTimeString()}
               </strong>{' '}
-              <span className={styles.stateChip}>{roundStateLabel(round.state)}</span>
+              {/* FR-07: a mappable channel state renders its milestone story
+                  below instead of the raw chip — never both. */}
+              {milestoneFor(channel, round.state) === null && (
+                <span className={styles.stateChip}>{roundStateLabel(round.state)}</span>
+              )}
             </p>
             <ul className={styles.itemListCompact}>
               {round.items.map((item) => (
@@ -112,6 +133,11 @@ export function RoundsHistory() {
                 </li>
               ))}
             </ul>
+            {/* FR-07: the channel's milestone story when the state maps onto
+                it (the raw chip above is suppressed in that case). */}
+            {milestoneFor(channel, round.state) !== null && (
+              <StatusTimeline channel={channel} state={round.state} />
+            )}
             <TotalsPanel
               totals={{
                 subtotal: round.subtotal,
