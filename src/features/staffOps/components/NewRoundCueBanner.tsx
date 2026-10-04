@@ -1,5 +1,6 @@
 import { Link } from 'react-router'
 import { Button } from '../../../components/ui'
+import { CUE_ARRIVED_COPY } from '../../realtime/announcementPolicy'
 import styles from '../staffOps.surfaces.module.css'
 
 /**
@@ -26,7 +27,7 @@ export function NewRoundCueBanner({
   }
   return (
     <div role="status" data-live-cue className={styles.cueBanner}>
-      <span>A new order arrived.</span>
+      <span>{CUE_ARRIVED_COPY}</span>
       {boardHref !== undefined && <Link to={boardHref}>Show the new order</Link>}
       <Button size="sm" onClick={onDismiss}>
         Dismiss

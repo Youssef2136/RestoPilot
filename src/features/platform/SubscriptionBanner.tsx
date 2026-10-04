@@ -1,4 +1,5 @@
 import { useMySubscription } from './usePlatform'
+import { SubscriptionDetailPanel } from './SubscriptionDetailPanel'
 
 /**
  * The tenant subscription banner (spec 014 T008, FR-007): the platform
@@ -22,6 +23,11 @@ export function SubscriptionBanner() {
         This restaurant has been disabled by the platform
         {data.platform_disabled_reason ? `: ${data.platform_disabled_reason}` : '.'} Customer
         ordering is unavailable. Contact the platform to resolve this.
+        <SubscriptionDetailPanel
+          state="platform_disabled"
+          endDate={data.end_date}
+          platformDisabledReason={data.platform_disabled_reason}
+        />
       </div>
     )
   }
@@ -32,6 +38,11 @@ export function SubscriptionBanner() {
         Your subscription is nearing expiration
         {data.end_date ? ` (${data.end_date})` : ''}. Renew with the platform to keep your service
         uninterrupted.
+        <SubscriptionDetailPanel
+          state={data.state}
+          endDate={data.end_date}
+          platformDisabledReason={null}
+        />
       </div>
     )
   }
@@ -41,6 +52,11 @@ export function SubscriptionBanner() {
       <div role="status" data-testid="subscription-banner" data-banner-state="expired">
         Your subscription has expired{data.end_date ? ` (${data.end_date})` : ''}. Ordering remains
         available — the platform may contact you about renewal.
+        <SubscriptionDetailPanel
+          state={data.state}
+          endDate={data.end_date}
+          platformDisabledReason={null}
+        />
       </div>
     )
   }

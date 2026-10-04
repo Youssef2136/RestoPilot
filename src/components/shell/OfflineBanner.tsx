@@ -1,6 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Icon } from '../ui'
+import {
+  RECOVERED_COPY,
+  RETRY_NOW_COPY,
+  SHELL_OFFLINE_COPY,
+  SHELL_RECONNECTING_COPY,
+} from '../../features/realtime/announcementPolicy'
 import { useRealtimeChannelHealth } from '../../features/realtime/realtimeStatus'
 import styles from './OfflineBanner.module.css'
 
@@ -75,13 +81,13 @@ export function OfflineBanner() {
         className={styles.icon}
       />
       <p className={styles.message}>
-        {state === 'offline' && "You're offline — changes can't reach the server right now."}
-        {state === 'reconnecting' && 'Reconnecting to live updates…'}
-        {state === 'recovered' && 'Back online — live updates restored.'}
+        {state === 'offline' && SHELL_OFFLINE_COPY}
+        {state === 'reconnecting' && SHELL_RECONNECTING_COPY}
+        {state === 'recovered' && RECOVERED_COPY}
       </p>
       {state !== 'recovered' && (
         <button type="button" className={styles.retry} onClick={retry}>
-          Retry now
+          {RETRY_NOW_COPY}
         </button>
       )}
     </div>

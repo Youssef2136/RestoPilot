@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
 import { signInAs } from './helpers/signInAs'
 import { withEntryLock } from './helpers/entryLock'
+import { withSubscriptionLock } from './helpers/subscriptionLock'
 
 /**
  * Platform surfaces E2E (spec 014 T011; FR-001–FR-010). The house pattern:
@@ -49,43 +50,47 @@ test('the platform console lists every restaurant for the super admin (FR-001, F
 test('the super admin activates a subscription and the state derives (FR-003/FR-004)', async ({
   page,
 }) => {
-  await signInAs(page, seedCredentials.platformAdmin)
-  await page.goto('/admin/platform')
+  await withSubscriptionLock(async () => {
+    await signInAs(page, seedCredentials.platformAdmin)
+    await page.goto('/admin/platform')
 
-  // Activate Blue Olive: today → +30 days = active.
-  await page.getByRole('button', { name: 'Activate' }).first().click()
-  const today = new Date()
-  const in30 = new Date()
-  in30.setUTCDate(in30.getUTCDate() + 30)
-  const iso = (d: Date) => d.toISOString().slice(0, 10)
-  await page.getByLabel('Start date').fill(iso(today))
-  await page.getByLabel('End date').fill(iso(in30))
-  await page.getByRole('button', { name: 'Save dates' }).click()
-  await expect(page.getByTestId('platform-overview')).toContainText('Active')
+    // Activate Blue Olive: today → +30 days = active.
+    await page.getByRole('button', { name: 'Activate' }).first().click()
+    const today = new Date()
+    const in30 = new Date()
+    in30.setUTCDate(in30.getUTCDate() + 30)
+    const iso = (d: Date) => d.toISOString().slice(0, 10)
+    await page.getByLabel('Start date').fill(iso(today))
+    await page.getByLabel('End date').fill(iso(in30))
+    await page.getByRole('button', { name: 'Save dates' }).click()
+    await expect(page.getByTestId('platform-overview')).toContainText('Active')
+  })
 })
 
 test("an expired subscription shows the tenant banner but doesn't block (FR-007, FR-010)", async ({
   page,
 }) => {
-  // Drive the subscription past its end as the super admin.
-  await signInAs(page, seedCredentials.platformAdmin)
-  await page.goto('/admin/platform')
-  await page.getByRole('button', { name: 'Change dates' }).first().click()
-  const past30 = new Date()
-  past30.setUTCDate(past30.getUTCDate() - 30)
-  const past1 = new Date()
-  past1.setUTCDate(past1.getUTCDate() - 1)
-  const iso = (d: Date) => d.toISOString().slice(0, 10)
-  await page.getByLabel('Start date').fill(iso(past30))
-  await page.getByLabel('End date').fill(iso(past1))
-  await page.getByRole('button', { name: 'Save dates' }).click()
-  await expect(page.getByTestId('platform-overview')).toContainText('Expired')
+  await withSubscriptionLock(async () => {
+    // Drive the subscription past its end as the super admin.
+    await signInAs(page, seedCredentials.platformAdmin)
+    await page.goto('/admin/platform')
+    await page.getByRole('button', { name: 'Change dates' }).first().click()
+    const past30 = new Date()
+    past30.setUTCDate(past30.getUTCDate() - 30)
+    const past1 = new Date()
+    past1.setUTCDate(past1.getUTCDate() - 1)
+    const iso = (d: Date) => d.toISOString().slice(0, 10)
+    await page.getByLabel('Start date').fill(iso(past30))
+    await page.getByLabel('End date').fill(iso(past1))
+    await page.getByRole('button', { name: 'Save dates' }).click()
+    await expect(page.getByTestId('platform-overview')).toContainText('Expired')
 
-  // Alice (owner) sees the informational banner — ordering NOT blocked.
-  await signInAs(page, seedCredentials.alice)
-  const banner = page.getByTestId('subscription-banner')
-  await expect(banner).toBeVisible()
-  await expect(banner).toHaveAttribute('data-banner-state', 'expired')
+    // Alice (owner) sees the informational banner — ordering NOT blocked.
+    await signInAs(page, seedCredentials.alice)
+    const banner = page.getByTestId('subscription-banner')
+    await expect(banner).toBeVisible()
+    await expect(banner).toHaveAttribute('data-banner-state', 'expired')
+  })
 })
 
 test('disablement blocks the customer entry and shows the tenant notice (FR-005/FR-006)', async ({

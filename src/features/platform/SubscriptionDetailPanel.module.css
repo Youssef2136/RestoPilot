@@ -1,0 +1,35 @@
+.panel {
+  margin-top: var(--space-2);
+}
+
+.disclosure {
+  font: inherit;
+  font-size: 0.85rem;
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-height: 1.5rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.body {
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-raised);
+}
+
+.stateLine {
+  margin: 0 0 var(--space-1);
+}
+
+.body p {
+  margin: 0 0 var(--space-1);
+}
+
+.body p:last-child {
+  margin-bottom: 0;
+}

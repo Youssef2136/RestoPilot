@@ -1,4 +1,9 @@
 import { Button } from '../../../components/ui'
+import {
+  BOARD_RECONNECTING_COPY,
+  RETRY_NOW_COPY,
+  STALE_RETRY_COPY,
+} from '../../realtime/announcementPolicy'
 import styles from '../staffOps.surfaces.module.css'
 
 /**
@@ -26,14 +31,12 @@ export function ReconnectingBanner({
   if (!reconnecting && !staleError) {
     return null
   }
-  const message = reconnecting
-    ? 'The live connection dropped — reconnecting. Showing the last known board.'
-    : 'The last refresh failed — showing the last known board.'
+  const message = reconnecting ? BOARD_RECONNECTING_COPY : STALE_RETRY_COPY
   return (
     <p className={styles.banner} aria-live="polite" data-testid="reconnecting-banner">
       <span>{message}</span>
       <Button size="sm" onClick={onRetry}>
-        Retry now
+        {RETRY_NOW_COPY}
       </Button>
     </p>
   )
