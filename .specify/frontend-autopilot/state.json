@@ -1,0 +1,20 @@
+{
+  "phase": 13,
+  "status": "done",
+  "stage": "DONE",
+  "currentTask": null,
+  "completedTasks": ["T001", "T002", "T003", "T004", "T005", "T006"],
+  "failedTasks": [],
+  "convergenceRound": 0,
+  "blocked": false,
+  "blocker": null,
+  "git": { "baseline": "f59faea", "checkpoint": "feat(033) = 3356b7d, PUSHED — origin/main = 3356b7d (both the 032 and 033 checkpoints landed on GitHub; the pending GCM-bound push completed later in the background)" },
+  "validation": {
+    "lastTargeted": "reportFormat 7/7; reports.test frozen 6/6; readability E2E 4/4 + frozen reports.surfaces 6/6 = 10/10 EXIT:0 (targeted, after reset); tsc -b clean; prettier clean",
+    "final": "verify green on final tree (format/lint 0 errors/typecheck/unit; test:db 31 files 516/516; test:integration 7 files 38/38; build OK); full E2E workers=1/90s: 183/191 passed, 3 environment-flavored failures + 5 serial siblings skipped, isolated rerun of the three files 21/21 EXIT:0 — every test of 191 has a passing run; no frozen anchor moved"
+  },
+  "nextPhase": 14,
+  "nextStage": null,
+  "note": "Git state note: specs/, .specify/, .agents/, DESIGN.md and the Master Plan were previously untracked-by-design; per the owner's request (specs 031-033 missing on GitHub) the docs/spec artifacts are being committed. Phase 13 (specs/033) DONE: reportFormat helpers (clamp/bars/period sentence), comparison honesty (same-period sentence + aria-live posture rows, no silent dash), zero hint, aria-hidden token bars, audit clamp notice + exact-match filter hint + reason line-clamp, CSS-only card fallback <720px on the three tables, e2e/reports.readability.test.ts (4, read-only). Env notes: reports.surfaces:131 legacy (isolated rerun), transient 0xC0000142 fork spawns (rerun once), shared cloud DB live writers (no overlap + reset before gated runs), GCM push needs the user's interactive shell.",
+  "updatedAt": "2026-10-05T22:20:00-04:00"
+}
