@@ -4,6 +4,8 @@ import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { AuditPayloadError } from '../features/audit/auditClient'
 import { useAuditLog } from '../features/audit/useAudit'
+import { CLAMP_PAGE_SIZE, isClampReached } from '../features/reports/reportFormat'
+import styles from '../features/reports/reports.surfaces.module.css'
 
 /**
  * The audit trail (spec 011 T009, `/dashboard/audit`; US3, FR-009/FR-010):
@@ -121,10 +123,17 @@ export function AuditLogPage() {
         <label htmlFor="audit-action">Action</label>
         <input
           id="audit-action"
+          aria-describedby="audit-action-hint"
           value={actionFilter}
           onChange={(event) => setActionFilter(event.target.value)}
           placeholder="e.g. round.void"
         />
+        {/* D7: the contract's filter is an exact match — state it, don't fake
+            a search. Date-range/actor filters need contract changes (out of
+            scope, recorded). */}
+        <p className={styles.clampNotice} id="audit-action-hint">
+          Matches the full action name exactly, e.g. round.void.
+        </p>
       </div>
 
       {auditQuery.isPending && <p>Loading the audit trail…</p>}
@@ -137,7 +146,7 @@ export function AuditLogPage() {
       )}
 
       {!auditQuery.isPending && !auditQuery.isError && (
-        <table data-testid="audit-table">
+        <table data-testid="audit-table" className={styles.cardTable}>
           <thead>
             <tr>
               <th scope="col">When</th>
@@ -155,17 +164,33 @@ export function AuditLogPage() {
             ) : (
               entries.map((entry) => (
                 <tr key={entry.id} data-audit-action={entry.action}>
-                  <td>{new Date(entry.created_at).toLocaleString()}</td>
-                  <td>{entry.action}</td>
-                  <td>{entry.actor_display_name}</td>
-                  <td>{entry.branch_label ?? '—'}</td>
-                  <td>{entry.reason ?? '—'}</td>
+                  <td data-label="When">{new Date(entry.created_at).toLocaleString()}</td>
+                  <td data-label="Action">{entry.action}</td>
+                  <td data-label="Actor">{entry.actor_display_name}</td>
+                  <td data-label="Branch">{entry.branch_label ?? '—'}</td>
+                  <td
+                    data-label="Reason"
+                    className={styles.reasonCell}
+                    title={entry.reason ?? undefined}
+                  >
+                    {entry.reason ?? '—'}
+                  </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
       )}
+
+      {/* D2: a full page may hide more rows behind the server's clamp — say
+          so honestly instead of looking like the end of the trail. */}
+      {!auditQuery.isPending &&
+        !auditQuery.isError &&
+        isClampReached(entries.length, CLAMP_PAGE_SIZE) && (
+          <p className={styles.clampNotice} role="status">
+            Showing the most recent {CLAMP_PAGE_SIZE} entries — narrow the filters to see more.
+          </p>
+        )}
 
       <p>
         <Link to="/dashboard">Back to the dashboard</Link>

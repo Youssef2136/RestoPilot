@@ -1,0 +1,82 @@
+/*
+ * Report-surface presentation styles (spec 033; Master Plan §Frontend Phase 13).
+ * Tokens only (FA-10): the bars are pure CSS divs, aria-hidden — the tables
+ * stay the text equivalent. The card fallback (D3) reflows the three tables
+ * below the mobile breakpoint without forking the DOM: each cell carries a
+ * data-label that becomes its card label.
+ */
+
+.periodSentence,
+.zeroHint,
+.clampNotice {
+  color: var(--color-text-muted);
+  margin: 0.5rem 0;
+}
+
+.barTrack {
+  display: inline-block;
+  width: 7rem;
+  height: 0.6rem;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  vertical-align: middle;
+  margin-inline-start: 0.5rem;
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  background: var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.reasonCell {
+  max-width: 34ch;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.comparisonStatus {
+  font-style: italic;
+  color: var(--color-text-muted);
+}
+
+/*
+ * D3 — the card fallback. Below the mobile breakpoint each row becomes a
+ * labelled card: thead leaves the flow, every cell states its own label
+ * (content: attr(data-label)), money columns stay horizontal-safe via
+ * overflow-wrap, and the table keeps its semantic structure for SRs.
+ */
+@media (max-width: 720px) {
+  .cardTable :where(thead) {
+    display: none;
+  }
+
+  .cardTable :where(tbody tr) {
+    display: block;
+    background: var(--color-surface-raised);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin: 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .cardTable :where(tbody td) {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.2rem 0;
+    overflow-wrap: anywhere;
+  }
+
+  .cardTable :where(tbody td)::before {
+    content: attr(data-label);
+    color: var(--color-text-muted);
+    text-align: start;
+    flex: 0 0 auto;
+  }
+}

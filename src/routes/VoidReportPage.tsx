@@ -6,6 +6,7 @@ import { useAuthContext } from '../features/auth/useAuthContext'
 import { formatPrice } from '../features/menu/money'
 import { ReportsPayloadError } from '../features/reports/reportsClient'
 import { useVoidReport } from '../features/reports/useReports'
+import styles from '../features/reports/reports.surfaces.module.css'
 import { getSupabaseClient } from '../lib/supabase'
 
 /**
@@ -167,7 +168,7 @@ export function VoidReportPage() {
       )}
 
       {rows !== undefined && refusal === null && rows.length > 0 && (
-        <table data-testid="void-log-table">
+        <table data-testid="void-log-table" className={styles.cardTable}>
           <thead>
             <tr>
               <th scope="col">Round</th>
@@ -181,12 +182,20 @@ export function VoidReportPage() {
           <tbody>
             {rows.map((row) => (
               <tr key={row.round_id}>
-                <td>{row.round_id.slice(0, 8)}</td>
-                <td>{row.voided_by_name ?? 'Unknown'}</td>
-                <td>{row.voided_at === null ? '—' : new Date(row.voided_at).toLocaleString()}</td>
-                <td>{row.void_reason ?? '—'}</td>
-                <td>{formatPrice(row.captured_total)}</td>
-                <td>{row.session_type.replace('_', '-')}</td>
+                <td data-label="Round">{row.round_id.slice(0, 8)}</td>
+                <td data-label="Voided by">{row.voided_by_name ?? 'Unknown'}</td>
+                <td data-label="When">
+                  {row.voided_at === null ? '—' : new Date(row.voided_at).toLocaleString()}
+                </td>
+                <td
+                  data-label="Reason"
+                  className={styles.reasonCell}
+                  title={row.void_reason ?? undefined}
+                >
+                  {row.void_reason ?? '—'}
+                </td>
+                <td data-label="Captured total">{formatPrice(row.captured_total)}</td>
+                <td data-label="Channel">{row.session_type.replace('_', '-')}</td>
               </tr>
             ))}
           </tbody>

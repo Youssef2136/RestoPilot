@@ -5,6 +5,8 @@ import { useAuthContext } from '../features/auth/useAuthContext'
 import { formatPrice } from '../features/menu/money'
 import { ReportsPayloadError, type ReportPeriod } from '../features/reports/reportsClient'
 import { useSalesReport } from '../features/reports/useReports'
+import { barShare, comparisonPeriodSentence } from '../features/reports/reportFormat'
+import styles from '../features/reports/reports.surfaces.module.css'
 import { useQuery } from '@tanstack/react-query'
 import { getSupabaseClient } from '../lib/supabase'
 
@@ -151,6 +153,13 @@ export function ReportsPage() {
   const report = reportQuery.data
   const refusal = reportQuery.error instanceof ReportsPayloadError ? reportQuery.error : null
 
+  // The bars are presentation shares of the visible list's max (D4) — no
+  // money arithmetic, no charting dependency, aria-hidden next to real text.
+  const maxChannelRounds =
+    report !== undefined ? Math.max(0, ...report.channels.map((c) => c.rounds)) : 0
+  const maxItemQuantity =
+    report !== undefined ? Math.max(0, ...report.best_sellers.map((item) => item.quantity)) : 0
+
   return (
     <section aria-labelledby="reports-heading">
       <h1 id="reports-heading">Reports</h1>
@@ -227,21 +236,38 @@ export function ReportsPage() {
             <dd>{formatPrice(report.net_tax_total)}</dd>
           </dl>
 
+          {/* Zero vs empty (D6): the figures stay rendered byte-for-byte; the
+              hint distinguishes a genuinely empty period from a broken one. */}
+          {report.rounds_submitted === 0 && report.rounds_voided === 0 && (
+            <p className={styles.zeroHint}>Nothing was recorded in this period.</p>
+          )}
+
           <h3>Channels</h3>
-          <table data-testid="report-channels">
+          <table data-testid="report-channels" className={styles.cardTable}>
             <thead>
               <tr>
                 <th scope="col">Channel</th>
                 <th scope="col">Rounds</th>
                 <th scope="col">Net total</th>
+                <th scope="col">Share</th>
               </tr>
             </thead>
             <tbody>
               {report.channels.map((channel) => (
                 <tr key={channel.type}>
-                  <td>{channel.type.replace('_', '-')}</td>
-                  <td>{channel.rounds}</td>
-                  <td>{formatPrice(channel.net_total)}</td>
+                  <td data-label="Channel">{channel.type.replace('_', '-')}</td>
+                  <td data-label="Rounds">{channel.rounds}</td>
+                  <td data-label="Net total">{formatPrice(channel.net_total)}</td>
+                  <td data-label="Share">
+                    <span aria-hidden="true" className={styles.barTrack}>
+                      <span
+                        className={styles.barFill}
+                        style={{
+                          width: `${Math.round(barShare(channel.rounds, maxChannelRounds) * 100)}%`,
+                        }}
+                      />
+                    </span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -255,6 +281,14 @@ export function ReportsPage() {
               {report.best_sellers.map((item) => (
                 <li key={item.item_id}>
                   {item.name} — {item.quantity}
+                  <span aria-hidden="true" className={styles.barTrack}>
+                    <span
+                      className={styles.barFill}
+                      style={{
+                        width: `${Math.round(barShare(item.quantity, maxItemQuantity) * 100)}%`,
+                      }}
+                    />
+                  </span>
                 </li>
               ))}
             </ol>
@@ -263,18 +297,40 @@ export function ReportsPage() {
       )}
 
       {isOwnerSomewhere && scopes.length > 1 && (
-        <BranchComparison scopes={scopes} period={period} anchorDate={anchorDate} />
+        <BranchComparison
+          scopes={scopes}
+          period={period}
+          anchorDate={anchorDate}
+          from={report?.from}
+          to={report?.to}
+        />
       )}
     </section>
   )
 }
 
 /** The owner's side-by-side view (FR-003): one call per branch, plan D2. */
-function BranchComparison(props: { scopes: Scope[]; period: ReportPeriod; anchorDate: string }) {
+function BranchComparison(props: {
+  scopes: Scope[]
+  period: ReportPeriod
+  anchorDate: string
+  /** The anchored branch's server-returned bounds — the same-period proof. */
+  from?: string
+  to?: string
+}) {
+  const sentence =
+    props.from !== undefined && props.to !== undefined
+      ? comparisonPeriodSentence(props.period, props.from, props.to)
+      : null
   return (
     <>
       <h2>Branch comparison</h2>
-      <table data-testid="report-comparison">
+      {sentence !== null && (
+        <p className={styles.periodSentence}>
+          {sentence} — every row loads its own copy of this exact range.
+        </p>
+      )}
+      <table data-testid="report-comparison" className={styles.cardTable}>
         <thead>
           <tr>
             <th scope="col">Branch</th>
@@ -304,11 +360,28 @@ function ComparisonRow(props: { scope: Scope; period: ReportPeriod; anchorDate: 
     period: props.period,
     anchorDate: props.anchorDate,
   })
+  // D1 honest posture: a pending row, a failed row, and a zero row are three
+  // different truths — never one silent '—'.
+  const rounds = query.data ? query.data.rounds_submitted : null
+  const netTotal = query.data ? formatPrice(query.data.net_total) : null
+  const posture = query.isPending
+    ? 'Loading…'
+    : query.data === undefined
+      ? 'Load failed — the figures for this branch could not be loaded.'
+      : null
   return (
     <tr>
-      <td>{props.scope.label}</td>
-      <td>{query.data ? query.data.rounds_submitted : query.isPending ? '…' : '—'}</td>
-      <td>{query.data ? formatPrice(query.data.net_total) : query.isPending ? '…' : '—'}</td>
+      <td data-label="Branch">{props.scope.label}</td>
+      {posture !== null ? (
+        <td colSpan={2} className={styles.comparisonStatus} aria-live="polite">
+          {posture}
+        </td>
+      ) : (
+        <>
+          <td data-label="Rounds">{rounds}</td>
+          <td data-label="Net total">{netTotal}</td>
+        </>
+      )}
     </tr>
   )
 }
