@@ -11,7 +11,7 @@
 | T007 | Page recomposition: toolbar (LiveBadge + selector), ReconnectingBanner (onStatus), skeleton loading, empty/error postures, announcement | FR-05/06/07 | [X] |
 | T008 | New E2E `e2e/kitchen.display.test.ts` (serial): Marina T1 tablet chain + keyboard-only + reload recovery + offline banner + blind re-assert + 390px fallback + axe | Gates | [X] |
 | T009 | Validation: db:reset → `npm run verify` → full Playwright (background + sleep 570) → `impeccable detect src` 0; convergence fixes; check off checklists | Gates | [X] |
-| T010 | Ledger §Phase 030 + evidence screenshots; checkpoint `feat(030)` + push; phase reports + state DONE | CHECKPOINT/REPORT | [ ] |
+| T010 | Ledger §Phase 030 + evidence screenshots; checkpoint `feat(030)` + push; phase reports + state DONE | CHECKPOINT/REPORT | [x] — done: ledger record + screenshots committed; checkpoint pushed; phase-9/10 reports DONE |
 
 ## Dependencies
 

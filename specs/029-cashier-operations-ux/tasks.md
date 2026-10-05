@@ -15,7 +15,7 @@
 | T011 | `CashierRoundsPage` composition: board, freshness wiring (onStatus + dataUpdatedAt), cue, bill; responsive postures | FR-01…10 | [X] |
 | T012 | New E2E `e2e/cashier.operations.test.ts` (serial): Marina T1 tablet chain + keyboard-only + reconnecting banner + 390px void + axe on both routes | Gates | [X] |
 | T013 | Validation: db:reset → `npm run verify` → full Playwright (background + sleep 570) → `impeccable detect src` 0; convergence fixes; check off checklists | Gates | [X] |
-| T014 | Ledger §Phase 029 + evidence screenshots; checkpoint `feat(029)` + push (incl. the trailing 028 tasks.md checkbox); phase reports + state DONE | CHECKPOINT/REPORT | [ ] |
+| T014 | Ledger §Phase 029 + evidence screenshots; checkpoint `feat(029)` + push (incl. the trailing 028 tasks.md checkbox); phase reports + state DONE | CHECKPOINT/REPORT | [x] — done: ledger record + screenshots committed; checkpoint pushed; phase-9/10 reports DONE |
 
 ## Dependencies
 

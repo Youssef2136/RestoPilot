@@ -1,8 +1,8 @@
 # specs/032 — Tasks
 
-- **T001** — `announcementPolicy.ts`: event-class map (round-arrival → cue live region; connection-loss → connection banner; recovery → transient banner; refetch → silent; subscription → banner+panel), `shouldAnnounce` dedupe guard; the pinned copy strings move in byte-identically. Unit tests incl. copy-parity.
-- **T002** — Rewire `NewRoundCueBanner`, `ReconnectingBanner`, `OfflineBanner` to source copy/politeness from the policy. Zero DOM/text changes (pins hold); tsc + prettier.
-- **T003** — `SubscriptionDetailPanel.tsx` + `subscriptionCopy` mapping + mount under `SubscriptionBanner` for the three non-silent states. Unit tests for the copy map.
-- **T004** — Cue supersede unit pin (second INSERT supersedes, no stacking) — new tests only.
-- **T005** — `e2e/helpers/subscriptionLock.ts`; wrap platform.surfaces' two date tests (no assertion changes); new `e2e/live.awareness.test.ts` (nearing_expiration + panel + restore; cue no-payload + 390px).
-- **T006** — Ledger §Phase 032 record; targeted validation (unit + the new E2E); verify; full suite; checkpoint `feat(032)` + push; report.
+- [X] **T001** — `announcementPolicy.ts`: event-class map (round-arrival → cue live region; connection-loss → connection banner; recovery → transient banner; refetch → silent; subscription → banner+panel), `shouldAnnounce` dedupe guard; the pinned copy strings move in byte-identically. Unit tests incl. copy-parity. — done: announcementPolicy.ts + unit 9/9 (copy byte-identical, dedupe, politeness)
+- [X] **T002** — Rewire `NewRoundCueBanner`, `ReconnectingBanner`, `OfflineBanner` to source copy/politeness from the policy. Zero DOM/text changes (pins hold); tsc + prettier. — done: three banners rewired; zero DOM change — realtime.test 14/14 untouched, pins hold
+- [X] **T003** — `SubscriptionDetailPanel.tsx` + `subscriptionCopy` mapping + mount under `SubscriptionBanner` for the three non-silent states. Unit tests for the copy map. — done: SubscriptionDetailPanel + subscriptionCopy 5/5; mounted under SubscriptionBanner
+- [X] **T004** — Cue supersede unit pin (second INSERT supersedes, no stacking) — new tests only. — done: newRoundCue.supersede.test.ts 3/3
+- [X] **T005** — `e2e/helpers/subscriptionLock.ts`; wrap platform.surfaces' two date tests (no assertion changes); new `e2e/live.awareness.test.ts` (nearing_expiration + panel + restore; cue no-payload + 390px). — done: subscriptionLock helper; platform.surfaces wrapped (assertions untouched); live.awareness 2/2 green today
+- [X] **T006** — Ledger §Phase 032 record; targeted validation (unit + the new E2E); verify; full suite; checkpoint `feat(032)` + push; report. — done: §Phase 032 in the ledger (republished); verify green; feat(032)=f59faea pushed
