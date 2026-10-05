@@ -80,6 +80,26 @@ Live regions: **54 × `role="alert"`** and **13 × `role="status"`** (+ 1 `role=
 
 **Change discipline:** the first two rows are frozen for the entire frontend plan. No phase may rename or repurpose them; a rename is a cross-cutting contract change requiring an owner-approved spec amendment (Master Plan §3.7). The dashboard-context row is phase-023-added: same discipline from its introduction.
 
+## Phase 022 presentation record (design system & visual language — the system's own record)
+
+Phase 022 built the world every later record assumes: `src/styles/tokens.css` as the
+single raw-value home (semantic color roles, type, spacing, radii, shadows, borders,
+z-index, motion, breakpoints, touch targets, density; `main.tsx` order
+reset → tokens → base), the `src/components/ui/` primitive library (30 components:
+Button/IconButton, Field + form family + FormErrorSummary, Dialog/ConfirmDialog/Drawer,
+Card/Panel/SectionHeader/Tabs/Toolbar/Divider/Stack/Grid, DataTable/KeyValueList/
+Pagination/LoadMore, Toast/useToast/Alert/StatusPill/Spinner/Skeleton/EmptyState/
+ErrorState/ProgressBar, MoneyText/StateChip/TotalsPanel, Icon with 21 authored glyphs),
+and the DEV gallery as their proving ground (every primitive × every labeled state).
+Contracts this phase introduced and later phases consume: the axed floor on the gallery
+(0 violations × chromium/mobile/tablet), the token drift scan (`design.literals.test.ts`
+— no raw values outside tokens.css; two dated incumbent exemptions), the 14-pair
+contrast contract (`design.tokens.test.ts`), the 34 static-markup ui contract tests,
+the surface-brief template, and `DESIGN.md`/`PRODUCT.md` as the product/design truth.
+The gallery stays out of the product bundle (re-proven by dist grep at validation).
+No surface was restyled in 022 (Out of Scope) — the surface phases 023+ record their
+migrations below; hooks they introduced are registered in their own records.
+
 ## Phase 023 presentation migrations (F-G09/FA-8: names preserved, role/region changed)
 
 Recorded per the phase-023 spec's migration-list requirement — every row preserves the assertion's TEXT while moving its ROLE or surface:
