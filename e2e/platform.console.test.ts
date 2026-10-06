@@ -91,8 +91,20 @@ test('every action speaks: dates saved, tenant disabled, tenant re-enabled (FR-0
     const today = new Date()
     const in10 = new Date()
     in10.setUTCDate(in10.getUTCDate() + 10)
-    await page.getByLabel('Start date').fill(iso(today))
+    // C001 (convergence round): the invalid case is pinned — end < start
+    // renders the inline error and the submit stays guarded (D4, R3).
+    const yesterday = new Date()
+    yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+    await page.getByLabel('End date').fill(iso(yesterday))
+    await expect(
+      page.getByText('The end date must be the same day as, or after, the start date.'),
+    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Save dates' })).toBeDisabled()
     await page.getByLabel('End date').fill(iso(in10))
+    await expect(
+      page.getByText('The end date must be the same day as, or after, the start date.'),
+    ).not.toBeVisible()
+    await page.getByLabel('Start date').fill(iso(today))
     await page.getByRole('button', { name: 'Save dates' }).click()
     await expect(notifications).toContainText('Subscription dates saved for Blue Olive.')
 
