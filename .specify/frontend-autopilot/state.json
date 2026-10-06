@@ -1,5 +1,5 @@
 {
-  "phase": 13,
+  "phase": 14,
   "status": "done",
   "stage": "DONE",
   "currentTask": null,
@@ -8,13 +8,13 @@
   "convergenceRound": 0,
   "blocked": false,
   "blocker": null,
-  "git": { "baseline": "f59faea", "checkpoint": "feat(033) = 3356b7d, PUSHED — origin/main = 3356b7d (both the 032 and 033 checkpoints landed on GitHub; the pending GCM-bound push completed later in the background)" },
+  "git": { "baseline": "9fd0268", "checkpoint": "feat(034) = 9dba5d3, PUSHED — origin/main = 9dba5d3 (ls-remote verified; push worked directly, no GCM involvement)" },
   "validation": {
-    "lastTargeted": "reportFormat 7/7; reports.test frozen 6/6; readability E2E 4/4 + frozen reports.surfaces 6/6 = 10/10 EXIT:0 (targeted, after reset); tsc -b clean; prettier clean",
-    "final": "verify green on final tree (format/lint 0 errors/typecheck/unit; test:db 31 files 516/516; test:integration 7 files 38/38; build OK); full E2E workers=1/90s: 183/191 passed, 3 environment-flavored failures + 5 serial siblings skipped, isolated rerun of the three files 21/21 EXIT:0 — every test of 191 has a passing run; no frozen anchor moved"
+    "lastTargeted": "unit 430/430 (adminPosture 3 new; subscriptionCopy 7 with the stateLabel block); E2E workers=1/90s after db:reset: live.awareness 2/2 + platform.console 3/3 (new) + platform.surfaces 7/7 — the two 'Never activated' pins migrated to 'Not activated yet' per D1 = 12/12 EXIT:0",
+    "final": "verify on the final tree: format:check green (after a prettier-only fix to docs/whatsapp-n8n-api-contract.md that b1a871e committed with formatting drift), lint green, tsc -b clean, test:unit 430/430, test:db 516/516 — first run had 5 failures = E2E residue on the shared cloud DB, green after db:reset; one order.rpc audit-count flake green on the isolated rerun (documented environmental: shared-cloud live writers) — test:integration 38/38, build OK (788.74 kB JS / 217.95 kB gzip)"
   },
-  "nextPhase": 14,
+  "nextPhase": 15,
   "nextStage": null,
-  "note": "Git state note: specs/, .specify/, .agents/, DESIGN.md and the Master Plan were previously untracked-by-design; per the owner's request (specs 031-033 missing on GitHub) the docs/spec artifacts are being committed. Phase 13 (specs/033) DONE: reportFormat helpers (clamp/bars/period sentence), comparison honesty (same-period sentence + aria-live posture rows, no silent dash), zero hint, aria-hidden token bars, audit clamp notice + exact-match filter hint + reason line-clamp, CSS-only card fallback <720px on the three tables, e2e/reports.readability.test.ts (4, read-only). Env notes: reports.surfaces:131 legacy (isolated rerun), transient 0xC0000142 fork spawns (rerun once), shared cloud DB live writers (no overlap + reset before gated runs), GCM push needs the user's interactive shell.",
-  "updatedAt": "2026-10-05T22:20:00-04:00"
+  "note": "Phase 14 (specs/034) DONE — Operate mode, all five platform RPCs untouched. D1 one vocabulary (stateLabel → subscriptionCopy; STATE_LABELS deleted) with the ONE deliberate frozen-pin migration 'Never activated' → 'Not activated yet': both platform.surfaces pins moved in the same commit per the Master Plan exit criterion and the Category-A discipline, recorded in §Phase 034 of docs/frontend-presentation-contracts.md and in specs/034 analysis.md (the earlier 'nothing moves' claim was wrong and is corrected there for the record). D2 toasts on dates/disable/re-enable/onboarding (onboarding toast wording distinct from the pinned inline status). D3 name filter + aria-sort columns, client-side over the fetched rows. D4 inline end≥start validation with guarded submit. D5 /admin posture (tenants/disabled counts + honesty statement) from the SAME overview query. D6 shared .cardTable pattern via the AuditLogPage precedent (no new CSS file). New e2e/platform.console.test.ts (3, serial): toasts ride subscriptionLock (Blue Olive dates restored to active +30) and entryLock (Cedar Grill disable→re-enable — session.surfaces enters its public surface); Cedar Grill's DATES are never touched (the suite's 'Activate' reserve). Env notes: db suites need a db:reset after E2E runs (residue breaks tenancy/platform fixture counts); order.rpc audit-count flake green on isolated rerun; Playwright reused the live 5173 dev server.",
+  "updatedAt": "2026-10-06T04:15:00-04:00"
 }
