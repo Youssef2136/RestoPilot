@@ -46,56 +46,7 @@ cashier/kitchen rendering, no accounting framing.
 (audit/void assertions), `tests/unit/reports.test.ts`, all `data-testid` hooks,
 formatPrice everywhere, denial/refusal copies verbatim.
 
-## plan.md
-
-| Aspect | Decision |
-|---|---|
-| Routes | unchanged: /dashboard/reports, /dashboard/voids, /dashboard/audit |
-| Components | PeriodControl stays inline; new: ReportBar (bar primitive), ClampNotice, honest ComparisonRow; reuse DataTable pattern classes for cards |
-| State/data flow | existing react-query reads unchanged; comparison rows already one-call-per-branch (D2) — only the RENDER of pending/error/zero changes |
-| Backend contracts | get_branch_sales_report / get_branch_void_report / get_audit_log — NOT_REQUIRED (read-only verbatim); D7 documents the filter-contract boundary |
-| Responsive | CSS-grid card fallback < 720px; desktop-first tables preserved |
-| Accessibility | bars aria-hidden with the table as text equivalent; clamp notice role="status"; comparison per-row posture read naturally by SRs; card layout keeps label/value pairing |
-| Loading/empty/error | skeleton-free text states kept (house style); D6 zero hint; D1 failure row; void-log-empty + 'No audit entries match.' untouched |
-| Testing strategy | unit: reportFormat (bar shares, clamp/threshold helper, period sentence); extend reports.test.ts? NO — frozen; NEW file tests/unit/reportFormat.test.ts. E2E: NEW e2e/reports.readability.test.ts (serial after reset) — clamp notice via seeded volume? NOT seedable cheaply → assert notice ABSENT below clamp + filters honest + 390px cards + axe on all three pages |
-| Design strategy | tokens only; SimpleBar width = quantity / max(quantities) of the visible list |
-
-## tasks.md
-
-- **T001** `src/features/reports/reportFormat.ts` — `barShare(value, max)` (0..1, 0 for
-  max<=0), `comparisonPeriodSentence(period, from, to)`, `isClampReached(count, limit)`
-  + `CLAMP_PAGE_SIZE = 200`. Unit `tests/unit/reportFormat.test.ts`.
-- **T002** ReportsPage: comparison honesty (D1 — period sentence, per-row status with
-  role="status", failure text), zero hint (D6), channel/best-seller bars (D4).
-- **T003** AuditLogPage: clamp notice (D2), action-filter hint (D7), reason truncation
-  (D5) via CSS.
-- **T004** VoidReportPage: reason truncation (D5).
-- **T005** Card-fallback CSS for the three tables (D3) — module.css per page.
-- **T006** `e2e/reports.readability.test.ts` (3): honest comparison partial posture is
-  covered at unit level + live zero/empty; E2E asserts (1) period sentence + bars +
-  zero hint visible with existing journeys, (2) audit filter hint + clamp absence +
-  exact-match behavior unchanged, (3) 390px: all three pages render card rows with no
-  horizontal overflow + axe passes on the three desktop pages.
-
-## checklists/requirements.md (R1–R6)
-
-- R1 (FR-05) comparison states same-period + per-row posture — T002, unit + E2E.
-- R2 (state matrix) clamp notice at exactly-limit pages — T003, unit.
-- R3 (Responsive) card fallback 390px, no overflow — T005/T006, E2E.
-- R4 (FA-10) bars token-driven, no dep, aria-hidden — T002, unit+E2E.
-- R5 (Visual) reason truncation w/ full text in DOM — T003/T004, unit (CSS) + E2E.
-- R6 (D6/UX) zero hint distinguishable from empty — T002, E2E.
-
-## checklists/realtime-fidelity.md → renamed focus: presentation-fidelity.md (F1–F4)
-
-- F1 figures byte-for-byte from RPCs — no arithmetic added (formatPrice only).
-- F2 frozen E2E assertions preserved unedited; new suite additive.
-- F3 denials/refusals verbatim; cashier/kitchen never render these surfaces.
-- F4 audit reach/reachability server-owned; filters exact-match; clamp honest.
-
-## analysis.md
-
-Spec-vs-plan consistency: D7 records the FR-07 filter-set boundary (exact-match only
-in the contract; no date/actor params — backend NOT_REQUIRED, no contract change
-authorized). No contradictions found between the Master Plan scope and the existing
-013 surfaces; the phase is an honesty/readability upgrade over frozen contracts.
+> Normalized 2026-10-06: the embedded plan/tasks/checklists/analysis sections moved
+> to standalone files (the 031/032 pipeline layout). Content verbatim; the embedded
+> tasks list was strictly superseded by the standalone evidence-annotated
+> `tasks.md`. Implementation stands at `3356b7d`; no pipeline step re-run.
