@@ -43,8 +43,10 @@ test('the platform console lists every restaurant for the super admin (FR-001, F
   await expect(table).toContainText('Cedar Grill')
   // Usage figures render as plain counts (the slash-joined group).
   await expect(table).toContainText('/')
-  // Never-activated is a visible state for the seeded restaurants.
-  await expect(table).toContainText('Never activated')
+  // Never-activated is a visible state for the seeded restaurants (spec 034
+  // D1 migrated the console's label to the Phase-12 vocabulary in the same
+  // commit — the change-discipline pairing, recorded in §Phase 034).
+  await expect(table).toContainText('Not activated yet')
 })
 
 test('the super admin activates a subscription and the state derives (FR-003/FR-004)', async ({
@@ -209,7 +211,8 @@ test('the super admin onboards a restaurant and its first owner through the cons
   // with the derived never-activated state.
   const table = page.getByTestId('platform-overview')
   await expect(table).toContainText('E2E Harbor Cafe')
-  await expect(table).toContainText('Never activated')
+  // Spec 034 D1 vocabulary migration (paired with the first pin above).
+  await expect(table).toContainText('Not activated yet')
 
   // Credential discipline (FR-003): the NEXT action — here a refused
   // onboarding — clears the credential block; the secret is never

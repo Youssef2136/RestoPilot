@@ -9,6 +9,7 @@
  */
 
 import { useState, type FormEvent } from 'react'
+import { useToast } from '../../../components/ui'
 import { useOnboardRestaurant } from '../usePlatform'
 import type { OnboardResult } from '../platformClient'
 
@@ -24,6 +25,10 @@ interface Feedback {
 
 export function OnboardingPanel() {
   const onboard = useOnboardRestaurant()
+  // Spec 034 D2 — the onboarding outcome also speaks through a toast
+  // (restaurant-named), on top of the inline status the panel keeps and the
+  // frozen E2E asserts.
+  const toast = useToast()
 
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
@@ -77,6 +82,12 @@ export function OnboardingPanel() {
         data.owner.temporaryPassword === null
           ? `Onboarded "${data.name}" — the first owner is linked with no credential issued.`
           : `Onboarded "${data.name}" — a one-time credential was issued to the first owner.`,
+    })
+    // Distinct wording from the inline status so the pinned E2E lookup stays
+    // strict-mode-safe (spec 019's assertion text is unchanged).
+    toast.show({
+      severity: 'success',
+      message: `"${data.name}" is onboarded — the overview below now lists the new tenant.`,
     })
     // The new tenant appears in the overview below (the hook invalidated it).
     setName('')

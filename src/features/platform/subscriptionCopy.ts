@@ -23,6 +23,15 @@ const EXPIRY_TRUTH = 'Ordering is not affected by expiry — customers keep orde
 const ACTOR_TRUTH =
   'Renewal is arranged with the platform: the platform owner acts here, not your restaurant.'
 
+/**
+ * The console's shared state label (spec 034 D1): the ONE owner-facing
+ * vocabulary — the platform console renders the same labels the owner banner
+ * does, from this same map. The separate local label map is deleted.
+ */
+export function stateLabel(state: SubscriptionState): string {
+  return subscriptionCopy(state).label
+}
+
 export function subscriptionCopy(state: SubscriptionState): SubscriptionCopy {
   switch (state) {
     case 'never_activated':

@@ -1,9 +1,13 @@
 import { useState } from 'react'
-import { ConfirmDialog } from '../components/ui'
+import { ConfirmDialog, useToast } from '../components/ui'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { PlatformPayloadError } from '../features/platform/platformClient'
+import { stateLabel } from '../features/platform/subscriptionCopy'
 import { OnboardingPanel } from '../features/platform/components/OnboardingPanel'
+// D6 — the shared card-fallback pattern (spec 033's reports module; the
+// AuditLogPage precedent routes through it the same way).
+import styles from '../features/reports/reports.surfaces.module.css'
 import {
   usePlatformOverview,
   useSetPlatformDisabled,
@@ -11,23 +15,21 @@ import {
 } from '../features/platform/usePlatform'
 
 /**
- * The platform console (spec 014 T007, FR-001–FR-005, FR-008): every
- * restaurant with its derived subscription state, dates, disable flag, and
- * usage counts; the super admin activates (sets dates), changes dates, and
- * disables with a mandatory reason. Spec 019 adds the onboarding panel
- * above the overview table: provision a new restaurant + first owner.
- * Route-gated by RequireSuperAdmin; the
- * RPCs re-verify the flag on every call (Constitution IV).
+ * The platform console (spec 014 T007, FR-001–FR-005, FR-008; phase 034
+ * D1–D4): every restaurant with its derived subscription state, dates,
+ * disable flag, and usage counts; the super admin activates (sets dates),
+ * changes dates, and disables with a mandatory reason. Spec 019 adds the
+ * onboarding panel above the overview table. Route-gated by
+ * RequireSuperAdmin; the RPCs re-verify the flag on every call
+ * (Constitution IV). The state labels come from subscriptionCopy — the ONE
+ * owner-facing vocabulary (D1); every action speaks through a toast (D2);
+ * the tenant list is filterable/sortable (D3); the dates form validates
+ * inline (D4); the table reflows to labelled cards below 720px (D6).
  */
-const STATE_LABELS: Record<string, string> = {
-  never_activated: 'Never activated',
-  active: 'Active',
-  nearing_expiration: 'Nearing expiration',
-  expired: 'Expired',
-}
 
 export function PlatformConsolePage() {
   const { profile, isPending, isError } = useAuthContext()
+  const toast = useToast()
 
   const overviewQuery = usePlatformOverview()
   const datesMutation = useSetSubscriptionDates()
@@ -39,6 +41,14 @@ export function PlatformConsolePage() {
   const [editingDates, setEditingDates] = useState<string | null>(null)
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10))
+
+  // D3 — the tenant list is workable: a name filter plus sortable Name and
+  // Subscription columns (client-side over the already-fetched rows — FR-10
+  // holds, no new reads).
+  const [nameFilter, setNameFilter] = useState('')
+  const [sort, setSort] = useState<{ key: 'name' | 'state'; direction: 'asc' | 'desc' } | null>(
+    null,
+  )
 
   if (isPending) {
     return (
@@ -65,7 +75,32 @@ export function PlatformConsolePage() {
   const rows = overviewQuery.data
   const refusal = overviewQuery.error instanceof PlatformPayloadError ? overviewQuery.error : null
 
-  async function handleDates(restaurantId: string) {
+  // D4 — inline dates validation: the guard runs before the RPC; the server's
+  // verbatim refusal still renders when it fires.
+  const datesInvalid = endDate < startDate
+
+  const visibleRows = (() => {
+    if (rows === undefined) return []
+    const needle = nameFilter.trim().toLowerCase()
+    const filtered =
+      needle === '' ? rows : rows.filter((r) => r.name.toLowerCase().includes(needle))
+    if (sort === null) return filtered
+    const dir = sort.direction === 'asc' ? 1 : -1
+    return [...filtered].sort((a, b) => {
+      if (sort.key === 'name') return a.name.localeCompare(b.name) * dir
+      return stateLabel(a.state).localeCompare(stateLabel(b.state)) * dir
+    })
+  })()
+
+  function toggleSort(key: 'name' | 'state') {
+    setSort((current) =>
+      current?.key === key
+        ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+        : { key, direction: 'asc' },
+    )
+  }
+
+  async function handleDates(restaurantId: string, name: string) {
     setError(null)
     const result = await datesMutation.mutateAsync({
       restaurantId,
@@ -74,15 +109,22 @@ export function PlatformConsolePage() {
     })
     if (result) {
       setEditingDates(null)
+      toast.show({ severity: 'success', message: `Subscription dates saved for ${name}.` })
     }
   }
 
-  async function handleDisable(restaurantId: string, disabled: boolean) {
+  async function handleDisable(restaurantId: string, disabled: boolean, name: string) {
     setError(null)
     try {
       await disableMutation.mutateAsync({ restaurantId, disabled, reason })
       setDisabling(null)
       setReason('')
+      toast.show({
+        severity: 'success',
+        message: disabled
+          ? `${name} was disabled — hosted actions stop; existing captured data is kept.`
+          : `${name} was re-enabled — customers can order again.`,
+      })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The action failed.')
     }
@@ -107,80 +149,125 @@ export function PlatformConsolePage() {
       {overviewQuery.isPending && <p>Loading the platform overview…</p>}
 
       {rows !== undefined && refusal === null && (
-        <table data-testid="platform-overview">
-          <thead>
-            <tr>
-              <th scope="col">Restaurant</th>
-              <th scope="col">Subscription</th>
-              <th scope="col">Dates</th>
-              <th scope="col">Usage (branches / staff / sessions / rounds)</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.restaurant_id}>
-                <td>
-                  {row.name}
-                  {row.platform_disabled && (
-                    <span data-testid={`disabled-${row.slug}`}>
-                      {' '}
-                      — disabled
-                      {row.platform_disabled_reason ? `: ${row.platform_disabled_reason}` : ''}
-                    </span>
-                  )}
-                </td>
-                <td>{row.platform_disabled ? 'Disabled' : STATE_LABELS[row.state]}</td>
-                <td>
-                  {row.start_date === null || row.end_date === null
-                    ? '—'
-                    : `${row.start_date} → ${row.end_date}`}
-                </td>
-                <td>
-                  {row.branch_count} / {row.staff_count} / {row.session_count} / {row.round_count}
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    disabled={datesMutation.isPending}
-                    onClick={() => {
-                      setEditingDates(row.restaurant_id)
-                      setDisabling(null)
-                    }}
-                  >
-                    {row.state === 'never_activated' ? 'Activate' : 'Change dates'}
+        <>
+          {/* D3 — the workable list: substring name filter (client-side). */}
+          <label htmlFor="tenant-filter">
+            Filter tenants{' '}
+            <input
+              id="tenant-filter"
+              type="search"
+              value={nameFilter}
+              onChange={(event) => setNameFilter(event.target.value)}
+              placeholder="e.g. Blue Olive"
+            />
+          </label>
+          <table data-testid="platform-overview" className={styles.cardTable}>
+            <thead>
+              <tr>
+                <th
+                  scope="col"
+                  aria-sort={
+                    sort?.key === 'name'
+                      ? sort.direction === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : undefined
+                  }
+                >
+                  <button type="button" onClick={() => toggleSort('name')}>
+                    Restaurant
                   </button>
-                  {row.platform_disabled ? (
+                </th>
+                <th
+                  scope="col"
+                  aria-sort={
+                    sort?.key === 'state'
+                      ? sort.direction === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : undefined
+                  }
+                >
+                  <button type="button" onClick={() => toggleSort('state')}>
+                    Subscription
+                  </button>
+                </th>
+                <th scope="col">Dates</th>
+                <th scope="col">Usage (branches / staff / sessions / rounds)</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleRows.map((row) => (
+                <tr key={row.restaurant_id}>
+                  <td data-label="Restaurant">
+                    {row.name}
+                    {row.platform_disabled && (
+                      <span data-testid={`disabled-${row.slug}`}>
+                        {' '}
+                        — disabled
+                        {row.platform_disabled_reason ? `: ${row.platform_disabled_reason}` : ''}
+                      </span>
+                    )}
+                  </td>
+                  <td data-label="Subscription">
+                    {row.platform_disabled ? 'Disabled' : stateLabel(row.state)}
+                  </td>
+                  <td data-label="Dates">
+                    {row.start_date === null || row.end_date === null
+                      ? '—'
+                      : `${row.start_date} → ${row.end_date}`}
+                  </td>
+                  <td data-label="Usage">
+                    {row.branch_count} / {row.staff_count} / {row.session_count} / {row.round_count}
+                  </td>
+                  <td data-label="Actions">
                     <button
                       type="button"
-                      disabled={disableMutation.isPending}
-                      onClick={() => void handleDisable(row.restaurant_id, false)}
-                    >
-                      Re-enable
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
+                      disabled={datesMutation.isPending}
                       onClick={() => {
-                        setDisabling(row.restaurant_id)
-                        setEditingDates(null)
+                        setEditingDates(row.restaurant_id)
+                        setDisabling(null)
                       }}
                     >
-                      Disable
+                      {row.state === 'never_activated' ? 'Activate' : 'Change dates'}
                     </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    {row.platform_disabled ? (
+                      <button
+                        type="button"
+                        disabled={disableMutation.isPending}
+                        onClick={() => void handleDisable(row.restaurant_id, false, row.name)}
+                      >
+                        Re-enable
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDisabling(row.restaurant_id)
+                          setEditingDates(null)
+                        }}
+                      >
+                        Disable
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
       )}
 
       {editingDates !== null && (
         <form
           onSubmit={(event) => {
             event.preventDefault()
-            void handleDates(editingDates)
+            if (!datesInvalid) {
+              const name =
+                rows?.find((r) => r.restaurant_id === editingDates)?.name ?? 'the restaurant'
+              void handleDates(editingDates, name)
+            }
           }}
         >
           <h2>Subscription dates</h2>
@@ -197,10 +284,17 @@ export function PlatformConsolePage() {
             <input
               type="date"
               value={endDate}
+              aria-invalid={datesInvalid}
+              aria-describedby={datesInvalid ? 'dates-error' : undefined}
               onChange={(event) => setEndDate(event.target.value)}
             />
           </label>
-          <button type="submit" disabled={datesMutation.isPending}>
+          {datesInvalid && (
+            <p id="dates-error" role="alert">
+              The end date must be the same day as, or after, the start date.
+            </p>
+          )}
+          <button type="submit" disabled={datesMutation.isPending || datesInvalid}>
             Save dates
           </button>
           <button type="button" onClick={() => setEditingDates(null)}>
@@ -221,7 +315,9 @@ export function PlatformConsolePage() {
         }}
         onConfirm={() => {
           if (disabling === null || reason.trim() === '') return
-          void handleDisable(disabling, true)
+          const name =
+            overviewQuery.data?.find((r) => r.restaurant_id === disabling)?.name ?? 'the restaurant'
+          void handleDisable(disabling, true, name)
         }}
         title="Disable restaurant"
         confirmLabel="Confirm disable"
@@ -232,7 +328,10 @@ export function PlatformConsolePage() {
           onSubmit={(event) => {
             event.preventDefault()
             if (disabling === null || reason.trim() === '') return
-            void handleDisable(disabling, true)
+            const name =
+              overviewQuery.data?.find((r) => r.restaurant_id === disabling)?.name ??
+              'the restaurant'
+            void handleDisable(disabling, true, name)
           }}
         >
           <label>

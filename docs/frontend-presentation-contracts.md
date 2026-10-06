@@ -29,16 +29,16 @@ Accessible names, labels, roles, headings, live regions, and tested focus behavi
 
 Representative asserted names (non-exhaustive; the suites are the source of truth):
 
-| Surface       | Asserted names (examples)                                                                                       |
-| ------------- | --------------------------------------------------------------------------------------------------------------- |
-| Global        | heading `RestoPilot` (/), nav label `Application areas`, `Account password`, `Sign out`, `Signing out…`         |
-| Auth          | `Staff sign-in`, `Email`, `Password`, `Sign in`, `Password recovery`, recovery-mode copy                        |
-| Guards        | `Not authorized` (explicit denial — rejected, never hidden)                                                     |
-| Dashboard     | `Staff Dashboard`, branch/role navigation labels per role                                                       |
-| Staff ops     | `Show bill`, two-step confirms (`Close session for T1` → `Confirm closing T1`), round/ticket transition buttons |
-| Platform      | `Super Admin`, console headings, `Never activated` subscription posture text                                    |
-| Customer      | `Restaurant` entry heading, `Order` placeholder heading, menu/cart labels                                       |
-| Reports/audit | `Report aggregates` region names, void-log empty-state text                                                     |
+| Surface       | Asserted names (examples)                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Global        | heading `RestoPilot` (/), nav label `Application areas`, `Account password`, `Sign out`, `Signing out…`                               |
+| Auth          | `Staff sign-in`, `Email`, `Password`, `Sign in`, `Password recovery`, recovery-mode copy                                              |
+| Guards        | `Not authorized` (explicit denial — rejected, never hidden)                                                                           |
+| Dashboard     | `Staff Dashboard`, branch/role navigation labels per role                                                                             |
+| Staff ops     | `Show bill`, two-step confirms (`Close session for T1` → `Confirm closing T1`), round/ticket transition buttons                       |
+| Platform      | `Super Admin`, console headings, `Not activated yet` subscription posture text (034 migrated from `Never activated` — see §Phase 034) |
+| Customer      | `Restaurant` entry heading, `Order` placeholder heading, menu/cart labels                                                             |
+| Reports/audit | `Report aggregates` region names, void-log empty-state text                                                                           |
 
 Live regions: **54 × `role="alert"`** and **13 × `role="status"`** (+ 1 `role="note"`) across `src/**` — server refusal text renders verbatim in alerts (FA-7).
 
@@ -451,3 +451,49 @@ period sentence + bars + zero hint, filter semantics + clamp absence, the 390px 
 walk over all three pages (overflow ≤ 0), and axe WCAG 2.2 AA on the three desktop
 pages. Unit: `tests/unit/reportFormat.test.ts` (7 — clamp at exactly-limit, zero-safe
 bar shares, period sentence). `reportsClient`/`auditClient`/`useAudit` untouched.
+
+## Phase 034 presentation record (platform console UX)
+
+The platform owner's console became a deliberate operations surface (specs/034; Master
+Plan §Frontend Phase 14, Operate mode) with all five RPC contracts untouched. The
+vocabulary is now ONE artifact (D1): the console renders state labels through
+`stateLabel()` → `subscriptionCopy()` — the P12 owner-facing map — and the local
+STATE_LABELS map is deleted; `platform_disabled` keeps its console-specific
+flag+reason rendering. **One anchor migrated deliberately (the phase's only frozen-pin
+move):** the console's never-activated label changed from 'Never activated' to the P12
+vocabulary 'Not activated yet', so the two `platform.surfaces` pins asserting the old
+word moved in the same commit (Master Plan exit criterion: "preserved or migrated with
+a record"; Category-A discipline: documented in specs/034, paired tests updated
+together, justified, validated — both suites green). 'Active'/'Expired'/'Disabled' and
+every banner/denial assertion are byte-identical. Every action now speaks its outcome
+(D2): dates saved, tenant disabled, tenant re-enabled, and onboarding success each
+raise a `useToast` success naming the restaurant (the onboarding toast's wording is
+distinct from the pinned inline status so the spec 019 assertions stay strict-safe);
+refusals stay verbatim. The tenant list became workable client-side (D3): a labelled
+case-insensitive name filter plus sortable Name/Subscription headers (aria-sort
+buttons over the already-fetched rows — no new reads). The dates form validates
+end ≥ start inline (D4: aria-invalid + described error line + guarded submit; the
+server's verbatim refusal still renders when it fires). /admin gained the landing
+posture (D5: tenants + disabled counts + the honesty statement) from the SAME overview
+query the console uses. The console table joined the shared card-fallback pattern
+(D6: the `reports.surfaces.module.css` `.cardTable` via the AuditLogPage precedent,
+data-label cells, thead out of flow < 720px).
+
+| Surface / hook       | Before (phase ≤ 033)                   | After (034)                                                                   | Asserted by                              |
+| -------------------- | -------------------------------------- | ----------------------------------------------------------------------------- | ---------------------------------------- |
+| State vocabulary     | local STATE_LABELS ('Never activated') | `stateLabel()` → subscriptionCopy ('Not activated yet') — ONE map             | platform.surfaces (migrated) + unit (D1) |
+| Action outcomes      | row refresh only                       | success toasts naming the restaurant (dates/disable/re-enable/onboard)        | platform.console (D2/FR-07)              |
+| Tenant list          | static rows                            | name filter + aria-sort columns, client-side (no new reads)                   | platform.console (D3/FR-02)              |
+| Dates form           | server-refusal only                    | inline end ≥ start error + guarded submit; verbatim refusals intact           | platform.console + dates error (D4)      |
+| /admin landing       | identity + link only                   | posture (N tenants · M disabled) + capability statement from the shared query | platform.console + unit (D5/FR-01)       |
+| Console table <720px | horizontal scroll                      | shared `.cardTable` pattern, labelled cells, no overflow at 390px             | platform.console (D6/R6)                 |
+
+New suite: `e2e/platform.console.test.ts` (3, serial): filter+sort (self-consistent
+row order), the toasts under the locks (the dates flip on Blue Olive rides
+subscriptionLock and restores active +30; the Cedar Grill disable→re-enable window
+rides the entryLock — session.surfaces enters Cedar Grill's public surface), and the
+axe scan on both /admin routes plus the 390px card/overflow walk. Unit:
+`tests/unit/adminPosture.test.tsx` (3 — counts, non-super-admin silence, pending
+silence) and stateLabel coverage in `tests/unit/subscriptionCopy.test.ts`.
+OnboardingPanel gained the success toast only — its form, inline status, credential
+discipline, and every spec 019 assertion are untouched.

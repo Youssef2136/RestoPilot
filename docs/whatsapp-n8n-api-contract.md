@@ -70,12 +70,12 @@ today), `PROPOSED` (must be built), or `NOT RECOMMENDED`.
 
 ## 1. Status vocabulary
 
-| Status                | Meaning |
-| --------------------- | ------- |
-| `EXISTING`            | The RPC is deployed in a migration and reachable today via PostgREST `/rest/v1/rpc/...`. |
-| `PARTIALLY EXISTING`  | The core engine exists (RPC/service), but a caller-facing wrapper (service auth, n8n-shaped payload) must be built on top. |
-| `PROPOSED`            | Does not exist anywhere in the codebase. Requires implementation. |
-| `NOT RECOMMENDED`     | Operation must not be executed by n8n directly (do it via RestoPilot, or don't do it at all). |
+| Status               | Meaning                                                                                                                    |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `EXISTING`           | The RPC is deployed in a migration and reachable today via PostgREST `/rest/v1/rpc/...`.                                   |
+| `PARTIALLY EXISTING` | The core engine exists (RPC/service), but a caller-facing wrapper (service auth, n8n-shaped payload) must be built on top. |
+| `PROPOSED`           | Does not exist anywhere in the codebase. Requires implementation.                                                          |
+| `NOT RECOMMENDED`    | Operation must not be executed by n8n directly (do it via RestoPilot, or don't do it at all).                              |
 
 ---
 
@@ -83,20 +83,20 @@ today), `PROPOSED` (must be built), or `NOT RECOMMENDED`.
 
 The bot's real work decomposes into 12 operations:
 
-| # | Operation | Status | RestoPilot today |
-| - | --------- | ------ | ---------------- |
-| 1 | Resolve restaurant by identifier | `EXISTING` | `get_public_restaurant(p_slug)` |
-| 2 | Open/join a session (dine-in) | `EXISTING` | `open_session_at_table(...)` |
-| 3 | Open a session (delivery/takeaway) | `EXISTING` | `open_session_channel(...)` |
-| 4 | Verify session / read context | `EXISTING` | `get_session_context(p_token)` |
-| 5 | Retrieve menu + availability | `EXISTING` | `get_session_menu(p_token)` |
-| 6 | Authoritative price preview | `EXISTING` | `calculate_branch_taxes(branch_id, selections)` |
-| 7 | Submit order (create round) | `EXISTING` | `submit_round(p_token, p_items)` |
-| 8 | Read order history for session | `EXISTING` | `get_session_rounds(p_token)` |
-| 9 | Modify order line (reduce/remove) | `NOT RECOMMENDED` | `modify_round_line` is staff-only (JWT role check); customer/self-service modify does not exist |
-| 10 | Cancel/void order | `NOT RECOMMENDED` | `void_round` is staff-only, audited, boundary-gated; no customer path |
-| 11 | Order status follow-up | `PARTIALLY EXISTING` | `get_session_rounds` shows customer's own rounds incl. `state`; a status-focused projection would be a small wrapper |
-| 12 | Customer identification/lookup by phone | `PROPOSED` | Nothing exists — participants are display-only rows inside a session; no lookup, no dedupe, no CRM |
+| #   | Operation                               | Status               | RestoPilot today                                                                                                     |
+| --- | --------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| 1   | Resolve restaurant by identifier        | `EXISTING`           | `get_public_restaurant(p_slug)`                                                                                      |
+| 2   | Open/join a session (dine-in)           | `EXISTING`           | `open_session_at_table(...)`                                                                                         |
+| 3   | Open a session (delivery/takeaway)      | `EXISTING`           | `open_session_channel(...)`                                                                                          |
+| 4   | Verify session / read context           | `EXISTING`           | `get_session_context(p_token)`                                                                                       |
+| 5   | Retrieve menu + availability            | `EXISTING`           | `get_session_menu(p_token)`                                                                                          |
+| 6   | Authoritative price preview             | `EXISTING`           | `calculate_branch_taxes(branch_id, selections)`                                                                      |
+| 7   | Submit order (create round)             | `EXISTING`           | `submit_round(p_token, p_items)`                                                                                     |
+| 8   | Read order history for session          | `EXISTING`           | `get_session_rounds(p_token)`                                                                                        |
+| 9   | Modify order line (reduce/remove)       | `NOT RECOMMENDED`    | `modify_round_line` is staff-only (JWT role check); customer/self-service modify does not exist                      |
+| 10  | Cancel/void order                       | `NOT RECOMMENDED`    | `void_round` is staff-only, audited, boundary-gated; no customer path                                                |
+| 11  | Order status follow-up                  | `PARTIALLY EXISTING` | `get_session_rounds` shows customer's own rounds incl. `state`; a status-focused projection would be a small wrapper |
+| 12  | Customer identification/lookup by phone | `PROPOSED`           | Nothing exists — participants are display-only rows inside a session; no lookup, no dedupe, no CRM                   |
 
 Detailed contracts per operation follow. **For all `EXISTING` entries the
 HTTP shape is the PostgREST RPC call shown in §0; bodies and responses are
@@ -139,10 +139,13 @@ apikey: <publishable-key>
 
 ```json
 {
-  "restaurant": { "id": "00000000-0000-4000-8000-000000000001", "name": "Blue Olive", "slug": "blue-olive", "brand_description": "Wood-fired Mediterranean plates..." },
-  "branches": [
-    { "id": "...", "name": "Downtown", "tables": [ { "id": "...", "label": "T1" } ] }
-  ]
+  "restaurant": {
+    "id": "00000000-0000-4000-8000-000000000001",
+    "name": "Blue Olive",
+    "slug": "blue-olive",
+    "brand_description": "Wood-fired Mediterranean plates..."
+  },
+  "branches": [{ "id": "...", "name": "Downtown", "tables": [{ "id": "...", "label": "T1" }] }]
 }
 ```
 
@@ -170,8 +173,8 @@ and obtain the **session token** that authorizes all later customer calls.
 **URL**: `{SUPABASE_URL}/rest/v1/rpc/open_session_at_table`
 **Authentication**: Publishable key; anon role. Granted to `anon, authenticated`.
 **Authorization**: The RPC validates restaurant → branch → active-table
-coherence itself (P0001 refusals otherwise). Tenant scoping is a *parameter
-chain* here — n8n must pass ids it obtained from op 3.1, never customer text.
+coherence itself (P0001 refusals otherwise). Tenant scoping is a _parameter
+chain_ here — n8n must pass ids it obtained from op 3.1, never customer text.
 
 **Request body**:
 
@@ -194,8 +197,14 @@ Validation inside the RPC: name 1–60 chars, phone matches `^\+?[0-9]{7,15}$`
 ```json
 {
   "session": {
-    "id": "…", "restaurant_id": "…", "branch_id": "…", "table_id": "…",
-    "type": "dine-in", "status": "open", "opened_at": "2026-10-05T12:00:00Z", "delivery_address": null
+    "id": "…",
+    "restaurant_id": "…",
+    "branch_id": "…",
+    "table_id": "…",
+    "type": "dine-in",
+    "status": "open",
+    "opened_at": "2026-10-05T12:00:00Z",
+    "delivery_address": null
   },
   "token": "base64url-32-bytes",
   "participant": { "id": "…", "display_name": "Yousef", "joined_at": "…" }
@@ -284,8 +293,8 @@ without asking the customer anything.
 
 **HTTP Method**: `POST`
 **URL**: `{SUPABASE_URL}/rest/v1/rpc/get_session_context`
-**Authentication**: publishable key; the *token parameter is the
-authorization* (SHA-256 hashed and matched server-side; only the hash is
+**Authentication**: publishable key; the _token parameter is the
+authorization_ (SHA-256 hashed and matched server-side; only the hash is
 stored — `session_tokens` has zero client grants).
 **Authorization**: Token-derived; a token can only ever address its own
 session/restaurant. This is the tenant-isolation mechanism for the whole
@@ -297,10 +306,18 @@ customer surface.
 
 ```json
 {
-  "session": { "id": "…", "restaurant_id": "…", "branch_id": "…", "table_id": null,
-               "type": "delivery", "status": "open", "delivery_address": "…", "opened_at": "…" },
+  "session": {
+    "id": "…",
+    "restaurant_id": "…",
+    "branch_id": "…",
+    "table_id": null,
+    "type": "delivery",
+    "status": "open",
+    "delivery_address": "…",
+    "opened_at": "…"
+  },
   "indicator": { "restaurant_name": "Blue Olive", "branch_name": "Downtown", "table_label": null },
-  "participants": [ { "id": "…", "display_name": "Yousef", "joined_at": "…" } ]
+  "participants": [{ "id": "…", "display_name": "Yousef", "joined_at": "…" }]
 }
 ```
 
@@ -340,13 +357,21 @@ be open). Granted to `anon, authenticated`.
   "restaurant": { "id": "…", "name": "Blue Olive", "slug": "blue-olive" },
   "categories": [
     {
-      "id": "…", "name": "Burgers", "description": null, "sort_order": 1,
+      "id": "…",
+      "name": "Burgers",
+      "description": null,
+      "sort_order": 1,
       "items": [
         {
-          "id": "…", "name": "Burger", "description": "…",
-          "price": "35.00", "sort_order": 1, "image_path": null,
-          "is_offered": true, "unavailable_reason": null,
-          "extras": [ { "id": "…", "name": "Cheese", "price_adjustment": "3.00", "sort_order": 1 } ]
+          "id": "…",
+          "name": "Burger",
+          "description": "…",
+          "price": "35.00",
+          "sort_order": 1,
+          "image_path": null,
+          "is_offered": true,
+          "unavailable_reason": null,
+          "extras": [{ "id": "…", "name": "Cheese", "price_adjustment": "3.00", "sort_order": 1 }]
         }
       ]
     }
@@ -389,9 +414,7 @@ jsonb scalar and the engine rejects that):
 ```json
 {
   "p_branch_id": "…",
-  "p_selections": [
-    { "item_id": "…", "extras": [ { "extra_id": "…" } ], "quantity": "2" }
-  ]
+  "p_selections": [{ "item_id": "…", "extras": [{ "extra_id": "…" }], "quantity": "2" }]
 }
 ```
 
@@ -400,8 +423,14 @@ jsonb scalar and the engine rejects that):
 ```json
 {
   "lines": [
-    { "rule_id": "…", "name": "VAT", "rate": "0.1500", "scope": "total",
-      "sort_order": 1, "amount": "10.50" }
+    {
+      "rule_id": "…",
+      "name": "VAT",
+      "rate": "0.1500",
+      "scope": "total",
+      "sort_order": 1,
+      "amount": "10.50"
+    }
   ],
   "subtotal": "70.00",
   "total": "80.50"
@@ -445,9 +474,7 @@ duplicate items merge:
 ```json
 {
   "p_token": "<session token>",
-  "p_items": [
-    { "item_id": "…", "extras": ["…", {"extra_id": "…"}], "quantity": "2" }
-  ]
+  "p_items": [{ "item_id": "…", "extras": ["…", { "extra_id": "…" }], "quantity": "2" }]
 }
 ```
 
@@ -456,17 +483,33 @@ duplicate items merge:
 ```json
 {
   "round": {
-    "id": "…", "restaurant_id": "…", "branch_id": "…", "session_id": "…",
+    "id": "…",
+    "restaurant_id": "…",
+    "branch_id": "…",
+    "session_id": "…",
     "state": "new",
-    "subtotal": "70.00", "tax_total": "10.50",
-    "tax_lines": [ { "rule_id": "…", "name": "VAT", "rate": "0.1500", "scope": "total", "sort_order": 1, "amount": "10.50" } ],
+    "subtotal": "70.00",
+    "tax_total": "10.50",
+    "tax_lines": [
+      {
+        "rule_id": "…",
+        "name": "VAT",
+        "rate": "0.1500",
+        "scope": "total",
+        "sort_order": 1,
+        "amount": "10.50"
+      }
+    ],
     "created_at": "…"
   },
   "ticket_id": "…",
   "items": [
     {
-      "id": "…", "item_id": "…", "quantity": 2, "unit_price": "35.00",
-      "extras": [ { "extra_id": "…", "price_adjustment": "3.00" } ]
+      "id": "…",
+      "item_id": "…",
+      "quantity": 2,
+      "unit_price": "35.00",
+      "extras": [{ "extra_id": "…", "price_adjustment": "3.00" }]
     }
   ]
 }
@@ -520,12 +563,21 @@ probe).
 {
   "rounds": [
     {
-      "id": "…", "state": "preparing", "subtotal": "70.00", "tax_total": "10.50",
-      "tax_lines": [], "created_at": "…",
+      "id": "…",
+      "state": "preparing",
+      "subtotal": "70.00",
+      "tax_total": "10.50",
+      "tax_lines": [],
+      "created_at": "…",
       "items": [
-        { "id": "…", "item_id": "…", "name": "Burger", "quantity": 2,
+        {
+          "id": "…",
+          "item_id": "…",
+          "name": "Burger",
+          "quantity": 2,
           "unit_price": "35.00",
-          "extras": [ { "extra_id": "…", "name": "Cheese", "price_adjustment": "3.00" } ] }
+          "extras": [{ "extra_id": "…", "name": "Cheese", "price_adjustment": "3.00" }]
+        }
       ]
     }
   ]
@@ -569,6 +621,7 @@ implementation):
 ```
 PROPOSED: POST {SUPABASE_URL}/rest/v1/rpc/customer_modify_round
 ```
+
 or, better, behind the §9 API layer:
 
 ```
@@ -578,8 +631,13 @@ PROPOSED: POST /api/whatsapp/orders/{round_id}/lines
 Suggested contract (token-authorized like `submit_round`):
 
 ```json
-{ "p_token": "<session token>", "p_round_id": "…", "p_item_id": "…",
-  "p_action": "reduce", "p_quantity": 3 }
+{
+  "p_token": "<session token>",
+  "p_round_id": "…",
+  "p_item_id": "…",
+  "p_action": "reduce",
+  "p_quantity": 3
+}
 ```
 
 Server-side rules to carry over from `modify_round_line`: only when the
@@ -672,12 +730,12 @@ past delivery sessions for the tenant) and a privacy decision (§14).
 
 ### Allowed / Reasonable (using the publishable key only)
 
-| Operation | Why acceptable |
-| --------- | -------------- |
-| `get_public_restaurant` | Public by design; payload is the tenant selector. |
-| `open_session_channel` / `open_session_at_table` | Anon-reachable by design; the RPCs validate everything and return a scoped token. |
+| Operation                                                                          | Why acceptable                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_public_restaurant`                                                            | Public by design; payload is the tenant selector.                                                                                                                               |
+| `open_session_channel` / `open_session_at_table`                                   | Anon-reachable by design; the RPCs validate everything and return a scoped token.                                                                                               |
 | `get_session_context` / `get_session_menu` / `get_session_rounds` / `submit_round` | The **session token is the authorization** — hashed lookup, tenant-derived server-side, zero table grants behind it. An n8n caller is exactly equivalent to a browser customer. |
-| Reading Realtime channels (optional) | `rounds`/`kitchen_tickets` broadcasts are authorized per-session/branch; could drive "your order is ready" messages later. |
+| Reading Realtime channels (optional)                                               | `rounds`/`kitchen_tickets` broadcasts are authorized per-session/branch; could drive "your order is ready" messages later.                                                      |
 
 Important: these are allowed **because** they are the same anon surface the
 public web app uses, and every one of them is server-authorized by a
@@ -686,17 +744,17 @@ fine".
 
 ### Not Recommended (never from n8n)
 
-| Operation | Why not |
-| --------- | ------- |
-| Table CRUD with `anon` key on RLS-open tables | Most product tables (`sessions`, `rounds`, `menu_*`, `tax_*`, …) have RLS enabled with **no policies** and all grants revoked — direct access fails closed. Any table that *is* readable by `anon` is readable only through the RPC contract above. |
-| Anything with the `service_role` key from n8n | Bypasses RLS entirely, cross-tenant by construction, impossible to audit as a customer actor, and would sit in n8n credentials (a workflow editor is not a secrets vault). The project's own runbook forbids service-role keys in the bundle; the same reasoning applies harder to n8n. |
-| Creating/updating orders by writing `rounds` / `round_items` / `round_item_extras` directly | Even with a privileged key: skips availability checks, tax capture, kitchen ticket creation, cutoff enforcement, and money capture invariants. `submit_round` is the only sanctioned writer. |
-| Modifying orders (`modify_round_line`, `void_round`) directly | Staff-authorized, audited, boundary-gated operations; a bot must not hold staff credentials (§3.9–3.10). |
-| Customer "business logic" (lookup, dedupe, profile updates) on raw tables | No such logic exists; inventing it in a workflow creates an unowned shadow model outside the DB's invariants. |
-| Availability/inventory toggles (`set_menu_item_availability`, `set_branch_item_availability`) | Owner/manager operations. The bot must *read* availability via the menu projection and *never* change it. |
-| Tax configuration (`create_tax_rule`, overrides, snapshots) | Owner-only surface; price truth must flow only through the engine. |
-| Payment state | No payments exist in the product at all (V1 explicitly excludes online payment). There is nothing to touch; don't create shadow payment state. |
-| Staff/platform management (`add_staff_member`, subscriptions, kill-switch) | Platform-admin/staff-only; catastrophic if exposed to a webhook surface. |
+| Operation                                                                                     | Why not                                                                                                                                                                                                                                                                                 |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Table CRUD with `anon` key on RLS-open tables                                                 | Most product tables (`sessions`, `rounds`, `menu_*`, `tax_*`, …) have RLS enabled with **no policies** and all grants revoked — direct access fails closed. Any table that _is_ readable by `anon` is readable only through the RPC contract above.                                     |
+| Anything with the `service_role` key from n8n                                                 | Bypasses RLS entirely, cross-tenant by construction, impossible to audit as a customer actor, and would sit in n8n credentials (a workflow editor is not a secrets vault). The project's own runbook forbids service-role keys in the bundle; the same reasoning applies harder to n8n. |
+| Creating/updating orders by writing `rounds` / `round_items` / `round_item_extras` directly   | Even with a privileged key: skips availability checks, tax capture, kitchen ticket creation, cutoff enforcement, and money capture invariants. `submit_round` is the only sanctioned writer.                                                                                            |
+| Modifying orders (`modify_round_line`, `void_round`) directly                                 | Staff-authorized, audited, boundary-gated operations; a bot must not hold staff credentials (§3.9–3.10).                                                                                                                                                                                |
+| Customer "business logic" (lookup, dedupe, profile updates) on raw tables                     | No such logic exists; inventing it in a workflow creates an unowned shadow model outside the DB's invariants.                                                                                                                                                                           |
+| Availability/inventory toggles (`set_menu_item_availability`, `set_branch_item_availability`) | Owner/manager operations. The bot must _read_ availability via the menu projection and _never_ change it.                                                                                                                                                                               |
+| Tax configuration (`create_tax_rule`, overrides, snapshots)                                   | Owner-only surface; price truth must flow only through the engine.                                                                                                                                                                                                                      |
+| Payment state                                                                                 | No payments exist in the product at all (V1 explicitly excludes online payment). There is nothing to touch; don't create shadow payment state.                                                                                                                                          |
+| Staff/platform management (`add_staff_member`, subscriptions, kill-switch)                    | Platform-admin/staff-only; catastrophic if exposed to a webhook surface.                                                                                                                                                                                                                |
 
 **Rule of thumb**: n8n touches Supabase directly only with the publishable
 key and only through the five token-authorized customer RPCs + the public
@@ -731,25 +789,25 @@ WhatsApp Reply
 
 Node-level mapping:
 
-| n8n Node | Responsibility | RestoPilot operation |
-| -------- | -------------- | -------------------- |
-| WhatsApp Trigger (Webhook) | Receive inbound message; respond 200 immediately (queue the work) | — |
-| Set/Code (Normalize) | Canonical chat_id + message_id; dedupe key | — |
-| Data Store / Redis (Get) | Conversation state: session token, branch, pending cart | — |
-| AI (LLM) node | Intent + slot extraction **grounded on menu JSON**; no db access, no tool-calling to Supabase | — |
-| Code (Mapper) | Map extracted names → `item_id`/`extra_id` from the cached menu; reject unknowns | — |
-| HTTP Request | Resolve restaurant | `get_public_restaurant` |
-| HTTP Request | Open session (delivery/takeaway) | `open_session_channel` |
-| HTTP Request | Open/join dine-in session | `open_session_at_table` |
-| HTTP Request | Session liveness check | `get_session_context` |
-| HTTP Request | Fetch/refresh menu cache | `get_session_menu` |
-| HTTP Request | Price preview | `calculate_branch_taxes` (needs §9 service auth) |
-| HTTP Request | **Create order** | `submit_round` |
-| HTTP Request | History/status | `get_session_rounds` |
-| Wait/Poll (schedule) | Status follow-up when customer asks | `get_session_rounds` |
-| Code (Error map) | `P0001` message verbatim → friendly text; unknown → generic retry message | — |
-| WhatsApp (Send) | Reply | — |
-| Data Store (Set) | Persist token/round ids/state | — |
+| n8n Node                   | Responsibility                                                                                | RestoPilot operation                             |
+| -------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| WhatsApp Trigger (Webhook) | Receive inbound message; respond 200 immediately (queue the work)                             | —                                                |
+| Set/Code (Normalize)       | Canonical chat_id + message_id; dedupe key                                                    | —                                                |
+| Data Store / Redis (Get)   | Conversation state: session token, branch, pending cart                                       | —                                                |
+| AI (LLM) node              | Intent + slot extraction **grounded on menu JSON**; no db access, no tool-calling to Supabase | —                                                |
+| Code (Mapper)              | Map extracted names → `item_id`/`extra_id` from the cached menu; reject unknowns              | —                                                |
+| HTTP Request               | Resolve restaurant                                                                            | `get_public_restaurant`                          |
+| HTTP Request               | Open session (delivery/takeaway)                                                              | `open_session_channel`                           |
+| HTTP Request               | Open/join dine-in session                                                                     | `open_session_at_table`                          |
+| HTTP Request               | Session liveness check                                                                        | `get_session_context`                            |
+| HTTP Request               | Fetch/refresh menu cache                                                                      | `get_session_menu`                               |
+| HTTP Request               | Price preview                                                                                 | `calculate_branch_taxes` (needs §9 service auth) |
+| HTTP Request               | **Create order**                                                                              | `submit_round`                                   |
+| HTTP Request               | History/status                                                                                | `get_session_rounds`                             |
+| Wait/Poll (schedule)       | Status follow-up when customer asks                                                           | `get_session_rounds`                             |
+| Code (Error map)           | `P0001` message verbatim → friendly text; unknown → generic retry message                     | —                                                |
+| WhatsApp (Send)            | Reply                                                                                         | —                                                |
+| Data Store (Set)           | Persist token/round ids/state                                                                 | —                                                |
 
 The error-mapping node should reuse RestoPilot's own vocabulary: `P0001`
 messages are written for humans — surface them verbatim (that's what the
@@ -771,7 +829,7 @@ Customer (WhatsApp, bound to Blue Olive bot): **"عايز 2 برجر وبيبس�
    Ask: "توصيل ولا استلام؟ ولأي فرع؟"
 6. **Open session**: after answers, n8n calls
    `open_session_channel` (3.3) with the customer's name/phone/address.
-   Response `token` stored in conversation state. *Every* later customer
+   Response `token` stored in conversation state. _Every_ later customer
    operation now uses this token.
 7. **Menu grounding**: `get_session_menu` (3.5) → cache in state (TTL).
    AI maps "برجر" → `item_id` (menu says `is_offered: true`), "بيبسي" →
@@ -964,16 +1022,16 @@ WhatsApp → n8n → RestoPilot API (new, e.g. Supabase Edge Functions)
 
 Operations and their status:
 
-| Endpoint | Status | Wraps |
-| -------- | ------ | ----- |
-| `GET /api/whatsapp/menu` (branch, token-bound) | `PROPOSED` (optional convenience over `get_session_menu`) | existing RPC |
-| `POST /api/whatsapp/price-preview` | `PROPOSED` — **needed**: `calculate_branch_taxes` is not anon-reachable | `calculate_branch_taxes` |
-| `POST /api/whatsapp/orders` | `PROPOSED` (optional wrapper; `submit_round` is already safely callable from n8n) | `submit_round` |
-| `PATCH /api/whatsapp/orders/{round_id}/lines` | `PROPOSED` — **needed**: no customer modify exists | new server logic (reuse `modify_round_line` internals) |
-| `POST /api/whatsapp/orders/{round_id}/cancel-request` | `PROPOSED` — **needed** if self-service cancel is wanted | new flow |
-| `GET /api/whatsapp/orders` (status) | `PROPOSED` (optional wrapper over `get_session_rounds`) | existing RPC |
-| `POST /api/whatsapp/customers/resolve` | `PROPOSED` — **needed** for returning-customer UX | new logic over `session_participants` |
-| `POST /api/whatsapp/outbound/status-changed` (webhook out to n8n) | `PROPOSED` — enables "your order is ready" pushes (polling alternative) | DB trigger → Edge Function |
+| Endpoint                                                          | Status                                                                            | Wraps                                                  |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `GET /api/whatsapp/menu` (branch, token-bound)                    | `PROPOSED` (optional convenience over `get_session_menu`)                         | existing RPC                                           |
+| `POST /api/whatsapp/price-preview`                                | `PROPOSED` — **needed**: `calculate_branch_taxes` is not anon-reachable           | `calculate_branch_taxes`                               |
+| `POST /api/whatsapp/orders`                                       | `PROPOSED` (optional wrapper; `submit_round` is already safely callable from n8n) | `submit_round`                                         |
+| `PATCH /api/whatsapp/orders/{round_id}/lines`                     | `PROPOSED` — **needed**: no customer modify exists                                | new server logic (reuse `modify_round_line` internals) |
+| `POST /api/whatsapp/orders/{round_id}/cancel-request`             | `PROPOSED` — **needed** if self-service cancel is wanted                          | new flow                                               |
+| `GET /api/whatsapp/orders` (status)                               | `PROPOSED` (optional wrapper over `get_session_rounds`)                           | existing RPC                                           |
+| `POST /api/whatsapp/customers/resolve`                            | `PROPOSED` — **needed** for returning-customer UX                                 | new logic over `session_participants`                  |
+| `POST /api/whatsapp/outbound/status-changed` (webhook out to n8n) | `PROPOSED` — enables "your order is ready" pushes (polling alternative)           | DB trigger → Edge Function                             |
 
 Minimum viable set for a working bot **without** building anything:
 ops 3.1–3.5, 3.7, 3.8 (all `EXISTING`). The layer becomes necessary the
@@ -984,24 +1042,24 @@ customer recognition (3.12).
 
 ## 10. Current RestoPilot reality — summary table
 
-| Operation | Current Implementation | n8n Method | API Needed? | Direct Supabase? |
-| --------- | ---------------------- | ---------- | ----------- | ---------------- |
-| Restaurant lookup | `get_public_restaurant(p_slug)` RPC (anon) | POST `/rest/v1/rpc/get_public_restaurant` | No | OK (publishable key) |
-| Session open — dine-in | `open_session_at_table` RPC (anon, token issued) | POST `/rest/v1/rpc/open_session_at_table` | No | OK |
-| Session open — delivery/takeaway | `open_session_channel` RPC (anon, token issued) | POST `/rest/v1/rpc/open_session_channel` | No | OK |
-| Session verify/context | `get_session_context(p_token)` RPC | POST `/rest/v1/rpc/get_session_context` | No | OK |
-| Menu + availability | `get_session_menu(p_token)` RPC (canonical payload shared with staff view) | POST `/rest/v1/rpc/get_session_menu` | No | OK |
-| Price preview | `calculate_branch_taxes` RPC — **authenticated-grant only** | — (blocked for anon) | **Yes** (service wrapper) | No |
-| Order creation | `submit_round(p_token, p_items)` RPC — atomic, captures money, makes kitchen ticket | POST `/rest/v1/rpc/submit_round` | No (idempotency handled in n8n) | OK (token-authorized) |
-| Order items | Written only inside `submit_round`; read via history RPCs | — | No | Never direct |
-| Order history/status | `get_session_rounds(p_token)` RPC (states visible) | POST `/rest/v1/rpc/get_session_rounds` | No | OK |
-| Order modification | `modify_round_line` — staff JWT + role, captured-money re-derivation | none available to bot | **Yes** (customer-modify path) | Never |
-| Order cancellation | `void_round` — staff-only, audited, boundary-gated | none available to bot | Yes (request-flow) | Never |
-| Customer identification | `session_participants` rows (display-only, no lookup) | none | **Yes** (resolve endpoint) | Never |
-| Cart | Client-only advisory (`localStorage`), server validates at submit | n8n conversation state replaces it | No | n/a |
-| Address update post-entry | none (address immutable after entry) | — | Yes (if wanted) | Never |
-| Push notifications to customer | none (out-of-scope V1) | polling only today | Optional (out-webhook) | n/a |
-| Payments | **Do not exist** in the product | — | n/a | Never |
+| Operation                        | Current Implementation                                                              | n8n Method                                | API Needed?                     | Direct Supabase?      |
+| -------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------- | --------------------- |
+| Restaurant lookup                | `get_public_restaurant(p_slug)` RPC (anon)                                          | POST `/rest/v1/rpc/get_public_restaurant` | No                              | OK (publishable key)  |
+| Session open — dine-in           | `open_session_at_table` RPC (anon, token issued)                                    | POST `/rest/v1/rpc/open_session_at_table` | No                              | OK                    |
+| Session open — delivery/takeaway | `open_session_channel` RPC (anon, token issued)                                     | POST `/rest/v1/rpc/open_session_channel`  | No                              | OK                    |
+| Session verify/context           | `get_session_context(p_token)` RPC                                                  | POST `/rest/v1/rpc/get_session_context`   | No                              | OK                    |
+| Menu + availability              | `get_session_menu(p_token)` RPC (canonical payload shared with staff view)          | POST `/rest/v1/rpc/get_session_menu`      | No                              | OK                    |
+| Price preview                    | `calculate_branch_taxes` RPC — **authenticated-grant only**                         | — (blocked for anon)                      | **Yes** (service wrapper)       | No                    |
+| Order creation                   | `submit_round(p_token, p_items)` RPC — atomic, captures money, makes kitchen ticket | POST `/rest/v1/rpc/submit_round`          | No (idempotency handled in n8n) | OK (token-authorized) |
+| Order items                      | Written only inside `submit_round`; read via history RPCs                           | —                                         | No                              | Never direct          |
+| Order history/status             | `get_session_rounds(p_token)` RPC (states visible)                                  | POST `/rest/v1/rpc/get_session_rounds`    | No                              | OK                    |
+| Order modification               | `modify_round_line` — staff JWT + role, captured-money re-derivation                | none available to bot                     | **Yes** (customer-modify path)  | Never                 |
+| Order cancellation               | `void_round` — staff-only, audited, boundary-gated                                  | none available to bot                     | Yes (request-flow)              | Never                 |
+| Customer identification          | `session_participants` rows (display-only, no lookup)                               | none                                      | **Yes** (resolve endpoint)      | Never                 |
+| Cart                             | Client-only advisory (`localStorage`), server validates at submit                   | n8n conversation state replaces it        | No                              | n/a                   |
+| Address update post-entry        | none (address immutable after entry)                                                | —                                         | Yes (if wanted)                 | Never                 |
+| Push notifications to customer   | none (out-of-scope V1)                                                              | polling only today                        | Optional (out-webhook)          | n/a                   |
+| Payments                         | **Do not exist** in the product                                                     | —                                         | n/a                             | Never                 |
 
 ---
 
@@ -1093,7 +1151,7 @@ Things the code cannot decide — owner input required:
 5. **Price preview for the bot**: accept building a small service endpoint
    for `calculate_branch_taxes`, or skip in-chat totals until then (the
    `submit_round` response already returns authoritative totals — the bot
-   could confirm *after* submit instead of before)?
+   could confirm _after_ submit instead of before)?
 6. **Customer recognition & privacy**: may the bot reuse past
    `session_participants` phone data to greet returning customers and
    prefill addresses? That requires a new tenant-scoped lookup RPC and a
@@ -1106,7 +1164,7 @@ Things the code cannot decide — owner input required:
 8. **Environment & secrets**: which Supabase project (dev/staging/prod) does
    the bot point at first, and where are the bot API keys stored (n8n
    credentials vs a secrets manager)?
-9. **Outbound notifications**: should n8n also *receive* events (order
+9. **Outbound notifications**: should n8n also _receive_ events (order
    accepted/ready/completed) via a new RestoPilot → n8n webhook to message
    customers proactively? (V1 excludes notifications; this would be new
    scope.)

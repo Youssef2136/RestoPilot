@@ -7,7 +7,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { subscriptionCopy } from '../../src/features/platform/subscriptionCopy'
+import { stateLabel, subscriptionCopy } from '../../src/features/platform/subscriptionCopy'
 
 describe('the subscription copy map (FR-05)', () => {
   it('keeps active and never_activated silent — no noise', () => {
@@ -41,5 +41,20 @@ describe('the subscription copy map (FR-05)', () => {
     expect(subscriptionCopy('active').label).toBe('Active')
     expect(subscriptionCopy('nearing_expiration').label).toBe('Nearing expiration')
     expect(subscriptionCopy('expired').label).toBe('Expired')
+  })
+})
+
+describe('stateLabel — the console’s shared vocabulary (spec 034 D1)', () => {
+  it('routes every state through the ONE owner-facing map', () => {
+    for (const state of ['never_activated', 'active', 'nearing_expiration', 'expired'] as const) {
+      expect(stateLabel(state)).toBe(subscriptionCopy(state).label)
+    }
+  })
+
+  it('keeps the migrated console label: never_activated reads “Not activated yet”', () => {
+    // D1 migrated the console's local 'Never activated' to this map's
+    // label — the paired platform.surfaces pins moved in the same commit
+    // (docs/frontend-presentation-contracts.md §Phase 034 record).
+    expect(stateLabel('never_activated')).toBe('Not activated yet')
   })
 })

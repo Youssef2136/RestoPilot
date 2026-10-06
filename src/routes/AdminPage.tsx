@@ -1,4 +1,5 @@
 import { useAuthContext } from '../features/auth/useAuthContext'
+import { usePlatformOverview } from '../features/platform/usePlatform'
 
 /**
  * The platform admin area shell (FR-012) — reachable only via
@@ -11,6 +12,11 @@ import { useAuthContext } from '../features/auth/useAuthContext'
  */
 export function AdminPage() {
   const { profile, isPending, isError } = useAuthContext()
+
+  // D5 — the landing posture rides the SAME overview query the console uses
+  // (no second shape, no tenant data beyond the payload — FR-10). Rendered
+  // only once it resolves; a failure here leaves the console link intact.
+  const overview = usePlatformOverview()
 
   return (
     <section>
@@ -26,6 +32,13 @@ export function AdminPage() {
           ) : (
             <>
               <p>Signed in as {profile.display_name}.</p>
+              {profile.is_super_admin && overview.data !== undefined && (
+                <p>
+                  Platform posture: {overview.data.length} tenants ·{' '}
+                  {overview.data.filter((r) => r.platform_disabled).length} disabled. This
+                  capability administers tenants — it grants no restaurant data beyond the overview.
+                </p>
+              )}
               {profile.is_super_admin && (
                 <p>This account holds the platform super-admin capability.</p>
               )}
