@@ -24,7 +24,7 @@
 
 /* Mobile: the table becomes card rows — each td labels itself via its
    data-label attribute (same DOM, no duplicated markup). */
-@media (max-width: 767px) {
+@media (max-width: 640px) {
   .tableWrap thead {
     display: none;
   }

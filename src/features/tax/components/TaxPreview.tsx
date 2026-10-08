@@ -188,7 +188,7 @@ export function TaxPreview({ branchId, menu }: { branchId: string; menu: BranchM
           {lines.length === 0 ? (
             <p>No taxes apply to this basket — the total equals the subtotal.</p>
           ) : (
-            <table>
+            <table className={styles.cardTable}>
               <caption>Tax lines in the configured order</caption>
               <thead>
                 <tr>
@@ -201,10 +201,10 @@ export function TaxPreview({ branchId, menu }: { branchId: string; menu: BranchM
               <tbody>
                 {lines.map((line) => (
                   <tr key={line.rule_id}>
-                    <td>{line.name}</td>
-                    <td>{formatRate(line.rate)}</td>
-                    <td>{scopeBadge(line.scope)}</td>
-                    <td>{formatPrice(line.amount)}</td>
+                    <td data-label="Tax">{line.name}</td>
+                    <td data-label="Rate">{formatRate(line.rate)}</td>
+                    <td data-label="Scope">{scopeBadge(line.scope)}</td>
+                    <td data-label="Amount">{formatPrice(line.amount)}</td>
                   </tr>
                 ))}
               </tbody>

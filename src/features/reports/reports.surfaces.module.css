@@ -51,7 +51,7 @@
  * (content: attr(data-label)), money columns stay horizontal-safe via
  * overflow-wrap, and the table keeps its semantic structure for SRs.
  */
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .cardTable :where(thead) {
     display: none;
   }

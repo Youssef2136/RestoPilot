@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Icon } from './Icon'
 import { Spinner } from './Feedback'
 import styles from './DataTable.module.css'
@@ -7,9 +7,11 @@ import styles from './DataTable.module.css'
  * DataTable (spec 022 FR-04/T008; first consumers: Phases 06/13/14 reports
  * and management tables). Sortable headers are real buttons with aria-sort;
  * empty/loading render as rows (never a detached spinner); the responsive
- * fallback strategy is documented: below the mobile breakpoint the table
- * scrolls horizontally inside its wrapper (min-width table) — card-ification
- * is a per-surface decision for a later phase, not a silent rewrite here.
+ * fallback strategy is documented and implemented (spec 036 T008): a
+ * per-instance `cardBreakpoint` renders the SAME columns as row cards below
+ * the crossover width (a media-query-free matchMedia listener) — same data,
+ * same disclosure, no column lost. Without `cardBreakpoint` the documented
+ * scroll-region fallback holds (min-width table inside the wrapper).
  */
 
 export type DataTableColumn<T> = {
@@ -35,6 +37,7 @@ export function DataTable<T>({
   loading = false,
   emptyMessage = 'Nothing here yet.',
   caption,
+  cardBreakpoint,
 }: {
   columns: DataTableColumn<T>[]
   rows: T[]
@@ -45,12 +48,61 @@ export function DataTable<T>({
   /** The EmptyState-style message row when there is no data. */
   emptyMessage?: string
   caption?: string
+  /**
+   * The card-fallback crossover in px (spec 036 FR-06): when the viewport is
+   * narrower, each row renders as a card (label + value per column — the
+   * exact fields the table shows, same order). Omit for the scroll-region
+   * fallback. Values come from the same `render` functions — one disclosure.
+   */
+  cardBreakpoint?: number
 }) {
   const captionId = useId()
+  const cards = useCardFallback(cardBreakpoint)
 
   const toggleSort = (columnKey: string) => {
     const current = sort?.columnKey === columnKey ? sort.direction : 'asc'
     onSortChange?.({ columnKey, direction: current === 'asc' ? 'desc' : 'asc' })
+  }
+
+  if (cards) {
+    return (
+      <div className={styles.wrapper}>
+        {caption && (
+          <div id={captionId} className={styles.caption}>
+            {caption}
+          </div>
+        )}
+        <ul className={styles.cardList} aria-labelledby={caption ? captionId : undefined}>
+          {loading ? (
+            <li className={styles.card} aria-busy="true">
+              <Spinner label="Loading rows" />
+            </li>
+          ) : rows.length === 0 ? (
+            <li className={`${styles.card} ${styles.emptyCell}`}>{emptyMessage}</li>
+          ) : (
+            rows.map((row) => (
+              <li key={rowKey(row)} className={styles.card}>
+                {columns.map((column) => (
+                  <div key={column.key} className={styles.cardRow}>
+                    <span className={styles.cardLabel}>
+                      {column.header}
+                      {column.sortable ? (
+                        <span className={styles.sortIcon} aria-hidden="true">
+                          {'\u2003'}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className={column.numeric ? styles.cardValueNumeric : styles.cardValue}>
+                      {column.render(row)}
+                    </span>
+                  </div>
+                ))}
+              </li>
+            ))
+          )}
+        </ul>
+      </div>
+    )
   }
 
   return (
@@ -138,6 +190,25 @@ export function DataTable<T>({
       </table>
     </div>
   )
+}
+
+/**
+ * The card-fallback listener (spec 036 T008): a media-query-free matchMedia
+ * subscription (custom properties cannot feed `@media`, so the crossover is
+ * an instance prop, not a stylesheet rule). SSR-safe: defaults to the table
+ * until a viewport is measured.
+ */
+function useCardFallback(breakpoint: number | undefined): boolean {
+  const [matches, setMatches] = useState(false)
+  useEffect(() => {
+    if (breakpoint === undefined) return
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`)
+    const onChange = () => setMatches(mql.matches)
+    onChange()
+    mql.addEventListener('change', onChange)
+    return () => mql.removeEventListener('change', onChange)
+  }, [breakpoint])
+  return breakpoint !== undefined && matches
 }
 
 /** Definition-list key/value rows (branch detail, session context). */

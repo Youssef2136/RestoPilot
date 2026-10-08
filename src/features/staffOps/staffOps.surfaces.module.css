@@ -18,7 +18,7 @@
 
 /* Tablet landscape + desktop (the cashier station): state columns sit
    side-by-side; narrow widths stack (same DOM — @media only). */
-@media (min-width: 1025px) {
+@media (min-width: 1024px) {
   .board {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));

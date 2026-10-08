@@ -15,7 +15,7 @@
   gap: var(--space-5);
 }
 
-@media (min-width: 1025px) {
+@media (min-width: 1024px) {
   .board {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));

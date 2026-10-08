@@ -2,6 +2,11 @@
 
 .layout {
   display: grid;
+  /* The track, not the content, owns the width (spec 036 T004/T006 sweep):
+     an implicit max-content track let the nowrap section pills push the
+     whole page past narrow viewports (the sticky section nav must scroll
+     inside the page, never stretch it). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 
@@ -113,7 +118,7 @@
 
 /* Mobile: card-row fallback is owned by the page modules (same DOM); the
    layout only tightens its nav at 390px-band widths. */
-@media (max-width: 767px) {
+@media (max-width: 640px) {
   .sectionCard {
     padding: var(--space-3);
   }

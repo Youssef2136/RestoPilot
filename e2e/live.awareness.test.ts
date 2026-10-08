@@ -93,24 +93,31 @@ test('a nearing-expiration subscription shows the banner state and the honest de
 }) => {
   test.setTimeout(150_000)
   await withSubscriptionLock(async () => {
-    // Drive the tenant into nearing_expiration: after a reset the row is
-    // never_activated, so the row's action is 'Activate' — one Save with
-    // start=today, end=+3 days lands the state directly (the console only
-    // offers 'Change dates' once dates exist).
+    // Drive the tenant into nearing_expiration. The row's state is NOT
+    // assumed dateless: platform.surfaces deliberately leaves Blue Olive
+    // EXPIRED (end = yesterday), so the row's action may be 'Change dates'
+    // — scope the click to BLUE OLIVE'S row (the platform.console pattern);
+    // a bare 'Activate'.first() would write another restaurant's dates.
     await signInAs(page, seedCredentials.platformAdmin)
     await page.goto('/admin/platform')
-    await page.getByRole('button', { name: 'Activate' }).first().click()
+    const overview = page.getByTestId('platform-overview')
+    await expect(overview).toBeVisible()
+    const oliveRow = overview.locator('tbody tr', { hasText: 'Blue Olive' })
+    await oliveRow.getByRole('button', { name: /Activate|Change dates/ }).click()
     const today = new Date()
     const in3 = new Date()
     in3.setUTCDate(in3.getUTCDate() + 3)
     await page.getByLabel('Start date').fill(iso(today))
     await page.getByLabel('End date').fill(iso(in3))
     await page.getByRole('button', { name: 'Save dates' }).click()
-    // The console's own state column proves the write landed (a silent
-    // mutation failure would leave the form open and the row untouched).
-    await expect(page.getByTestId('platform-overview')).toContainText('Nearing expiration', {
-      timeout: 20_000,
-    })
+    // The save's own notification is the deterministic write confirmation
+    // (the platform.console discipline) — and the state assertion is scoped
+    // to BLUE OLIVE'S row: the unscoped table contains Cedar Grill's own
+    // nearing row from earlier suite spans, which would mask a missed write.
+    await expect(page.getByRole('region', { name: 'Notifications' })).toContainText(
+      'Subscription dates saved for Blue Olive.',
+    )
+    await expect(oliveRow).toContainText('Nearing expiration', { timeout: 20_000 })
 
     // Alice (owner) sees the nearing banner and opens the honest detail.
     await signInAs(page, seedCredentials.alice)
@@ -131,7 +138,12 @@ test('a nearing-expiration subscription shows the banner state and the honest de
     // Restore the active state so downstream suites see the neutral tenant.
     await signInAs(page, seedCredentials.platformAdmin)
     await page.goto('/admin/platform')
-    await page.getByRole('button', { name: 'Change dates' }).first().click()
+    await expect(page.getByTestId('platform-overview')).toBeVisible()
+    await page
+      .getByTestId('platform-overview')
+      .locator('tbody tr', { hasText: 'Blue Olive' })
+      .getByRole('button', { name: 'Change dates' })
+      .click()
     const in30 = new Date()
     in30.setUTCDate(in30.getUTCDate() + 30)
     await page.getByLabel('Start date').fill(iso(today))

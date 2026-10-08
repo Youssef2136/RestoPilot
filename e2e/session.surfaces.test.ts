@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { seedCredentials } from '../tests/database/helpers/fixtures'
 import { signInAs } from './helpers/signInAs'
+import { withEntryLock } from './helpers/entryLock'
 
 /**
  * Session surfaces E2E — US1 block (spec 007 T015; SC-001; FR-001…FR-005;
@@ -53,7 +54,9 @@ test('the public entry flow reaches the customer menu with the indicator (SC-001
   await tableSelect.selectOption({ label: 'T3' })
   await page.getByLabel('Your name').fill('Playwright Guest')
   await page.getByLabel('Phone number').fill('+15559000001')
-  await page.getByRole('button', { name: 'Join the table' }).click()
+  // The join queues on the shared entry lock (a concurrent platform
+  // kill-switch test would refuse this submit otherwise).
+  await withEntryLock(() => page.getByRole('button', { name: 'Join the table' }).click())
 
   // Success lands on the customer menu route with the indicator.
   await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
@@ -90,7 +93,7 @@ test('a joined session survives a reload through the stored token (US3 preview, 
   await page.getByLabel('Table').selectOption({ label: 'T3' })
   await page.getByLabel('Your name').fill('Reload Guest')
   await page.getByLabel('Phone number').fill('+15559000003')
-  await page.getByRole('button', { name: 'Join the table' }).click()
+  await withEntryLock(() => page.getByRole('button', { name: 'Join the table' }).click())
   await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
 
   // Reload: the token recovers the session without re-entry (FR-013).
@@ -110,7 +113,9 @@ test('a second window joins the open table: one session, two participants (SC-00
     await page.getByLabel('Table').selectOption({ label: 'T3' })
     await page.getByLabel('Your name').fill(name)
     await page.getByLabel('Phone number').fill(phone)
-    await page.getByRole('button', { name: 'Join the table' }).click()
+    // The join queues on the shared entry lock (the platform kill-switch
+    // race this file hit when batched with platform.surfaces).
+    await withEntryLock(() => page.getByRole('button', { name: 'Join the table' }).click())
     await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
     await expect(page.getByText(/Blue Olive · Downtown · Table T3/)).toBeVisible()
   }
@@ -172,7 +177,7 @@ test('the owner closes a session through the confirmed action (SC-005, FR-009)',
   await guestPage.getByLabel('Table').selectOption({ label: 'T1' })
   await guestPage.getByLabel('Your name').fill('Close Flow Guest')
   await guestPage.getByLabel('Phone number').fill('+15559000021')
-  await guestPage.getByRole('button', { name: 'Join the table' }).click()
+  await withEntryLock(() => guestPage.getByRole('button', { name: 'Join the table' }).click())
   await expect(guestPage).toHaveURL(new RegExp(`/r/cedar-grill/menu$`))
 
   // eve (Cedar Grill owner) oversees her restaurant's branch and closes the
@@ -222,7 +227,7 @@ test('a closed session refuses recovery and returns to entry (SC-004, FR-014)', 
   await page.getByLabel('Table').selectOption({ label: 'T1' })
   await page.getByLabel('Your name').fill('Recovery Guest')
   await page.getByLabel('Phone number').fill('+15559000031')
-  await page.getByRole('button', { name: 'Join the table' }).click()
+  await withEntryLock(() => page.getByRole('button', { name: 'Join the table' }).click())
   await expect(page).toHaveURL(new RegExp(`/r/cedar-grill/menu$`))
   await expect(page.getByText(/Cedar Grill · Airport · Table T1/)).toBeVisible()
 
@@ -297,7 +302,8 @@ async function joinT3AndReachMenu(page: Page, name: string, phone: string) {
   await page.getByLabel('Table').selectOption({ label: 'T3' })
   await page.getByLabel('Your name').fill(name)
   await page.getByLabel('Phone number').fill(phone)
-  await page.getByRole('button', { name: 'Join the table' }).click()
+  // The join queues on the shared entry lock (the platform kill-switch race).
+  await withEntryLock(() => page.getByRole('button', { name: 'Join the table' }).click())
   await expect(page).toHaveURL(new RegExp(`/r/${SLUG}/menu$`))
 }
 

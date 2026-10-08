@@ -3,12 +3,59 @@
  */
 
 /* Responsive fallback (documented): horizontal scroll under the table's
-   min width — no silent card rewrite (plan.md T008). */
+   min width when no cardBreakpoint is given (plan.md T008); with a
+   cardBreakpoint the same columns render as row cards below the crossover
+   (spec 036 T008 — same data, same disclosure, no column lost). */
 .wrapper {
   overflow-x: auto;
   background-color: var(--color-surface-raised);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
+}
+
+/* --- The card fallback (spec 036 FR-06) -------------------------------- */
+
+.cardList {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.card {
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.cardRow {
+  display: grid;
+  grid-template-columns: minmax(6rem, 40%) 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.cardLabel {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-ink-muted);
+}
+
+.cardValue {
+  font-size: var(--font-size-md);
+  color: var(--color-ink);
+  overflow-wrap: anywhere;
+}
+
+.cardValueNumeric {
+  font-size: var(--font-size-md);
+  color: var(--color-ink);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
 }
 
 .table {

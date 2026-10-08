@@ -2,6 +2,8 @@
 
 .page {
   display: grid;
+  /* The track owns the width (spec 036 sweep) — same rule as menuLayout. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
   padding: var(--space-4);
   max-width: 76rem;
@@ -15,6 +17,11 @@
 
 .menuLayout {
   display: grid;
+  /* The track, not the content, owns the width (spec 036 sweep): the
+     implicit max-content track let the category nav's nowrap pills push
+     the whole page past narrow viewports — the sticky nav scrolls inside
+     the page, never stretches it (same fix as the management layout). */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
 }
 

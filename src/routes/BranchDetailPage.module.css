@@ -25,7 +25,7 @@
 }
 
 /* Mobile: each table row becomes a card (the documented fallback). */
-@media (max-width: 767px) {
+@media (max-width: 640px) {
   .tableRow {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
