@@ -497,3 +497,71 @@ axe scan on both /admin routes plus the 390px card/overflow walk. Unit:
 silence) and stateLabel coverage in `tests/unit/subscriptionCopy.test.ts`.
 OnboardingPanel gained the success toast only — its form, inline status, credential
 discipline, and every spec 019 assertion are untouched.
+
+## Phase 035 presentation record (accessibility hardening)
+
+The a11y posture became a verified property of the whole product (specs/035; Master
+Plan §Frontend Phase 15, audit-and-fix mode): the axe floor extended to a route×state
+MATRIX over every registered route in its authorized state (31 serial rows — public,
+per-role staff, denial views as-seen, the Fiona bootstrap, the 404 catch-all) plus a
+shell floor (one `#main`, skip link first in Tab order) per row; the critical journeys
+are keyboard-complete with focus containment/restore/no-steal assertions; the
+announcement surfaces are unit-pinned (polite-only, one region per surface, dedupe
+silence) on top of 032's policy; contrast/targets/motion/zoom are standing records and
+specs. **No pinned accessible name or text moved** — zero Category-A migrations: the
+phase fixed structure (F-002), system composition (F-003/F-006), and a dialog
+lifecycle gap (F-005) without touching any asserted name, label, role, or copy. The
+audit record lives in `specs/035-accessibility-hardening/audit/` (report, exceptions EXC-001..003, contrast
+15/15 PASS); the keyboard maps and proof index are documented in
+`docs/accessibility.md`.
+
+| Surface / hook       | Before (phase ≤ 034)                        | After (035)                                                                       | Asserted by                                                          |
+| -------------------- | ------------------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| 404 + error views    | a second nested `<main id="main">`          | labelled `<section>` (one main per document; F-002)                               | a11y.matrix shell floor                                              |
+| Branches create form | bare native submit (~21px)                  | the system `Button` + token back-row spacing (F-003)                              | a11y.matrix (target-size) + touch.targets                            |
+| AuthCard controls    | bare intrinsic heights (~21px, 3px apart)   | token min-heights + vertical rhythm in the card subtree (F-006)                   | touch.targets (axe rule @390/834)                                    |
+| Shared `Dialog`      | open-sync only on prop change               | render-synced open-state effect (a raced close can no longer strand it; F-005)    | cashier void legs + the 44-test overlay batch                        |
+| a11y floor           | 5 signed-out routes (021) + per-phase scans | 31-row route×state matrix + viewport scans + journey/focus/announcement/zoom pins | a11y.matrix + touch.targets + motion.preferences + keyboard.journeys |
+
+New suites: `e2e/a11y.matrix.test.ts` (31, serial), `e2e/keyboard.journeys.test.ts` (4,
+serial), `e2e/touch.targets.test.ts` (3, serial), `e2e/motion.preferences.test.ts` (3,
+serial). Extended: `e2e/helpers/a11y.ts` (matrix runner + shell floor), the cashier and
+kitchen walks (keyboard void/bill/no-steal legs). New units:
+`tests/unit/announcementSurfaces.test.tsx` (4). Fixes: NotFoundView/RouteErrorView,
+BranchesPage (+ its new module.css), AuthCard.module.css, Dialog.tsx. The keyboard maps
+landed in `docs/accessibility.md` (development.md points to it).
+
+## Phase 036 presentation record (responsive & device hardening)
+
+Every surface gained a documented per-route device contract (specs/036; Master Plan
+§Frontend Phase 16, harden mode): a 26-row contract
+(`specs/036-responsive-and-device-hardening/device-contracts.md`)
+names each registered route's primary/secondary device class and its narrow layout
+behavior, and the standing overflow sweep (`e2e/responsive.overflow.test.ts`, 6 serial
+rows over public/owner/cashier/manager+kitchen/platform/IN-SESSION customer at 320/390/430)
+pins "no horizontal overflow" for every authorized route. **No pinned accessible name,
+hook, or copy moved** — zero Category-A migrations: the phase changed layout containers
+(F-036-01: the implicit `max-content` grid track in the management and customer shells
+let nowrap pill navs stretch the page past small phones — both tracks became
+`minmax(0, 1fr)`), normalized three `@media` drift values to the token scale (767→640,
+720→640, 1025→1024), joined TaxPreview's bare table to the committed `cardTable`
+pattern, and added `DataTable.cardBreakpoint` as the NEW-table primitive — all without
+touching a name or label the matrix asserts.
+
+| Surface / hook        | Before (phase ≤ 035)                             | After (036)                                                                                                                  | Asserted by                                      |
+| --------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| Management shell grid | implicit max-content track (nowrap navs stretch) | `grid-template-columns: minmax(0, 1fr)` (F-036-01; same fix in the customer menu shell)                                      | responsive.overflow sweep                        |
+| Media queries         | drift values 767/720/1025                        | token scale literally (640/1024/1440); audit table in device-contracts                                                       | device-contracts media audit                     |
+| TaxPreview table      | unstyled browser-default table                   | the reports `cardTable` pattern (data-label card rows)                                                                       | responsive.overflow + the cardTable CSS contract |
+| DataTable (ui)        | scroll-region policy only                        | `cardBreakpoint` + labeled card fallback from the SAME column definitions (one disclosure)                                   | tests/unit/dataTableCardFallback.test.tsx (4)    |
+| Responsive proof      | scattered per-phase viewport checks              | standing sweep (6 rows × 3 widths) + cashier landscape + kitchen board + desktop/wide + same-disclosure + orientation suites | responsive.* suites                              |
+
+New suites: `e2e/responsive.overflow.test.ts` (6), `e2e/responsive.devices.test.ts` (2),
+`e2e/responsive.devices.cashier.test.ts` (2), `e2e/responsive.devices.desktop.test.ts` (2),
+`e2e/responsive.sameDisclosure.test.ts` (2), `e2e/responsive.orientation.test.ts` (3);
+the kitchen legs joined `e2e/kitchen.display.test.ts` (1). New helper:
+`e2e/helpers/responsive.ts` (11 named viewports, setViewport/rotate/keyboardShrink,
+`expectNoHorizontalOverflow` with the scroll-container exemption). Extended:
+`src/components/ui/DataTable.tsx`+css, `src/features/tax/components/TaxPreview.tsx`
+(+ its module.css), `management.module.css`, `CustomerMenuPage.module.css`. The
+responsive rule set landed in `docs/conventions.md`.

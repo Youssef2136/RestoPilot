@@ -20,6 +20,29 @@
   text-align: center;
 }
 
+/* Spec 035 (F-006): the credential forms' controls previously rendered at
+   their bare ~21px intrinsic height — under the 24px target-size floor
+   AND inside 3px of their neighbours (axe flagged both on /signin @390px;
+   the card is the whole AuthCard subtree). Token-driven minimums +
+   vertical rhythm: layout-neutral at every viewport, the controls simply
+   stand at the floor and breathe between rows. */
+.card input,
+.card button {
+  min-height: 1.5rem; /* the 24px target-size floor (token-scaled) */
+}
+
+.card form > div {
+  margin-bottom: var(--space-4);
+}
+
+.card form > button {
+  margin-top: var(--space-2);
+}
+
+.card > p {
+  margin-top: var(--space-5);
+}
+
 @media (max-width: 640px) {
   .card {
     border: none;

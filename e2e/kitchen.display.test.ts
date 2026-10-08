@@ -177,6 +177,35 @@ test('the cook works a real Marina ticket on the landscape board: live arrival, 
     // The axe floor on the populated landscape board.
     await expectNoNewViolations(page, { route: '/dashboard/kitchen' })
 
+    // No focus steal through the LIVE invalidation cycles (spec 035
+    // FR-04/T007): park focus on stable shell chrome and ride out a FULL
+    // poll cycle (the board refetches/re-renders around it every ~10s) —
+    // focus must stay put through the data-driven re-render.
+    const chrome = page.getByRole('link', { name: 'Account password' })
+    await chrome.focus()
+    await page.waitForTimeout(11_000)
+    await expect(chrome).toBeFocused()
+
+    // One arrival = ONE new announcement (spec 035 FR-05/T010, D3): the
+    // board's polite counter speaks per RESOLVED fetch (coalesced, once
+    // per dataUpdatedAt). A fresh submission changes the announced count
+    // exactly once — the next snapshot repeats the SAME text (no stacking
+    // across the coalesced events), then the count moves by exactly one.
+    const counter = page.locator('p[aria-live="polite"]')
+    const baseline = await counter.textContent()
+    await submitCustomerRound(
+      browser,
+      'Marina',
+      'T1',
+      'Hummus',
+      'E2E Announce Customer',
+      '+15550783',
+    )
+    await expect(counter).not.toHaveText(baseline ?? '', { timeout: 20_000 })
+    const afterArrival = await counter.textContent()
+    await page.waitForTimeout(4_000)
+    expect(await counter.textContent()).toBe(afterArrival)
+
     await ensureMarinaT1Inactive(browser)
   })
 })
@@ -255,6 +284,51 @@ test('the board stays money-free and address-free live; the 390px fallback stays
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     )
     expect(overflow).toBe(false)
+
+    await ensureMarinaT1Inactive(browser)
+  })
+})
+
+test('the wall-screen board holds its structural floor at tablet portrait and 1600px (spec 036 FR-05)', async ({
+  page,
+  browser,
+}) => {
+  test.setTimeout(240_000)
+  await withMarinaT1Lock(async () => {
+    await ensureMarinaT1Active(browser)
+    await submitCustomerRound(browser, 'Marina', 'T1', 'Hummus', 'E2E Wall Guest', '+15550779')
+
+    await signInAs(page, seedCredentials.dan)
+    await page.goto(`/dashboard/kitchen?branch=${branchIds.marina}`)
+
+    // Both device classes: the columns stay NAMED, BOUNDED (no unbounded
+    // stretch pushing tickets out of view), and every ticket keeps its
+    // state marker visible (FR-05, W2).
+    for (const [width, height] of [
+      [768, 1024], // tablet portrait — the small-kitchen posture
+      [1600, 900], // the wall-screen band's lower edge
+      [1920, 1080], // a real wall screen
+    ] as const) {
+      await page.setViewportSize({ width, height })
+      const incoming = page.locator('[data-ticket-state="new"]').first()
+      await expect(incoming).toBeVisible()
+      for (const column of ['new', 'preparing', 'ready']) {
+        const col = page.locator(`[data-kitchen-column="${column}"]`)
+        await expect(col).toBeVisible()
+        const box = await col.boundingBox()
+        expect(box, `the ${column} column must render at ${width}px`).not.toBeNull()
+        expect(box!.x).toBeGreaterThanOrEqual(0)
+        // Bounded: no column escapes the viewport's right edge (unbounded
+        // stretching would push its tickets out of view).
+        expect(box!.x + box!.width).toBeLessThanOrEqual(width)
+      }
+      // The ticket's identity and state stay readable at every width (the
+      // board is a two-metre display — reading is the contract; the kitchen
+      // ticket carries NO action buttons by design — accepting happens on
+      // the cashier board).
+      const ticketText = await incoming.innerText()
+      expect(ticketText.length, 'the ticket must carry readable content').toBeGreaterThan(0)
+    }
 
     await ensureMarinaT1Inactive(browser)
   })

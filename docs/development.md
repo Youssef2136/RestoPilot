@@ -153,7 +153,10 @@ The E2E tier carries a tooling floor every later phase must keep green:
   signed-out. Findings outside the committed baseline
   (`e2e/helpers/a11y.ts`) fail the run; baseline entries need a justification
   and an owning phase. The floor rides `npm run test:e2e` (Clarification Q4:
-  `verify` gains no separate a11y step).
+  `verify` gains no separate a11y step). Spec 035 extends the posture: the
+  route×state matrix (`e2e/a11y.matrix.test.ts`) scans every registered route
+  in its authorized state, and the keyboard maps + the full proof index live
+  in [accessibility.md](./accessibility.md).
 - **Viewport projects** — `mobile-chromium` (390×844) and `tablet-chromium`
   (834×1112) run `e2e/responsive.smoke.test.ts` (no horizontal overflow).
   Existing suites stay chromium-only by config (`testIgnore`/`testMatch`).

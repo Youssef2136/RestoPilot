@@ -56,8 +56,15 @@ test('the super admin activates a subscription and the state derives (FR-003/FR-
     await signInAs(page, seedCredentials.platformAdmin)
     await page.goto('/admin/platform')
 
-    // Activate Blue Olive: today → +30 days = active.
-    await page.getByRole('button', { name: 'Activate' }).first().click()
+    // Activate Blue Olive: today → +30 days = active. Scoped to BLUE OLIVE'S
+    // row and state-agnostic (the live.awareness discipline): a bare
+    // 'Activate'.first() would silently date a DIFFERENT restaurant once
+    // any other row is dateless, and the unscoped 'Active' assertion would
+    // pass on a neighbor's active row.
+    const overview = page.getByTestId('platform-overview')
+    await expect(overview).toBeVisible()
+    const oliveRow = overview.locator('tbody tr', { hasText: 'Blue Olive' })
+    await oliveRow.getByRole('button', { name: /Activate|Change dates/ }).click()
     const today = new Date()
     const in30 = new Date()
     in30.setUTCDate(in30.getUTCDate() + 30)
@@ -65,7 +72,7 @@ test('the super admin activates a subscription and the state derives (FR-003/FR-
     await page.getByLabel('Start date').fill(iso(today))
     await page.getByLabel('End date').fill(iso(in30))
     await page.getByRole('button', { name: 'Save dates' }).click()
-    await expect(page.getByTestId('platform-overview')).toContainText('Active')
+    await expect(oliveRow).toContainText(/Active|Nearing expiration/)
   })
 })
 
@@ -76,7 +83,12 @@ test("an expired subscription shows the tenant banner but doesn't block (FR-007,
     // Drive the subscription past its end as the super admin.
     await signInAs(page, seedCredentials.platformAdmin)
     await page.goto('/admin/platform')
-    await page.getByRole('button', { name: 'Change dates' }).first().click()
+    const overview = page.getByTestId('platform-overview')
+    await expect(overview).toBeVisible()
+    await overview
+      .locator('tbody tr', { hasText: 'Blue Olive' })
+      .getByRole('button', { name: 'Change dates' })
+      .click()
     const past30 = new Date()
     past30.setUTCDate(past30.getUTCDate() - 30)
     const past1 = new Date()
@@ -131,19 +143,26 @@ test('disablement blocks the customer entry and shows the tenant notice (FR-005/
     await expect(banner).toBeVisible()
     await expect(banner).toHaveAttribute('data-banner-state', 'disabled')
     await expect(banner).toContainText('E2E: platform suspension')
-  }) // withEntryLock — the kill-switch window stays open for re-enable.
-})
 
-test('re-enable restores the tenant state (FR-005)', async ({ page }) => {
-  // Kill-switch window part 2 — Blue Olive stays kill-switched until this
-  // lands (see the disable test for the lock rationale + budget).
-  test.setTimeout(120_000)
-  await withEntryLock(async () => {
+    // Re-enable INSIDE this same lock span: the kill-switch must never
+    // outlive its lock (a lock-free poisoned gap — the old two-test split —
+    // let a concurrent file's customer join slip between the serial tests
+    // and eat the refusal). The next test verifies the restored state.
     await signInAs(page, seedCredentials.platformAdmin)
     await page.goto('/admin/platform')
     await page.getByRole('button', { name: 'Re-enable' }).first().click()
     await expect(page.getByTestId('platform-overview')).toContainText('Expired')
-  })
+  }) // withEntryLock — the kill-switch window is closed within the span.
+})
+
+test('re-enable restores the tenant state (FR-005)', async ({ page }) => {
+  // The re-enable click landed inside the disable test's lock span (the
+  // poisoned gap between the old two-span split raced concurrent joins);
+  // this test verifies the restoration through the platform console.
+  await signInAs(page, seedCredentials.platformAdmin)
+  await page.goto('/admin/platform')
+  await expect(page.getByTestId('platform-overview')).toContainText('Expired')
+  await expect(page.getByRole('button', { name: 'Disable' }).first()).toBeVisible()
 })
 
 test.afterAll(async ({ browser }) => {

@@ -140,11 +140,20 @@ test('the cashier works a real Marina round on a tablet viewport: board groups, 
     await expect(locked).toBeVisible()
 
     // The bill inline on 'Show bill' (FR-05, D1): the printed check with
-    // the server's grand total.
-    await locked.getByLabel('Show bill').check()
+    // the server's grand total. Keyboard completion (spec 035 FR-04/T007):
+    // Space toggles the checkbox — RETRIED through the post-lock refetch
+    // that can replace the node between focus and keypress (the inner
+    // expect holds the toggled state while the bill fetch lands; .check()
+    // waits out the same race). The bill's re-render must NOT steal focus.
+    const showBill = locked.getByLabel('Show bill')
+    await expect(async () => {
+      await showBill.focus()
+      await page.keyboard.press('Space')
+      await expect(page.getByTestId('session-bill')).toBeVisible()
+    }).toPass({ timeout: 45_000 })
     const bill = page.getByTestId('session-bill')
-    await expect(bill).toBeVisible()
     await expect(bill.getByTestId('bill-grand-total')).toContainText(/Grand total/)
+    await expect(showBill).toBeFocused()
 
     // The axe floor on the populated tablet board.
     await expectNoNewViolations(page, { route: '/dashboard/rounds' })
@@ -201,12 +210,34 @@ test('mobile posture (390px): the void journey stays operable with a mandatory r
     // 'Void reason' input — the page-level lookup would strict-collide.
     const myCard = page.locator(`article[data-round-id="${roundId}"]`)
 
-    // The void prompt: the confirm stays disabled until a reason exists,
-    // then the voided display state lands on the card (the overlay).
-    await myCard.getByRole('button', { name: 'Void round' }).click()
+    // The void prompt, KEYBOARD-ONLY (spec 035 FR-04/T007): focus + Enter
+    // opens the card's confirm dialog — RETRIED through the live refetch
+    // storm a transition triggers (the focused button can be unmounted when
+    // the rounds read moves the card into its new state group; .click()
+    // waits out the same race). Focus moves inside; Escape restores.
+    const voidTrigger = myCard.getByRole('button', { name: 'Void round' })
+    await expect(async () => {
+      await voidTrigger.focus()
+      await page.keyboard.press('Enter')
+      await expect(myCard.getByRole('dialog')).toBeVisible()
+    }).toPass({ timeout: 20_000 })
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.closest('dialog') !== null))
+      .toBe(true)
+    await page.keyboard.press('Escape')
+    await expect(myCard.getByRole('dialog')).toHaveCount(0)
+    await expect(voidTrigger).toBeFocused()
+    // Reopen and confirm — the confirm stays disabled until a reason exists.
+    await expect(async () => {
+      await voidTrigger.focus()
+      await page.keyboard.press('Enter')
+      await expect(myCard.getByRole('dialog')).toBeVisible()
+    }).toPass({ timeout: 20_000 })
     await expect(myCard.getByRole('button', { name: 'Confirm void' })).toBeDisabled()
     await myCard.getByLabel('Void reason').fill('E2E: mobile void')
-    await myCard.getByRole('button', { name: 'Confirm void' }).click()
+    const confirmVoid = myCard.getByRole('button', { name: 'Confirm void' })
+    await confirmVoid.focus()
+    await page.keyboard.press('Enter')
     await expect(
       page.locator(`article[data-round-id="${roundId}"][data-voided="true"]`),
     ).toBeVisible()
@@ -225,6 +256,12 @@ test('the reconnecting banner reports a dropped connection and clears on recover
   await signInAs(page, seedCredentials.carla)
   await page.goto('/dashboard/rounds')
   await expect(page.getByRole('heading', { name: 'Rounds' })).toBeVisible()
+  // No-steal (spec 035 FR-04/T007): the offline flip re-renders chrome
+  // around the board — focus must stay where the user left it.
+  const roundsLink = page
+    .getByRole('navigation', { name: 'Staff area' })
+    .getByRole('link', { name: 'Rounds', exact: true })
+  await roundsLink.focus()
 
   // The transport drops: the binding's status callback (CHANNEL_ERROR —
   // after TIMED_OUT/CLOSED variants) lands the polite banner; the last
@@ -237,6 +274,8 @@ test('the reconnecting banner reports a dropped connection and clears on recover
   // posture, unchanged).
   await page.context().setOffline(false)
   await expect(page.getByTestId('reconnecting-banner')).toBeHidden({ timeout: 60_000 })
+  // The recovery refetch must not steal focus either.
+  await expect(roundsLink).toBeFocused()
 })
 
 test('the sessions oversight panel holds the axe floor after the re-skin (FR-06)', async ({

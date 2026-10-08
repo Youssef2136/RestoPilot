@@ -1,0 +1,12 @@
+/*
+ * BranchesPage.module.css (spec 035, finding F-003).
+ * Token-driven spacing only — no new visual decisions.
+ */
+
+/* The trailing back row keeps >= 24px of safe clickable space from the
+   interactive controls above it (the create form) — the axe target-offset
+   floor (WCAG 2.2 AA target-size). --space-8 is 24px even in the compact
+   staff density mode. */
+.backRow {
+  margin-top: var(--space-8);
+}

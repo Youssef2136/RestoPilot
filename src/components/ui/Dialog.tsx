@@ -39,6 +39,21 @@ export function Dialog({ open, onClose, title, children, actions, busy, error }:
     }
   }, [open])
 
+  // Spec 035 (F-005): keep the native element's open state synced even when
+  // the close notification is missed — Enter in a form inside <dialog>, or
+  // any other close path React re-renders over, can leave `open=true` state
+  // with a closed <dialog>. Without this, the dialog can never re-open and
+  // the trigger appears dead. Cheap no-op when already consistent.
+  useEffect(() => {
+    const dialog = ref.current
+    if (dialog && dialog.open === open) return
+    if (open) {
+      dialog?.showModal()
+    } else {
+      dialog?.close()
+    }
+  })
+
   // The backdrop click should not close destructive confirmations by
   // accident; Esc still works (native cancel). Controlled close only.
   const handleCancel = (event: React.SyntheticEvent) => {

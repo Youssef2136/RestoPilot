@@ -10,18 +10,22 @@ import styles from './RouteErrorView.module.css'
  * links: the boundary above holds the caught error, so only a full document
  * load rebuilds the tree. Recovery through the browser's normal navigation
  * is exactly the reset the error state needs.
+ *
+ * Spec 035 (F-002): renders a labelled SECTION, not a second <main> — same
+ * rationale as NotFoundView (one main landmark per document; the shell owns
+ * it). No pinned E2E assertion binds the element tag here.
  */
 export function RouteErrorView({ minimal = false }: { minimal?: boolean }) {
   if (minimal) {
     return (
-      <main id="main">
+      <section aria-label="Something went wrong">
         <p role="alert">Something went wrong. Please reload the page.</p>
-      </main>
+      </section>
     )
   }
 
   return (
-    <main id="main" className={styles.view}>
+    <section aria-label="Something went wrong" className={styles.view}>
       <h1>Something went wrong</h1>
       <p role="alert">
         An unexpected error occurred while rendering this view. You can return to a working area of
@@ -31,6 +35,6 @@ export function RouteErrorView({ minimal = false }: { minimal?: boolean }) {
         <a href="/dashboard">Go to dashboard</a>
         <a href="/signin">Go to sign-in</a>
       </div>
-    </main>
+    </section>
   )
 }

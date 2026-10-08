@@ -2,9 +2,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { useMemo, useState, type FormEvent } from 'react'
 import { getSupabaseClient } from '../lib/supabase'
+import { Button } from '../components/ui'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext, type AuthContextMembership } from '../features/auth/useAuthContext'
 import { managementClient, type BranchRow } from '../features/management/managementClient'
+import styles from './BranchesPage.module.css'
 
 /**
  * Branch list (contracts/management-client.md §2/§4.5; FR-007, FR-017): the
@@ -84,9 +86,11 @@ function CreateBranchForm({ restaurantId }: { restaurantId: string }) {
           />
           <p>Display names are not required to be unique within the restaurant.</p>
         </div>
-        <button type="submit" disabled={submitting}>
+        {/* Spec 035 (F-003): the system Button, not a bare native one — the
+            raw button rendered ~21px tall, under the 24px target-size floor. */}
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Creating…' : 'Create branch'}
-        </button>
+        </Button>
       </form>
       {feedback !== null && (
         <p role={feedback.tone === 'error' ? 'alert' : 'status'}>{feedback.message}</p>
@@ -282,7 +286,9 @@ export function BranchesPage() {
 
       {isOwner && <CreateBranchForm restaurantId={effectiveRestaurantId} />}
 
-      <p>
+      {/* Spec 035 (F-003): token-driven safe space above the back row (axe
+          target-offset measured 23px to the form's controls). */}
+      <p className={styles.backRow}>
         <Link to="/dashboard">Back to the dashboard</Link>
       </p>
     </section>
