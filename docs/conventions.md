@@ -191,6 +191,32 @@ family (`src/components/state/`) — never an ad-hoc spinner, never a bare
 The full per-route matrix lives in
 [specs/037-frontend-state-hardening/state-matrix.md](../specs/037-frontend-state-hardening/state-matrix.md).
 
+### Performance budgets (spec 038)
+
+Performance claims are recorded, never asserted: every optimization carries a
+**Baseline → Change → Measurement → Result** entry in its feature directory
+(`specs/038-frontend-performance/measurements/`), and the budget ledger
+(`specs/038-frontend-performance/budgets.md`) records each budget's threshold,
+its justification, and its measured result. The standing rules:
+
+- **Timing measurements are informational** over the shared cloud database —
+  only deterministic facts (build-output chunk-class membership,
+  client-side-deterministic marks, DOM identity) are hard assertions. The
+  clarified rule: do not assert cloud latency in CI.
+- **Route-level splitting is the standing shape** (spec 038 D2): pages are
+  `React.lazy` boundaries declared in `src/app/lazyPages.tsx` (NEVER in the
+  E2E-imported `routes.ts`); the Suspense fallback is the Phase 17 Skeleton;
+  a chunk failure falls to the route error boundary. Customer chunks must
+  never reach staff/admin-only modules (enforced by
+  `tests/unit/bundleSplit.test.ts` reading `dist/.vite/manifest.json` —
+  enable `build.manifest: true` in the build config; it is part of the
+  config).
+- **Only measured bottlenecks are optimized** — a measured "no change
+  needed" is a valid, recorded Result (W3/W6/W7 recorded three).
+- **Cache policy lives in one table** (`specs/038-frontend-performance/
+cache-policy.md`); queries keep identity/scope in their keys; prefetch is
+  measured-before-adopted and never touches customer token reads.
+
 ### Naming conventions
 
 - React components in `PascalCase.tsx`; hooks in `camelCase` prefixed `use`

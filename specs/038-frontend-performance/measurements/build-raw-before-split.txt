@@ -1,0 +1,3 @@
+dist/assets/index-BYpWYqBE.css   61.76 kB │ gzip:  10.49 kB
+dist/assets/index-Cun7-CRp.js   794.24 kB │ gzip: 219.61 kB
+[32m✓ built in 2.25s[39m

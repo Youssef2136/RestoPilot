@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-22T17:23:58.460Z",
+  "generated_at": "2026-10-10T20:37:49.618Z",
   "environment": {
     "project_url": "https://yyghtaimzjsclolcwzrg.supabase.co",
     "fixture": "seed.sql deterministic fixture (2 restaurants, 14 items, 4 open sessions)",
@@ -16,165 +16,165 @@
       "budget_ms": 1500,
       "get_session_menu": {
         "name": "get_session_menu",
-        "median_ms": 106,
+        "median_ms": 149,
         "runs_ms": [
-          109,
-          104,
-          100,
-          106,
-          116
+          161,
+          149,
+          128,
+          413,
+          148
         ]
       }
     },
     "dashboard_queries": {
       "get_branch_rounds": {
         "name": "get_branch_rounds",
-        "median_ms": 118,
+        "median_ms": 159,
         "runs_ms": [
-          123,
-          118,
-          119,
-          117,
-          118
+          829,
+          141,
+          159,
+          137,
+          249
         ]
       },
       "get_branch_open_sessions": {
         "name": "get_branch_open_sessions",
-        "median_ms": 103,
+        "median_ms": 154,
         "runs_ms": [
-          103,
-          101,
-          102,
-          103,
-          108
+          186,
+          154,
+          142,
+          153,
+          163
         ]
       },
       "get_audit_log": {
         "name": "get_audit_log",
-        "median_ms": 109,
+        "median_ms": 157,
         "runs_ms": [
-          108,
-          111,
-          124,
-          107,
-          109
+          157,
+          400,
+          144,
+          157,
+          151
         ]
       }
     },
     "realtime_fanout": {
-      "subscribe_to_subscribed_ms": 218,
+      "subscribe_to_subscribed_ms": 396,
       "note": "single handshake; fan-out latency is asserted by the 012 e2e journeys"
     },
     "session_retrieval": {
       "get_session_context": {
         "name": "get_session_context",
-        "median_ms": 105,
+        "median_ms": 120,
         "runs_ms": [
-          106,
-          105,
-          101,
-          114,
-          101
+          165,
+          120,
+          115,
+          119,
+          157
         ]
       }
     },
     "round_submission": {
       "budget_ms": 800,
-      "median_ms": 306,
+      "median_ms": 160,
       "runs_ms": [
-        107,
-        315,
-        306,
-        210,
-        397
+        160,
+        199,
+        185,
+        138,
+        143
       ]
     },
     "kitchen_ticket_updates": {
       "start_preparation": {
         "name": "start_preparation",
-        "median_ms": 186,
+        "median_ms": 173,
         "runs_ms": [
-          236,
-          186,
-          214,
-          114,
-          114
+          153,
+          127,
+          174,
+          437,
+          173
         ]
       },
       "mark_round_ready": {
         "name": "mark_round_ready",
-        "median_ms": 111,
+        "median_ms": 147,
         "runs_ms": [
-          111,
-          111,
-          112,
-          105,
-          108
+          134,
+          165,
+          155,
+          147,
+          130
         ]
       }
     },
     "report_query": {
       "day": {
         "name": "sales_report_day",
-        "median_ms": 103,
+        "median_ms": 188,
         "runs_ms": [
-          102,
-          108,
-          103,
-          115,
-          103
+          256,
+          188,
+          143,
+          305,
+          160
         ]
       },
       "week": {
         "name": "sales_report_week",
-        "median_ms": 109,
+        "median_ms": 172,
         "runs_ms": [
-          109,
-          104,
-          111,
-          111,
-          102
+          127,
+          396,
+          142,
+          324,
+          172
         ]
       },
       "month": {
         "name": "sales_report_month",
-        "median_ms": 108,
+        "median_ms": 139,
         "runs_ms": [
-          106,
-          109,
-          109,
-          108,
-          105
+          134,
+          332,
+          139,
+          124,
+          151
         ]
       }
     },
     "image_handling": {
       "upload": {
         "name": "storage_upload",
-        "median_ms": 189,
+        "median_ms": 223,
         "runs_ms": [
-          179,
-          189,
-          197,
-          178,
-          333
+          221,
+          292,
+          253,
+          218,
+          223
         ]
       },
       "read": {
         "name": "storage_signed_read",
-        "median_ms": 258,
+        "median_ms": 402,
         "runs_ms": [
-          258,
-          309,
-          261,
-          255,
-          255
+          262,
+          402,
+          400,
+          501,
+          618
         ]
       }
     },
     "reconnection": {
-      "first_handshake_ms": 72,
-      "resubscribe_ms": 72
+      "first_handshake_ms": 113,
+      "resubscribe_ms": 117
     }
   }
 }
