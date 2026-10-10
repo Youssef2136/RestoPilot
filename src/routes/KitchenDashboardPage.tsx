@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { EmptyState, OfflineSurface, useOfflineState } from '../components/state'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { useRealtimeInvalidation } from '../features/realtime/useRealtimeInvalidation'
@@ -83,6 +84,10 @@ export function KitchenDashboardPage() {
   const queueQuery = useKitchenQueue(effectiveBranchId)
   const start = useRoundTransition(effectiveBranchId, 'start')
   const ready = useRoundTransition(effectiveBranchId, 'ready')
+  // Spec 037 FR-07 (clarified): offline gates the board's action layer —
+  // the last-known board stays readable; the ReconnectingBanner carries the
+  // copy; reconnect reconciles via SUBSCRIBED.
+  const { offline } = useOfflineState()
 
   const refusalFor = (roundId: string): string | null => {
     for (const mutation of [start, ready]) {
@@ -155,7 +160,7 @@ export function KitchenDashboardPage() {
     )
   }
 
-  const busy = start.isPending || ready.isPending
+  const busy = start.isPending || ready.isPending || offline
   const staleError = queueQuery.isError && queueQuery.data !== undefined
 
   return (
@@ -182,31 +187,33 @@ export function KitchenDashboardPage() {
         )}
       </div>
 
-      <ReconnectingBanner
-        reconnecting={realtimeHealth === 'reconnecting'}
-        staleError={staleError}
-        onRetry={() => void queueQuery.refetch()}
-      />
+      <OfflineSurface actionNoun="kitchen" banner={false}>
+        <ReconnectingBanner
+          reconnecting={realtimeHealth === 'reconnecting'}
+          staleError={staleError}
+          onRetry={() => void queueQuery.refetch()}
+        />
 
-      {queueQuery.isError && queueQuery.data === undefined && (
-        <p role="alert">The queue could not be loaded. Reload the page and try again.</p>
-      )}
+        {queueQuery.isError && queueQuery.data === undefined && (
+          <p role="alert">The queue could not be loaded. Reload the page and try again.</p>
+        )}
 
-      {tickets.length === 0 && !queueQuery.isPending && (
-        <p className={kitchenStyles.emptyBoard}>
-          The kitchen queue is empty — incoming, in preparation and ready columns are all clear.
-        </p>
-      )}
+        {tickets.length === 0 && !queueQuery.isPending && (
+          <EmptyState testId="kitchen-board-empty" title="The kitchen queue is empty">
+            Incoming, in preparation and ready columns are all clear.
+          </EmptyState>
+        )}
 
-      <KitchenBoard
-        tickets={tickets}
-        busy={busy}
-        loading={queueQuery.isPending && tickets.length === 0}
-        refusalFor={refusalFor}
-        arrivedTicketIds={arrivedTicketIds}
-        onStart={(roundId) => start.mutate(roundId)}
-        onReady={(roundId) => ready.mutate(roundId)}
-      />
+        <KitchenBoard
+          tickets={tickets}
+          busy={busy}
+          loading={queueQuery.isPending && tickets.length === 0}
+          refusalFor={refusalFor}
+          arrivedTicketIds={arrivedTicketIds}
+          onStart={(roundId) => start.mutate(roundId)}
+          onReady={(roundId) => ready.mutate(roundId)}
+        />
+      </OfflineSurface>
 
       <p aria-live="polite" className={kitchenStyles.srOnly ?? undefined}>
         {announcement}

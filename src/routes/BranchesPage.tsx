@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { useMemo, useState, type FormEvent } from 'react'
 import { getSupabaseClient } from '../lib/supabase'
+import { EmptyState } from '../components/state'
 import { Button } from '../components/ui'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext, type AuthContextMembership } from '../features/auth/useAuthContext'
@@ -275,7 +276,9 @@ export function BranchesPage() {
       ) : branchesQuery.isError ? (
         <p role="alert">The branches could not be loaded. Try again.</p>
       ) : branches.length === 0 ? (
-        <p>No branches yet.</p>
+        <EmptyState testId="branches-empty" title="No branches yet">
+          Create the restaurant's first branch to start taking orders.
+        </EmptyState>
       ) : (
         <ul>
           {branches.map((branch) => (

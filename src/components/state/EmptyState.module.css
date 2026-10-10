@@ -1,0 +1,28 @@
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-9) var(--space-5);
+  text-align: center;
+  color: var(--color-ink-muted); /* neutral/positive ink — never alarm */
+}
+
+.icon {
+  color: var(--color-info);
+  opacity: 0.85;
+}
+
+.title {
+  font-weight: 600;
+  color: var(--color-ink);
+  font-size: 1.0625rem;
+}
+
+.body {
+  max-width: 42ch;
+  line-height: 1.5;
+}
+
+.action {
+  margin-block-start: var(--space-2);
+}

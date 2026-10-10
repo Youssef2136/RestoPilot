@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQueryClient } from '@tanstack/react-query'
+import { Skeleton } from '../components/state'
 import { CartRegion } from '../features/order/components/CartRegion'
 import { CategoryNav } from '../features/order/components/CategoryNav'
 import { MenuSections } from '../features/order/components/MenuSections'
@@ -70,7 +71,12 @@ export function CustomerMenuPage() {
     return (
       <section className={styles.page}>
         <SessionIndicator />
-        <p>Loading the menu…</p>
+        <h1 className={styles.pageTitle}>&nbsp;</h1>
+        {/* FR-02: the menu is a network read that routinely exceeds ~300 ms —
+            sized placeholders (title bar + category rail + two menu blocks)
+            hold the layout so the swap shifts nothing at any breakpoint. */}
+        <Skeleton variant="text" lines={3} width="60%" />
+        <Skeleton height="10rem" />
       </section>
     )
   }

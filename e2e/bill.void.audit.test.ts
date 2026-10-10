@@ -24,6 +24,20 @@ const SLUG = 'blue-olive'
 
 test.describe.configure({ mode: 'serial' })
 
+/**
+ * The audit trail's `round.void` subject is created by this file's FIRST
+ * test — but the serial pairing only holds when the seeded state STARTS
+ * writable: leftover sessions from a previous run (e.g. another suite
+ * consumed the demo T1/T2 sessions' join paths before this file's reset)
+ * make the fresh T3 entry fail before the void is ever created. A reset in
+ * the worker makes the file's meaning independent of run order
+ * (npm run db:reset -- --yes — the standing protocol).
+ */
+test.beforeAll(async () => {
+  const { execSync } = await import('node:child_process')
+  execSync('npm run db:reset -- --yes', { stdio: 'inherit', cwd: process.cwd() })
+})
+
 /** Signs a seeded identity in through the /signin form (auth.routes pattern). */
 /** Submit one dine-in round as a real customer (the 009 e2e journey). */
 async function submitCustomerRound(

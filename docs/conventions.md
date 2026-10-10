@@ -162,6 +162,35 @@ follows (the full per-route contract lives in
   boundary it claims to honor (`e2e/responsive.overflow.test.ts` is the
   standing sweep — extend it for new routes).
 
+### State vocabulary (spec 037)
+
+Every failure, wait, and offline condition renders through the shared state
+family (`src/components/state/`) — never an ad-hoc spinner, never a bare
+`console.error`, never a white screen:
+
+- **Loading** renders a `Skeleton` (or the surface's named skeleton), keeping
+  the layout box stable — the control box never jumps while a read resolves.
+- **Empty** renders `EmptyState` with the surface's frozen verbatim copy as
+  `title` and the next-action in the body.
+- **A read failure** renders an honest recovery view (RouteErrorView or the
+  surface's error line) — guidance, never a fabricated figure.
+- **A refused mutation** renders `RefusalAlert` INLINE at the acting control
+  with the server's message verbatim; **a failed read** renders the page-level
+  `ErrorState` — the two never swap roles.
+- **Offline** renders `OfflineSurface` (banner + blocked writes with the
+  reason); last-known data stays readable and obviously stale.
+- **Partial failure** on a multi-part surface is per-part honest posture
+  (e.g. the reports comparison rows) — never a silent zero, never a page-wide
+  failure for one failed part.
+- **Single handling (D8)**: one failure is handled exactly ONCE — a row-level
+  posture never composes a page-level notice for the same failure, an expiry
+  is resolved by one mechanism (guard denial or the signed-out redirect), and
+  one automatic read retry is the only auto-retry (reads only); mutations
+  never auto-resubmit (`retry: false` in `src/app/queryClient.ts` — FA-7).
+
+The full per-route matrix lives in
+[specs/037-frontend-state-hardening/state-matrix.md](../specs/037-frontend-state-hardening/state-matrix.md).
+
 ### Naming conventions
 
 - React components in `PascalCase.tsx`; hooks in `camelCase` prefixed `use`

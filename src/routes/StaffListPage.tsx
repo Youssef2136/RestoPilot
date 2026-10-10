@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router'
 import { useMemo, useState } from 'react'
+import { EmptyState, Skeleton } from '../components/state'
 import { getSupabaseClient } from '../lib/supabase'
 import { NotAuthorized } from '../features/auth/guards'
 import styles from './StaffListPage.module.css'
@@ -212,11 +213,15 @@ export function StaffListPage() {
       </p>
 
       {staffQuery.isPending ? (
-        <p>Loading the staff list…</p>
+        /* FR-02: the table read routinely passes ~300 ms — placeholder text
+           rows sized like the table rows' content */
+        <Skeleton testId="staff-list-skeleton" variant="text" lines={4} />
       ) : staffQuery.isError ? (
         <p role="alert">The staff list could not be loaded. Try again.</p>
       ) : staffQuery.data.length === 0 ? (
-        <p>No staff members found for this restaurant.</p>
+        <EmptyState testId="staff-list-empty" title="No staff members found for this restaurant">
+          An owner can add people from the management panel above.
+        </EmptyState>
       ) : (
         <div className={styles.tableWrap}>
           <table>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useRealtimeInvalidation } from '../../realtime/useRealtimeInvalidation'
+import { OfflineSurface, useOfflineState } from '../../../components/state'
 import { ConfirmDialog, Button, useToast } from '../../../components/ui'
 import styles from '../../staffOps/staffOps.surfaces.module.css'
 import { branchSessionsKey, useBranchOpenSessions, useCloseSession } from '../useSession'
@@ -35,6 +36,9 @@ export function BranchSessionsPanel({ branchId, branchName, canClose }: BranchSe
   })
   const sessionsQuery = useBranchOpenSessions(branchId)
   const closeMutation = useCloseSession(branchId)
+  // Spec 037 FR-07 (clarified): offline disables the close action with the
+  // reason carried by the shell's OfflineBanner; the list stays readable.
+  const { offline } = useOfflineState()
   // The session awaiting confirmation, and the outcome of the last close.
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   const toast = useToast()
@@ -62,111 +66,113 @@ export function BranchSessionsPanel({ branchId, branchName, canClose }: BranchSe
   const sessions = sessionsQuery.data.sessions
 
   return (
-    <section aria-labelledby="sessions-heading" data-density="compact">
-      <h2 id="sessions-heading">Open sessions — {branchName}</h2>
+    <OfflineSurface actionNoun="oversight" banner={false}>
+      <section aria-labelledby="sessions-heading" data-density="compact">
+        <h2 id="sessions-heading">Open sessions — {branchName}</h2>
 
-      {sessions.length === 0 ? (
-        <p>No open sessions at this branch.</p>
-      ) : (
-        <ul className={styles.sessionsList}>
-          {sessions.map((session) => {
-            const confirming = confirmingId === session.id
-            const closeError =
-              closeMutation.error !== null &&
-              closeMutation.variables === session.id &&
-              closeMutation.error instanceof Error
-                ? closeMutation.error.message
-                : null
-            return (
-              <li key={session.id} className={styles.sessionRow}>
-                {/* specs/031 FR-01, D5: channel sessions (table_id null) render
+        {sessions.length === 0 ? (
+          <p>No open sessions at this branch.</p>
+        ) : (
+          <ul className={styles.sessionsList}>
+            {sessions.map((session) => {
+              const confirming = confirmingId === session.id
+              const closeError =
+                closeMutation.error !== null &&
+                closeMutation.variables === session.id &&
+                closeMutation.error instanceof Error
+                  ? closeMutation.error.message
+                  : null
+              return (
+                <li key={session.id} className={styles.sessionRow}>
+                  {/* specs/031 FR-01, D5: channel sessions (table_id null) render
                     here with an empty table_label — the read's payload carries
                     no session_type, so a per-channel chip would be a claim the
                     client cannot verify (a §3.8 contract conflict, RECORDED
                     not patched). The neutral marker says honestly: a no-table
                     session is open. */}
-                <p className={styles.sessionMain}>{session.table_label ?? 'Counter session'}</p>
-                <p className={styles.sessionMeta}>
-                  Opened {new Date(session.opened_at).toLocaleTimeString()}
-                </p>
-                <p className={styles.participants}>
-                  {session.participants.length === 0
-                    ? 'No participants listed.'
-                    : session.participants.map((p) => (
-                        <span key={p.id} className={styles.participantChip}>
-                          {p.display_name}
-                        </span>
-                      ))}
-                </p>
-                {canClose && (
-                  <div className={styles.sessionActions}>
-                    {/* Spec 023 FR-06 (Q4): the two-step confirmation runs
+                  <p className={styles.sessionMain}>{session.table_label ?? 'Counter session'}</p>
+                  <p className={styles.sessionMeta}>
+                    Opened {new Date(session.opened_at).toLocaleTimeString()}
+                  </p>
+                  <p className={styles.participants}>
+                    {session.participants.length === 0
+                      ? 'No participants listed.'
+                      : session.participants.map((p) => (
+                          <span key={p.id} className={styles.participantChip}>
+                            {p.display_name}
+                          </span>
+                        ))}
+                  </p>
+                  {canClose && (
+                    <div className={styles.sessionActions}>
+                      {/* Spec 023 FR-06 (Q4): the two-step confirmation runs
                         through the ConfirmDialog primitive. Names preserved
                         verbatim: "Close session for T1" opens; "Confirm
                         closing T1" confirms (E2E contract); "Keep it open"
                         becomes the dialog's cancel (also pre-existing). */}
-                    <Button
-                      className={styles.touchAction}
-                      onClick={() => setConfirmingId(session.id)}
-                    >
-                      {`Close session for ${session.table_label}`}
-                    </Button>
-                    <ConfirmDialog
-                      open={confirming}
-                      onCancel={() => setConfirmingId(null)}
-                      title={`Close session for ${session.table_label}`}
-                      confirmLabel={
-                        closeMutation.isPending
-                          ? 'Closing…'
-                          : `Confirm closing ${session.table_label}`
-                      }
-                      cancelLabel="Keep it open"
-                      busy={closeMutation.isPending}
-                      error={closeError ?? undefined}
-                      onConfirm={() => {
-                        closeMutation.mutate(session.id, {
-                          onSuccess: () => {
-                            setConfirmingId(null)
-                            setLastClosed(session.table_label)
-                            // Spec 023 FR-05 (Q3): the toast ACCOMPANIES the
-                            // asserted inline role="status" text — never
-                            // replaces it.
-                            toast.show({
-                              severity: 'success',
-                              message: `${session.table_label}'s session was closed.`,
-                            })
-                          },
-                          onError: () => {
-                            toast.show({
-                              severity: 'danger',
-                              message:
-                                closeMutation.error instanceof Error
-                                  ? closeMutation.error.message
-                                  : 'The session close failed. Try again.',
-                            })
-                          },
-                        })
-                      }}
-                    >
-                      <p>
-                        This closes {session.table_label}&apos;s session: seated guests recover as
-                        unavailable and re-enter the table&apos;s new session.
-                      </p>
-                    </ConfirmDialog>
-                  </div>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                      <Button
+                        className={styles.touchAction}
+                        onClick={() => setConfirmingId(session.id)}
+                      >
+                        {`Close session for ${session.table_label}`}
+                      </Button>
+                      <ConfirmDialog
+                        open={confirming}
+                        onCancel={() => setConfirmingId(null)}
+                        title={`Close session for ${session.table_label}`}
+                        confirmLabel={
+                          closeMutation.isPending
+                            ? 'Closing…'
+                            : `Confirm closing ${session.table_label}`
+                        }
+                        cancelLabel="Keep it open"
+                        busy={closeMutation.isPending || offline}
+                        error={closeError ?? undefined}
+                        onConfirm={() => {
+                          closeMutation.mutate(session.id, {
+                            onSuccess: () => {
+                              setConfirmingId(null)
+                              setLastClosed(session.table_label)
+                              // Spec 023 FR-05 (Q3): the toast ACCOMPANIES the
+                              // asserted inline role="status" text — never
+                              // replaces it.
+                              toast.show({
+                                severity: 'success',
+                                message: `${session.table_label}'s session was closed.`,
+                              })
+                            },
+                            onError: () => {
+                              toast.show({
+                                severity: 'danger',
+                                message:
+                                  closeMutation.error instanceof Error
+                                    ? closeMutation.error.message
+                                    : 'The session close failed. Try again.',
+                              })
+                            },
+                          })
+                        }}
+                      >
+                        <p>
+                          This closes {session.table_label}&apos;s session: seated guests recover as
+                          unavailable and re-enter the table&apos;s new session.
+                        </p>
+                      </ConfirmDialog>
+                    </div>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
 
-      {lastClosed !== null && (
-        <p role="status" className={styles.closedNotice}>
-          {lastClosed}&apos;s session was closed. Seated guests recover as unavailable and re-enter
-          the table&apos;s new session.
-        </p>
-      )}
-    </section>
+        {lastClosed !== null && (
+          <p role="status" className={styles.closedNotice}>
+            {lastClosed}&apos;s session was closed. Seated guests recover as unavailable and
+            re-enter the table&apos;s new session.
+          </p>
+        )}
+      </section>
+    </OfflineSurface>
   )
 }

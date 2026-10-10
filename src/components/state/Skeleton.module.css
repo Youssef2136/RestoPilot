@@ -1,0 +1,39 @@
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.block,
+.text {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-sunken) 25%,
+    var(--color-border) 45%,
+    var(--color-surface-sunken) 65%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+.text {
+  display: block;
+  height: 1em; /* matches the surrounding line-height box */
+  margin-block-end: 0.25em;
+}
+
+.block {
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .block,
+  .text {
+    animation: none; /* static tint — no shimmer */
+  }
+}

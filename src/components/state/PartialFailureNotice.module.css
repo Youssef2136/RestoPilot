@@ -1,0 +1,11 @@
+.partial {
+  margin-block: var(--space-3);
+}
+
+.body {
+  overflow-wrap: anywhere;
+}
+
+.retry {
+  margin-block-start: var(--space-2);
+}

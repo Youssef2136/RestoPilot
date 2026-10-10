@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { EmptyState } from '../components/state'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { AuditPayloadError } from '../features/audit/auditClient'
@@ -159,7 +160,11 @@ export function AuditLogPage() {
           <tbody>
             {entries.length === 0 ? (
               <tr>
-                <td colSpan={5}>No audit entries match.</td>
+                <td colSpan={5}>
+                  <EmptyState testId="audit-log-empty" title="No audit entries match.">
+                    Widen the filters below to see more of the trail.
+                  </EmptyState>
+                </td>
               </tr>
             ) : (
               entries.map((entry) => (

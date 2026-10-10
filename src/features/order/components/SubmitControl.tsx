@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CartLine } from '../orderClient'
+import { RefusalAlert } from '../../../components/state'
 import { useSubmitRound } from '../useOrder'
 
 /**
@@ -36,11 +37,14 @@ export function SubmitControl({ lines }: { lines: CartLine[] }) {
         {submitRound.isPending ? 'Sending your order…' : 'Send order to the kitchen'}
       </button>
       {submitRound.isError && (
-        <p role="alert">
-          {submitRound.error instanceof Error
-            ? submitRound.error.message
-            : 'The order was refused.'}
-        </p>
+        <RefusalAlert
+          message={
+            submitRound.error instanceof Error
+              ? submitRound.error.message
+              : 'The order was refused.'
+          }
+          context="Sending your order"
+        />
       )}
       {roundNumber !== null && (
         <p role="status">Your order is in — the kitchen has ticket {roundNumber}.</p>

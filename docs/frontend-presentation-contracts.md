@@ -565,3 +565,37 @@ the kitchen legs joined `e2e/kitchen.display.test.ts` (1). New helper:
 `src/components/ui/DataTable.tsx`+css, `src/features/tax/components/TaxPreview.tsx`
 (+ its module.css), `management.module.css`, `CustomerMenuPage.module.css`. The
 responsive rule set landed in `docs/conventions.md`.
+
+## Phase 037 presentation record (state, error, loading & offline hardening)
+
+The state vocabulary became a component family with a per-route matrix
+(specs/037; Master Plan §Frontend Phase 17, harden mode — clarify-encoded:
+skeleton ~300ms; offline mutations BLOCKED with the reason; refusal split
+codified inline-RefusalAlert-for-mutations / page-ErrorState-for-reads;
+last-known data readable offline stale-obvious; ONE automatic read retry,
+mutations manual-only). `src/components/state/` added `OfflineSurface` and
+`offlineGate.ts` to the family; `Skeleton`/`EmptyState` gained `testId`
+passthrough (EmptyState: title + body composition).
+
+| Surface / hook      | Before (phase ≤ 036)       | After (037)                                                                                                                                                                       | Asserted by                                 |
+| ------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Offline posture     | ad-hoc per                 | `OfflineSurface` on sessions/rounds/kitchen + customer posture; writes BLOCKED with reason (offlineGate)                                                                          | state.operations leg1                       |
+| Refusal split       | mixed inline/page handling | codified: mutations → inline `RefusalAlert` verbatim; reads → page error/posture line (D8 single handling)                                                                        | state.operations leg2; state.expiry.partial |
+| Loading skeletons   | sparse, untestable         | `Skeleton` (testId) adopted at customer pending-branch, rounds board, staff list, reports                                                                                         | state.reads                                 |
+| Empty postures      | bare lines, untestable     | `EmptyState` (testId, title+body) at 8 sites; verbatim copy kept as title                                                                                                         | state.reads (void/audit legs)               |
+| Expiry resolution   | implicit                   | dual codified: failed context read → deny-by-default 'Not authorized' denial (never white screen); ended session → RequireAuth redirect with `expired:true` note — each ONCE (D8) | state.expiry.partial legs1–2                |
+| Partial comparison  | could zero silently        | per-row honest posture ('Load failed — the figures…'), siblings intact; NO page-level notice (D8)                                                                                 | state.expiry.partial leg3                   |
+| Customer submission | implicit                   | cart cleared ONLY on ok; verbatim refusal inline; abort → SESSION_RETRY_MESSAGE honesty (never fake success)                                                                      | state.customer                              |
+
+New suites: `e2e/state.operations.test.ts` (2, serial), `e2e/state.reads.test.ts`
+(5, serial), `e2e/state.customer.test.ts` (2, serial — T2 lock, 390×844),
+`e2e/state.expiry.partial.test.ts` (3, serial). New family files:
+`src/components/state/{OfflineSurface,offlineGate.ts}` (+ module.css); testId
+to `Skeleton.tsx`, `EmptyState.tsx`. Adopted at: CashierRoundsPage,
+KitchenDashboardPage, BranchSessionsPanel (offline), ReportsPage (skeleton +
+per-row posture review), StaffListPage, CustomerMenuPage, AuditLogPage,
+BranchesPage, BranchDetailPage, VoidReportPage, StaffManagementPanel.
+Reviewed (no code delta): submitRound contract (T012), queryClient read/mutation
+retry policy (T015), guards' deny-by-default expiry posture (T014). The
+per-route twelve-state matrix is `specs/037-frontend-state-hardening/state-matrix.md`;
+the vocabulary rules landed in `docs/conventions.md`.

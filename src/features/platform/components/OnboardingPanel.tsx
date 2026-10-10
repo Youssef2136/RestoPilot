@@ -10,6 +10,7 @@
 
 import { useState, type FormEvent } from 'react'
 import { useToast } from '../../../components/ui'
+import { RefusalAlert } from '../../../components/state'
 import { useOnboardRestaurant } from '../usePlatform'
 import type { OnboardResult } from '../platformClient'
 
@@ -189,8 +190,11 @@ export function OnboardingPanel() {
         <button type="submit" disabled={submitting}>
           {submitting ? 'Onboarding…' : 'Onboard restaurant'}
         </button>
-        {feedback !== null && (
-          <p role={feedback.tone === 'error' ? 'alert' : 'status'}>{feedback.message}</p>
+        {feedback !== null && feedback.tone === 'error' && (
+          <RefusalAlert message={feedback.message} context="Onboarding the restaurant" />
+        )}
+        {feedback !== null && feedback.tone === 'success' && (
+          <p role="status">{feedback.message}</p>
         )}
       </form>
 

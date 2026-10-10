@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { EmptyState } from '../../../components/state'
 import { ConfirmDialog } from '../../../components/ui'
 import { AUTH_CONTEXT_QUERY_KEY } from '../../auth/useAuthContext'
 import type { StaffRole } from '../managementClient'
@@ -336,7 +337,12 @@ export function StaffManagementPanel({
 
       <h3>Existing members</h3>
       {members.length === 0 ? (
-        <p>No staff members found for this restaurant.</p>
+        <EmptyState
+          testId="management-members-empty"
+          title="No staff members found for this restaurant"
+        >
+          Add the first person with the form above.
+        </EmptyState>
       ) : (
         <ul>
           {members.map((member) => (

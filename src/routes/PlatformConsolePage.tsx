@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ConfirmDialog, useToast } from '../components/ui'
+import { RefusalAlert } from '../components/state'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { PlatformPayloadError } from '../features/platform/platformClient'
@@ -138,11 +139,14 @@ export function PlatformConsolePage() {
       <OnboardingPanel />
 
       {refusal !== null && (
-        <p role="alert">
-          {refusal.code === '42501'
-            ? 'You do not have access to the platform console.'
-            : refusal.message}
-        </p>
+        <RefusalAlert
+          message={
+            refusal.code === '42501'
+              ? 'You do not have access to the platform console.'
+              : refusal.message
+          }
+          context="Platform console"
+        />
       )}
       {error !== null && <p role="alert">{error}</p>}
 

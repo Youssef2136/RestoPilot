@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { RefusalAlert } from '../../../components/state'
 import { getSupabaseClient } from '../../../lib/supabase'
 import { taxClient, type BranchTaxConfig } from '../taxClient'
 import { useRecordTaxSnapshot, useTaxInvalidation } from '../useTax'
@@ -165,7 +166,9 @@ export function SnapshotAction({ restaurantId }: { restaurantId: string }) {
         {recordButtonLabel}
       </button>
 
-      {feedback?.tone === 'error' && <p role="alert">{feedback.message}</p>}
+      {feedback?.tone === 'error' && (
+        <RefusalAlert message={feedback.message} context="Recording the snapshot" />
+      )}
 
       {(feedback?.tone === 'recorded' || feedback?.tone === 'already-recorded') && (
         <p role="status">

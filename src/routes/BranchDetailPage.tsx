@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router'
 import { useState, type FormEvent } from 'react'
+import { EmptyState } from '../components/state'
 import { getSupabaseClient } from '../lib/supabase'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
@@ -236,7 +237,9 @@ function DiningTablesSection({ branchId, isOwner }: { branchId: string; isOwner:
       ) : tablesQuery.isError ? (
         <p role="alert">The tables could not be loaded. Try again.</p>
       ) : tables.length === 0 ? (
-        <p>No tables in this branch yet.</p>
+        <EmptyState testId="tables-empty" title="No tables in this branch yet">
+          Add a table below so guests can join this branch.
+        </EmptyState>
       ) : (
         <ul className={styles.tableList}>
           {tables.map((table) => (

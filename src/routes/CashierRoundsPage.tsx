@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
+import { OfflineSurface, Skeleton, useOfflineState } from '../components/state'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { useNewRoundCue } from '../features/realtime/useNewRoundCue'
@@ -148,6 +149,11 @@ export function CashierRoundsPage() {
   ]
   const refusalFor = (roundId: string): string | null => pickRefusal(roundId, attempts)
 
+  // Spec 037 FR-07 (clarified): offline gates the whole action layer —
+  // last-known data stays readable, actions disable with the reason carried
+  // by the shell's OfflineBanner; reconnect reconciles via SUBSCRIBED.
+  const { offline } = useOfflineState()
+
   const busy =
     accept.isPending ||
     startPrep.isPending ||
@@ -156,7 +162,8 @@ export function CashierRoundsPage() {
     outForDelivery.isPending ||
     completed.isPending ||
     modify.isPending ||
-    voidRound.isPending
+    voidRound.isPending ||
+    offline
 
   const handlers: TransitionHandlers = {
     onAccept: (roundId) => accept.mutate(roundId),
@@ -226,36 +233,42 @@ export function CashierRoundsPage() {
         <LiveBadge updatedAt={roundsQuery.dataUpdatedAt} fetching={roundsQuery.isFetching} />
       </header>
 
-      <ReconnectingBanner
-        reconnecting={realtimeHealth === 'reconnecting'}
-        staleError={staleError}
-        onRetry={() => void roundsQuery.refetch()}
-      />
+      <OfflineSurface actionNoun="floor" banner={false}>
+        <ReconnectingBanner
+          reconnecting={realtimeHealth === 'reconnecting'}
+          staleError={staleError}
+          onRetry={() => void roundsQuery.refetch()}
+        />
 
-      <ChannelFilter value={channelFilter} onChange={setChannelFilter} />
+        <ChannelFilter value={channelFilter} onChange={setChannelFilter} />
 
-      {roundsQuery.isPending && <p>Loading the branch rounds…</p>}
-      {roundsQuery.isError && roundsQuery.data === undefined && (
-        <p role="alert">The rounds could not be loaded. Reload the page and try again.</p>
-      )}
+        {roundsQuery.isPending && (
+          /* FR-02: the board is a network read past the ~300 ms threshold —
+             placeholder text rows sized like the round cards' titles */
+          <Skeleton testId="rounds-skeleton" variant="text" lines={3} />
+        )}
+        {roundsQuery.isError && roundsQuery.data === undefined && (
+          <p role="alert">The rounds could not be loaded. Reload the page and try again.</p>
+        )}
 
-      <RoundsBoard
-        rounds={filteredRounds}
-        busy={busy}
-        refusalFor={refusalFor}
-        cuedRoundId={cue?.roundId ?? null}
-        billSelectedSessionId={selectedSessionId}
-        onSelectForBill={(round) =>
-          setSelectedSessionId((current) =>
-            current === round.session_id ? null : round.session_id,
-          )
-        }
-        onModify={(round, itemId, action, quantity) =>
-          modify.mutate({ roundId: round.round_id, itemId, action, quantity })
-        }
-        onVoid={(round, reason) => voidRound.mutate({ roundId: round.round_id, reason })}
-        handlers={handlers}
-      />
+        <RoundsBoard
+          rounds={filteredRounds}
+          busy={busy}
+          refusalFor={refusalFor}
+          cuedRoundId={cue?.roundId ?? null}
+          billSelectedSessionId={selectedSessionId}
+          onSelectForBill={(round) =>
+            setSelectedSessionId((current) =>
+              current === round.session_id ? null : round.session_id,
+            )
+          }
+          onModify={(round, itemId, action, quantity) =>
+            modify.mutate({ roundId: round.round_id, itemId, action, quantity })
+          }
+          onVoid={(round, reason) => voidRound.mutate({ roundId: round.round_id, reason })}
+          handlers={handlers}
+        />
+      </OfflineSurface>
 
       <p aria-live="polite" className={styles.srOnly}>
         {announcement}

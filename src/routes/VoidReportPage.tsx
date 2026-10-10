@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
+import { EmptyState } from '../components/state'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { formatPrice } from '../features/menu/money'
@@ -164,7 +165,9 @@ export function VoidReportPage() {
       )}
 
       {rows !== undefined && refusal === null && rows.length === 0 && (
-        <p data-testid="void-log-empty">No voids recorded for this branch.</p>
+        <EmptyState testId="void-log-empty" title="No voids recorded for this branch">
+          Logged voids will appear here with their reason and actor.
+        </EmptyState>
       )}
 
       {rows !== undefined && refusal === null && rows.length > 0 && (

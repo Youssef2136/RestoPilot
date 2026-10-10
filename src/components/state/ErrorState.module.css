@@ -1,0 +1,38 @@
+.error {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-9) var(--space-5);
+  text-align: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+/* Guidance typography, not alarm: danger reserved for the title marker,
+   body reads as instruction. */
+.title {
+  font-weight: 600;
+  color: var(--color-ink);
+  font-size: 1.0625rem;
+}
+
+.title::before {
+  content: '';
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-danger);
+  margin-inline-end: var(--space-3);
+}
+
+.body {
+  max-width: 46ch;
+  line-height: 1.5;
+  color: var(--color-ink-muted);
+}
+
+.retry {
+  margin-block-start: var(--space-2);
+}

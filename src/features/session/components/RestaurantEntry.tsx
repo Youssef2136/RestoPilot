@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
+import { RefusalAlert } from '../../../components/state'
 import { useEnterChannelSession, useEnterSession, usePublicRestaurant } from '../useSession'
 import { CustomerShellHeader } from './entry/CustomerShellHeader'
 import { ChannelSelector } from './entry/ChannelSelector'
@@ -237,7 +238,7 @@ export function RestaurantEntry({ slug }: Props) {
               autoComplete="tel"
             />
           </label>
-          {error ? <p role="alert">{error}</p> : null}
+          {error ? <RefusalAlert message={error} context="Joining the table" /> : null}
           <div className={styles.actionRow}>
             <button type="submit" disabled={pending}>
               {pending

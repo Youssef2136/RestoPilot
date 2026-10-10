@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { CartLine } from '../orderClient'
+import { RefusalAlert } from '../../../components/state'
 import { useSubmitRound } from '../useOrder'
 import styles from './order.surfaces.module.css'
 
@@ -29,11 +30,14 @@ export function SubmitBar({ lines }: { lines: CartLine[] }) {
         {submitRound.isPending ? 'Sending your order…' : 'Send order to the kitchen'}
       </button>
       {submitRound.isError && (
-        <p role="alert">
-          {submitRound.error instanceof Error
-            ? submitRound.error.message
-            : 'The order was refused.'}
-        </p>
+        <RefusalAlert
+          message={
+            submitRound.error instanceof Error
+              ? submitRound.error.message
+              : 'The order was refused.'
+          }
+          context="Sending your order"
+        />
       )}
       {roundTicket !== null && (
         <p role="status">Your order is in — the kitchen has ticket {roundTicket}.</p>

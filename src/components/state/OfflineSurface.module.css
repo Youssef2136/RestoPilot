@@ -1,0 +1,32 @@
+.surface {
+  position: relative;
+}
+
+/* Staleness obvious: TEXT as well as color (a11y rule) — the banner names
+   the state; the tint is the second channel, not the only one. */
+.interrupted {
+  outline: 2px solid var(--color-warning);
+  outline-offset: -2px;
+  border-radius: var(--radius-md);
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  background: var(--color-warning-surface);
+  color: var(--color-warning);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.icon {
+  flex: none;
+}
+
+.message {
+  overflow-wrap: anywhere;
+}
+
+/* The banner must not cover primary actions (Responsive rule): it is a
+   block ABOVE the children — an overlay never floats over them. */

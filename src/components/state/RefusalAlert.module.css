@@ -1,0 +1,19 @@
+.refusal {
+  margin-block: var(--space-3);
+}
+
+/* The context sentence is the container's description (aria-describedby) —
+   deliberately OUTSIDE the role=alert region: the alert's text is the
+   verbatim server message alone (FA-7 / the presentation ledger). */
+.context {
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-muted);
+  margin-block: 0;
+}
+
+.message {
+  /* Verbatim means verbatim: the message wraps, it is never truncated into
+     a lie (Edge Cases), and it must survive 320 px (Phase 16 floor). */
+  overflow-wrap: anywhere;
+  white-space: normal;
+}

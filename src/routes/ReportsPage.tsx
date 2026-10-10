@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
+import { EmptyState, Skeleton } from '../components/state'
 import { NotAuthorized } from '../features/auth/guards'
 import { useAuthContext } from '../features/auth/useAuthContext'
 import { formatPrice } from '../features/menu/money'
@@ -209,7 +210,11 @@ export function ReportsPage() {
         />
       </label>
 
-      {reportQuery.isPending && <p>Loading the report…</p>}
+      {reportQuery.isPending && (
+        /* FR-02: the report is a slow aggregate read — placeholder text rows
+           sized like the summary figures' content */
+        <Skeleton testId="report-skeleton" variant="text" lines={5} />
+      )}
 
       {refusal !== null && (
         <p role="alert">
@@ -275,7 +280,9 @@ export function ReportsPage() {
 
           <h3>Best sellers</h3>
           {report.best_sellers.length === 0 ? (
-            <p>No items sold in this period.</p>
+            <EmptyState testId="report-best-sellers-empty" title="No items sold in this period.">
+              The best-sellers list fills in as rounds are submitted.
+            </EmptyState>
           ) : (
             <ol data-testid="report-best-sellers">
               {report.best_sellers.map((item) => (
