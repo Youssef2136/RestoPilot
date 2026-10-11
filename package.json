@@ -23,7 +23,8 @@
     "db:seed": "node --env-file-if-exists=.env scripts/db/seed.mjs",
     "db:reset": "node --env-file-if-exists=.env scripts/db/reset.mjs",
     "types:gen": "supabase gen types typescript --linked --schema public > src/types/database.types.ts",
-    "deploy": "npm run build && node scripts/deploy-frontend.mjs"
+    "deploy": "npm run build && node scripts/deploy-frontend.mjs",
+    "verify:scenario-proof": "node scripts/verify-scenario-proof.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

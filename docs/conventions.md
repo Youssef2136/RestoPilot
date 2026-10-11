@@ -217,6 +217,30 @@ its justification, and its measured result. The standing rules:
 cache-policy.md`); queries keep identity/scope in their keys; prefetch is
   measured-before-adopted and never touches customer token reads.
 
+### The validation phase ledger (spec 039)
+
+The dress rehearsal (spec 039) is how a release candidate is validated, and
+it sets the protocol for every future validation phase:
+
+- **Proof is one table, not a narrative** — every validation scenario cites
+  its standing suite (file › test) or names its NEW coverage in
+  `specs/NNN-*/scenario-proof.md`; the no-silent-gaps check
+  (`scripts/verify-scenario-proof.mjs`) must stay wired and green
+  (`npm run verify:scenario-proof`).
+- **Friction is recorded, not fixed, in a validate phase** — a friction
+  finding goes to the owning phase or a convergence task with a
+  justification; the validation spec forbids redesign.
+- **The run window is honest** — the run summary
+  (`specs/NNN-*/run-summary.md`) records expected-vs-unexpected console
+  events (F-G14: allowed injected 400s and fixture collisions are named;
+  everything else is unexpected) and the residue posture; a polluted-run
+  attempt and its mandated `db:reset` treatment are recorded, never
+  curated away.
+- **Manual a11y spots ride the window** — the four
+  highest-value journeys get a screen-reader spot statement in
+  `specs/NNN-*/manual-a11y.md`; the machine matrix remains the enforcement
+  layer (spots never weaken it).
+
 ### Naming conventions
 
 - React components in `PascalCase.tsx`; hooks in `camelCase` prefixed `use`
