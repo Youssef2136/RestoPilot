@@ -8,7 +8,7 @@
   "convergenceRound": 1,
   "blocked": false,
   "blocker": null,
-  "git": { "baseline": "df48c5f", "checkpoint": "PENDING-COMMIT — the working tree holds phase 20; commit as release(040) at the user's word (tagging, deploying, and pushing are owner actions) — spec df48c5f is phase 19's pushed checkpoint" },
+  "git": { "baseline": "df48c5f", "checkpoint": "committed as a47e04a release(040) on main at the user's word (not pushed yet; tagging/deploying are owner actions)" },
   "validation": {
     "lastTargeted": "the release window: production.smoke 3/3 vs vite preview (38 s) after db:reset; release suites 10/10 (2.2 m); a11y.matrix 31/31 (3.9 m); release:check GREEN (16 deterministic gates); dry-run exit 0 (68-file manifest, SPA precondition, credential refusal named)",
     "final": "T016 gate on the release tree: npm run verify EXIT=0 (format clean, lint 0 errors / 29 pre-existing warnings, tsc clean, unit 454/454, db 516/516 after db:reset, integration 38/38, build 3.01 s) — with the honest ledger: the first full verify attempt failed the db tier (14 fixture-drift failures) and the mandated db:reset → rerun proved green; the integration tier then failed 6 files = ONE real orphan auth user (the provisioning suite's own interrupted prior attempt, removed) + the shared-cloud auth rate-limiter's burst (the tier re-run green after cooling, 7/7); the final full-gate run EXIT=0. The FR-03 manual bundle inspection: 49 assets scanned, zero secret matches (only the publishable key inlined)."
