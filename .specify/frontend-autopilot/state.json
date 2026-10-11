@@ -8,7 +8,7 @@
   "convergenceRound": 1,
   "blocked": false,
   "blocker": null,
-  "git": { "baseline": "582ad99", "checkpoint": "PENDING-COMMIT — the working tree holds phase 19; commit as test(039) at the user's word (nothing pushed, nothing committed by the autopilot without the user's request)" },
+  "git": { "baseline": "582ad99", "checkpoint": "committed as b8629c6 test(039) on main at the user's word (not pushed — pushing awaits an explicit request)" },
   "validation": {
     "lastTargeted": "the release validation window: release.journey 4/4 (~57 s fresh-reset standalone); journey + 6 role files combined 10/10 (2.2 m) after db:reset; state batch (operations/reads/customer/expiry.partial/a11y.matrix) 43/43 (5.2 m); standing suites zero failures (coverage-notes: zero drift post-018); scenario-proof 26/26 resolvable via npm run verify:scenario-proof",
     "final": "T012 gate on the final tree: npm run verify GREEN per stage (format clean, lint 0 errors / 29 pre-existing react-refresh warnings, tsc clean, unit 454/454 after db:reset, db 516/516, integration 38/38, build 2.66 s with manifest) with npm run build pre-run feeding bundleSplit's manifest dependency; honest ledger: one db-tier attempt hit a staff.management transaction-abort cascade (3/516) — the mandated db:reset → failed-tier rerun landed green, then the full-gate rerun EXIT=0."
