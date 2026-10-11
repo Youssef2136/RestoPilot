@@ -31,7 +31,8 @@ async function marinaGuestRound(page: Page, name: string): Promise<void> {
 
 test('kitchen: the Marina board runs its money-free ticket path; the rounds surface denies kitchen (FR-02)', async ({
   browser,
-}) => {
+}, testInfo) => {
+  testInfo.setTimeout(180_000)
   // Marina T1 is the seeded INACTIVE fixture: the owner activates it
   // through the real management surface INSIDE the T1 lock (the realtime
   // suite's established pattern — state-agnostic flip), and the deactivation

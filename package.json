@@ -24,7 +24,8 @@
     "db:reset": "node --env-file-if-exists=.env scripts/db/reset.mjs",
     "types:gen": "supabase gen types typescript --linked --schema public > src/types/database.types.ts",
     "deploy": "npm run build && node scripts/deploy-frontend.mjs",
-    "verify:scenario-proof": "node scripts/verify-scenario-proof.mjs"
+    "verify:scenario-proof": "node scripts/verify-scenario-proof.mjs",
+    "release:check": "node scripts/release-check.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",

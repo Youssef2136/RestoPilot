@@ -30,11 +30,22 @@ perform.
 | Custom domain         | Pages project → **Custom domains** → add the domain, follow the DNS instructions; HTTPS is automatic (managed certificate)                                                                                          |
 | Secrets in the bundle | Only `VITE_*` vars are inlined by Vite. The publishable key is public by design. The script never exports `SUPABASE_DB_URL` or any service-role credential — asserted by `tests/unit/production.guard.test.ts`.     |
 
-### Rollback
+### Rollback (frontend release reality, spec 040 FR-09)
 
 - `npx wrangler pages deployment rollback` (promotes the previous
   deployment), or the Pages dashboard → **Deployments** → the last good one
-  → **Rollback to this deployment**.
+  → **Rollback to this deployment**. Either path is one command/action —
+  the frontend is stateless, so a build rollback is complete for the UI.
+- What CANNOT be rolled back by a frontend rollback:
+  1. **Database migrations** — a bad migration is fixed by a new forward
+     migration (never by editing history); restore-from-backup is the
+     operator action of last resort (§ item 11 below).
+  2. **Supabase configuration changes** (auth URL configuration, keys,
+     platform settings) — revert them in the dashboard explicitly.
+  3. **Data mutations the bad build caused** — user actions taken while
+     the bad build was live are real business data; reconcile through
+     the product's own flows (voids with reason, audit trail), not a
+     rollback.
 - Database rollbacks are NOT automatic: a bad migration is fixed by a new
   forward migration (never by editing history); restore-from-backup is the
   §-below operator action of last resort.
@@ -154,10 +165,68 @@ Secrets rule (§45 "secrets are safely managed"): real values live only in
 git-ignored `.env` files or operator secret stores; the repository carries
 `.env.example` placeholders.
 
+### Per-environment placement (spec 040 FR-04 — the exact names, where each value lives)
+
+| Variable                                                                      | Local (dev)                                                     | Staging (preview)                                                                             | Production                                                                   |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`                                                           | `.env` (git-ignored), pointing at the dev project               | Pages → project → **Settings → Environment variables → Preview**, value = staging project URL | Pages **Environment variables → Production**, value = production project URL |
+| `VITE_SUPABASE_PUBLISHABLE_KEY`                                               | `.env`, the dev project's publishable key                       | Pages Preview env var (staging key)                                                           | Pages Production env var (production key)                                    |
+| `SUPABASE_DB_URL`                                                             | `.env` (dev project) for CLI/tests/scripts only — never inlined | operator shell/session secret (staging URL)                                                   | operator shell/session secret ONLY — never `.env`, never CI logs             |
+| `SUPABASE_PROJECT_REF`                                                        | `.env` (the linked dev ref)                                     | set on `supabase link --project-ref` for the staging project                                  | same, for the production project                                             |
+| `CLOUDFLARE_API_TOKEN` / `CLOUDFLARE_ACCOUNT_ID` / `CLOUDFLARE_PAGES_PROJECT` | not needed (`--dry-run` needs none)                             | same                                                                                          | same — the deploy session's secret store (operator shell), never `.env`      |
+
+Owner of every operator cell: the project operator.
+
+### Auth redirect URLs for the production domain (spec 040 FR-06)
+
+Console path: Supabase Dashboard → (the PRODUCTION project) →
+**Authentication → URL Configuration**:
+
+1. **Site URL**: the production origin (`https://<your-domain>` and/or
+   `https://<project>.pages.dev`).
+2. **Redirect URLs** allow-list: the production origin + `/**/reset-password`
+   destination patterns the app uses (the reset flow's exact path is
+   `/reset-password`). Add the custom domain AND the pages.dev origin
+   during the transition; remove stray origins afterwards.
+3. Locally, `.env` values keep the dev project's own URLs — the dev
+   project's URL configuration is already exercised by the auth suites.
+
+Owner: project operator. No code change is involved: the client never
+hard-codes redirect hosts.
+
 ---
 
-## 6. Gate
+## 6. Caching posture (spec 040 FR-07)
 
-`npm run verify` is the quality gate (format → lint → types → unit → db →
-integration → build). This runbook and its guard suite are part of that
-gate: the env-var drift tripwire runs in every `npm run verify`.
+| Asset class                            | What Cloudflare Pages provides by default                                                                   | Operator configuration needed?                                                 |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| hashed `assets/*` (every JS/CSS chunk) | long-lived caching with immutable semantics (the URL changes when the file changes — safe to cache forever) | NO — the default is correct; nothing to set                                    |
+| `index.html`                           | served fresh at the edge (the SPA fallback document must stay current or users get stale chunk references)  | NO for standard Pages; review ONLY if a custom caching rule was added manually |
+| `.vite/manifest.json`                  | same class as other static files; built per release                                                         | NO (also harmless if cached: it changes only at deploy time)                   |
+
+The safe-deviation note: if the operator adds Page Rules/Transform Rules,
+`index.html` must keep short/no-cache semantics and hashed assets keep
+their immutable behavior — that combination is the entire requirement.
+
+## 7. Error tracking & monitoring posture (spec 040 FR-08; the clarified disposition)
+
+**Decision: vendor-free (deferred), recorded 2026-10-11.** The client
+ships NO error-tracking SDK; the rationale: the product's 037 honest-state
+model already renders failures as its own recovery UX, and the operator
+has a viable baseline without any vendor:
+
+- **What the error boundary exposes**: the 037 recovery view — never the
+  raw message, never a stack trace; the user's way out is the recovery
+  links + a retry.
+- **What the operator watches**:
+  - Supabase **Logs & Analytics** (API / Postgres / Auth logs) — the
+    server-side complaint surface;
+  - Cloudflare Pages **Deployments → build logs** + the deployment
+    status — the deploy-side surface;
+  - the browser-side failures surface as the DB/API errors above (the
+    client communicates through the same RPCs).
+- **Wiring a client-side vendor later** (Sentry et al.): a NEW spec with
+  its own secret management + the boundary's report path — not a silent
+  dependency addition.
+
+Owner: project operator.

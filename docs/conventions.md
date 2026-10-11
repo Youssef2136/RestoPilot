@@ -240,6 +240,13 @@ it sets the protocol for every future validation phase:
   highest-value journeys get a screen-reader spot statement in
   `specs/NNN-*/manual-a11y.md`; the machine matrix remains the enforcement
   layer (spots never weaken it).
+- **The release-check gate** (spec 040): `npm run release:check` re-runs the
+  deterministic release facts in one command — the production guard suite,
+  the bundle-class manifest gate + per-route budget re-read, the release
+  artifacts' structural gates (rehearsal record, runbook sections, release
+  notes, checklist dispositions), and the deploy `--dry-run`. Deterministic
+  facts only (the 038 rule); the real deploy, tagging, and pushing stay
+  owner actions (`docs/production-runbook.md`).
 
 ### Naming conventions
 
